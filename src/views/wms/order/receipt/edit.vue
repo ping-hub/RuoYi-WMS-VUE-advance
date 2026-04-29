@@ -151,9 +151,34 @@
                 </el-popover>
               </template>
             </el-table-column>
-            <el-table-column label="数量" prop="quantity" width="180">
+            <el-table-column label="数量" prop="quantity" width="280">
               <template #default="scope">
+                <!-- SN模式：显示SN码输入 -->
+                <div v-if="mode && checkSnEnabled(scope.row)">
+                  <div class="sn-mode-quantity">
+                    <span>数量：{{ scope.row.quantity }}</span>
+                    <el-button type="primary" size="small" icon="Edit" @click="showSnInput(scope.row)">
+                      {{ scope.row.snCodes && scope.row.snCodes.length > 0 ? '编辑SN码' : '添加SN码' }}
+                    </el-button>
+                  </div>
+                  <div class="sn-code-list">
+                    <el-tag
+                      v-for="(sn, index) in (scope.row.snCodes || [])"
+                      :key="index"
+                      size="small"
+                      closable
+                      @close="removeSnCode(scope.row, index)"
+                    >
+                      {{ sn }}
+                    </el-tag>
+                    <span v-if="!scope.row.snCodes || scope.row.snCodes.length === 0" class="text-muted">
+                      暂无SN码
+                    </span>
+                  </div>
+                </div>
+                <!-- 非SN模式：显示数量输入框 -->
                 <el-input-number
+                  v-else
                   v-model="scope.row.quantity"
                   placeholder="数量"
                   :min="1"
@@ -218,6 +243,68 @@
         :size="'80%'"
       />
     </div>
+
+    <!-- SN码输入对话框 -->
+    <el-dialog title="SN码管理" v-model="snInputDialog" width="700px" append-to-body>
+      <el-form label-width="100px">
+        <el-form-item label="单个SN码">
+          <el-input
+            v-model="snInputForm.singleSn"
+            placeholder="请输入或扫描SN码"
+            clearable
+            @keyup.enter="addSingleSnCode"
+            class="sn-single-input"
+          >
+            <template #append>
+              <el-button type="primary" @click="addSingleSnCode">添加</el-button>
+            </template>
+          </el-input>
+        </el-form-item>
+        <el-form-item label="批量SN码">
+          <el-input
+            v-model="snInputForm.batchSn"
+            type="textarea"
+            :rows="5"
+            placeholder="请输入SN码，每行一个"
+          />
+        </el-form-item>
+        <el-form-item>
+          <el-button type="success" @click="addBatchSnCodes">批量添加</el-button>
+          <el-button type="warning" @click="generateSnCodes" class="ml10">自动生成</el-button>
+        </el-form-item>
+        <el-divider />
+        <el-form-item label="生成数量">
+          <el-input-number v-model="snInputForm.generateCount" :min="1" :max="100" />
+        </el-form-item>
+        <el-form-item label="SN前缀">
+          <el-input v-model="snInputForm.prefix" placeholder="SN码前缀" clearable />
+        </el-form-item>
+        <el-form-item label="已添加SN">
+          <div class="sn-code-list">
+            <el-tag
+              v-for="(sn, index) in (snInputRow?.snCodes || [])"
+              :key="index"
+              size="small"
+              closable
+              @close="removeSnCode(snInputRow, index)"
+            >
+              {{ sn }}
+            </el-tag>
+            <span v-if="!snInputRow?.snCodes || snInputRow?.snCodes.length === 0" class="text-muted">
+              暂无SN码
+            </span>
+          </div>
+        </el-form-item>
+        <el-form-item label="SN数量">
+          <span>{{ snInputRow?.snCodes?.length || 0 }}</span>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="snInputDialog = false">关闭</el-button>
+        </div>
+      </template>
+    </el-dialog>
     <div class="footer-global">
       <div class="btn-box">
         <div>
@@ -234,7 +321,7 @@
 </template>
 
 <script setup name="ReceiptOrderEdit">
-import {computed, getCurrentInstance, onMounted, reactive, ref, toRef, toRefs, watch} from "vue";
+import {computed, getCurrentInstance, onMounted, reactive, ref, toRef, toRefs, watch, nextTick} from "vue";
 import {addReceiptOrder, getReceiptOrder, updateReceiptOrder, warehousing} from "@/api/wms/receiptOrder";
 import {ElMessage, ElMessageBox} from "element-plus";
 import SkuSelect from "../../../components/SkuSelect.vue";
@@ -355,7 +442,7 @@ const doSave = async (receiptOrderStatus = 0) => {
     const details = form.value.details.map(it => {
       return {
         id: it.id,
-        shipmentOrderId: form.value.id,
+        receiptOrderId: form.value.id,
         skuId: it.itemSku.id,
         amount: it.amount,
         quantity: it.quantity,
@@ -363,7 +450,8 @@ const doSave = async (receiptOrderStatus = 0) => {
         productionDate: it.productionDate,
         expirationDate: it.expirationDate,
         warehouseId: form.value.warehouseId,
-        areaId: it.areaId
+        areaId: it.areaId,
+        snCodes: it.snCodes || null
       }
     })
 
@@ -427,11 +515,28 @@ const doWarehousing = async () => {
     if (invalidQuantityList?.length) {
       return ElMessage.error('请选择数量')
     }
+
+    // SN模式校验：如果开启了SN模式且有SN管理的商品，必须录入SN码
+    if (mode.value) {
+      const snEnabledItems = form.value.details.filter(detail =>
+        detail.itemSku && detail.itemSku.snEnabled === 1
+      )
+      if (snEnabledItems.length > 0) {
+        const missingSnItems = snEnabledItems.filter(detail =>
+          !detail.snCodes || detail.snCodes.length === 0
+        )
+        if (missingSnItems.length > 0) {
+          const itemNames = missingSnItems.map(d => d.itemSku?.item?.itemName || d.itemSku?.skuName || '未知商品').join('、')
+          return ElMessage.error(`以下商品需要录入SN码：${itemNames}`)
+        }
+      }
+    }
+
     // 构建参数
     const details = form.value.details.map(it => {
       return {
         id: it.id,
-        shipmentOrderId: form.value.id,
+        receiptOrderId: form.value.id,
         skuId: it.itemSku.id,
         amount: it.amount,
         quantity: it.quantity,
@@ -439,7 +544,8 @@ const doWarehousing = async () => {
         productionDate: it.productionDate,
         expirationDate: it.expirationDate,
         warehouseId: form.value.warehouseId,
-        areaId: it.areaId
+        areaId: it.areaId,
+        snCodes: it.snCodes || null
       }
     })
 
@@ -485,6 +591,40 @@ const loadDetail = (id) => {
   loading.value = true
   getReceiptOrder(id).then((response) => {
     form.value = {...response.data}
+    // 处理SN码数据
+    if (form.value.details?.length) {
+      form.value.details.forEach(detail => {
+        if (detail.snCodes) {
+          // 如果是字符串，尝试解析为数组
+          if (typeof detail.snCodes === 'string') {
+            try {
+              detail.snCodes = JSON.parse(detail.snCodes)
+            } catch (e) {
+              // 如果JSON解析失败，尝试按逗号分隔
+              detail.snCodes = detail.snCodes.split(',').filter(s => s.trim())
+            }
+          }
+        }
+        // 兼容处理：如果itemSku为空对象或缺少必要属性，需要进行初始化
+        if (!detail.itemSku || !detail.itemSku.item) {
+          // 从缓存中获取完整的itemSku数据
+          if (detail.skuId) {
+            detail.itemSku = {
+              id: detail.skuId,
+              skuName: detail.itemSku?.skuName || '',
+              skuCode: detail.itemSku?.skuCode || '',
+              barcode: detail.itemSku?.barcode || '',
+              snEnabled: detail.itemSku?.snEnabled || 0,
+              item: detail.itemSku?.item || {
+                itemName: detail.itemSku?.item?.itemName || '',
+                itemCode: detail.itemSku?.item?.itemCode || '',
+                itemBrand: detail.itemSku?.item?.itemBrand || null
+              }
+            }
+          }
+        }
+      })
+    }
     Promise.resolve();
   }).then(() => {
   }).finally(() => {
@@ -540,12 +680,167 @@ const handleDeleteDetail = (row, index) => {
     form.value.details.splice(index, 1)
   }
 }
-const goSaasTip = () => {
-  ElMessageBox.alert('一物一码/SN模式请去Saas版本体验！', '系统提示', {
-    confirmButtonText: '确定'
-  })
-  return false
+/** SN码输入对话框状态 */
+const snInputDialog = ref(false)
+const snInputRow = ref(null)
+const snInputForm = reactive({
+  singleSn: '',
+  batchSn: '',
+  generateCount: 10,
+  prefix: 'SN'
+})
+
+/** 显示SN码输入对话框 */
+const showSnInput = (row) => {
+  snInputRow.value = row
+  snInputDialog.value = true
+  resetSnInputForm()
 }
+
+/** 重置SN输入表单 */
+const resetSnInputForm = () => {
+  snInputForm.singleSn = ''
+  snInputForm.batchSn = ''
+  snInputForm.generateCount = 10
+  snInputForm.prefix = 'SN'
+}
+
+/** 添加单个SN码 */
+const addSingleSnCode = () => {
+  if (!snInputForm.singleSn) {
+    ElMessage.warning('请输入SN码')
+    return
+  }
+  if (!snInputRow.value.snCodes) {
+    snInputRow.value.snCodes = []
+  }
+  if (snInputRow.value.snCodes.includes(snInputForm.singleSn)) {
+    ElMessage.warning('SN码已存在')
+    return
+  }
+  snInputRow.value.snCodes.push(snInputForm.singleSn)
+  snInputRow.value.quantity = snInputRow.value.snCodes.length
+  snInputForm.singleSn = ''
+  nextTick(() => {
+    const input = document.querySelector('.sn-single-input .el-input__inner')
+    if (input) input.focus()
+  })
+}
+
+/** 批量添加SN码 */
+const addBatchSnCodes = () => {
+  if (!snInputForm.batchSn) {
+    ElMessage.warning('请输入SN码')
+    return
+  }
+  const lines = snInputForm.batchSn.split('\n').filter(line => line.trim())
+  if (lines.length === 0) {
+    ElMessage.warning('请输入SN码')
+    return
+  }
+
+  if (!snInputRow.value.snCodes) {
+    snInputRow.value.snCodes = []
+  }
+
+  let addedCount = 0
+  const duplicateCodes = []
+  lines.forEach(line => {
+    const snCode = line.trim()
+    if (!snCode) return
+    if (snInputRow.value.snCodes.includes(snCode)) {
+      duplicateCodes.push(snCode)
+    } else {
+      snInputRow.value.snCodes.push(snCode)
+      addedCount++
+    }
+  })
+
+  if (duplicateCodes.length > 0) {
+    ElMessage.warning(`以下SN码已存在，已跳过：${duplicateCodes.join('、')}`)
+  }
+
+  if (addedCount > 0) {
+    snInputRow.value.quantity = snInputRow.value.snCodes.length
+    ElMessage.success(`成功添加${addedCount}个SN码`)
+  }
+  snInputDialog.value = false
+}
+
+/** 自动生成SN码 */
+const generateSnCodes = () => {
+  const count = snInputForm.generateCount || 10
+  const prefix = snInputForm.prefix || 'SN'
+
+  if (!snInputRow.value.snCodes) {
+    snInputRow.value.snCodes = []
+  }
+
+  const timestamp = Date.now()
+  for (let i = 0; i < count; i++) {
+    const snCode = `${prefix}${timestamp}${String(i + 1).padStart(3, '0')}`
+    if (!snInputRow.value.snCodes.includes(snCode)) {
+      snInputRow.value.snCodes.push(snCode)
+    }
+  }
+
+  snInputRow.value.quantity = snInputRow.value.snCodes.length
+  ElMessage.success(`成功生成${count}个SN码`)
+  snInputDialog.value = false
+}
+
+/** 删除SN码 */
+const removeSnCode = (row, index) => {
+  if (!row.snCodes) return
+  row.snCodes.splice(index, 1)
+  row.quantity = row.snCodes.length
+}
+
+const goSaasTip = () => {
+  // SN模式开启前校验
+  if (!form.value.warehouseId) {
+    ElMessage.warning('请先选择仓库！')
+    return false
+  }
+  if (!form.value.details || form.value.details.length === 0) {
+    ElMessage.warning('请先添加商品！')
+    return false
+  }
+
+  // 检查是否有商品支持SN模式
+  const hasSnEnabledItem = form.value.details.some(detail =>
+    detail.itemSku && detail.itemSku.snEnabled === 1
+  )
+
+  if (!hasSnEnabledItem) {
+    ElMessage.warning('当前商品列表中没有启用SN管理的商品，无法开启SN模式！')
+    return false
+  }
+
+  ElMessage.success('SN模式已开启，请为SN管理的商品录入SN码')
+  return true
+}
+
+/** 检查是否需要启用SN模式 */
+const checkSnEnabled = (row) => {
+  if (!mode.value || !row.itemSku) return false
+  return row.itemSku.snEnabled === 1
+}
+
+/** 初始化明细行的SN码数组 */
+const initDetailSnCodes = (row) => {
+  if (!row.snCodes) {
+    row.snCodes = []
+  }
+  row.snEnabled = checkSnEnabled(row)
+}
+
+/** 监听明细变化，自动初始化SN码 */
+watch(() => form.value.details, (newDetails) => {
+  newDetails.forEach(row => {
+    initDetailSnCodes(row)
+  })
+}, { immediate: true })
 </script>
 
 <style lang="scss" scoped>
@@ -557,5 +852,22 @@ const goSaasTip = () => {
   align-items: center;
   justify-content: space-between;
   float: right;
+}
+
+.sn-mode-quantity {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sn-code-list {
+  margin-top: 8px;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+.text-muted {
+  color: #909399;
+  font-size: 14px;
 }
 </style>

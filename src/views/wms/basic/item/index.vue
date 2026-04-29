@@ -91,7 +91,7 @@
 <!--                </div>-->
               </template>
             </el-table-column>
-            <el-table-column label="价格(元)" width="160" align="left">
+            <el-table-column label="价格(元)" width="140" align="left">
               <template #default="{ row }">
                 <div v-if="row.costPrice" class="flex-space-between">
                   <span>成本价：</span>
@@ -103,7 +103,7 @@
                 </div>
               </template>
             </el-table-column>
-            <el-table-column label="重量(kg)" width="160" align="left">
+            <el-table-column label="重量(kg)" width="130" align="left">
               <template #default="{ row }">
                 <div v-if="row.netWeight" class="flex-space-between">
                   <span>净重：</span>
@@ -119,15 +119,15 @@
                 </div>
               </template>
             </el-table-column>
-            <el-table-column label="长宽高(cm)" align="right" width="250">
+            <el-table-column label="长宽高(cm)" align="right" width="140">
               <template #default="{ row }">
                 <div>{{ getVolumeText(row) }}</div>
               </template>
             </el-table-column>
-            <el-table-column label="操作" align="right" prop="itemId" width="200">
+            <el-table-column label="操作" align="right" prop="itemId" width="140">
               <template #default="scope">
-                <el-button link type="primary" @click="handleDelete(scope.row)" icon="Delete">删除</el-button>
                 <el-button link type="primary" @click="handleUpdate(scope.row)" icon="Edit">修改</el-button>
+                <el-button link type="primary" @click="handleDelete(scope.row)" icon="Delete">删除</el-button>
               </template>
             </el-table-column>
           </el-table>
@@ -260,6 +260,17 @@
                   <span class="mr5">销售价</span>
                   <el-input-number :controls="false" :min="0" :precision="2" v-model="scope.row.sellingPrice"/>
                 </div>
+              </template>
+            </el-table-column>
+            <el-table-column label="SN管理" width="100" align="center">
+              <template #default="scope">
+                <el-switch
+                  v-model="scope.row.snEnabled"
+                  :active-value="1"
+                  :inactive-value="0"
+                  active-text="启用"
+                  inactive-text="不启用"
+                />
               </template>
             </el-table-column>
             <el-table-column label="操作" class-name="small-padding fixed-width" width="80" align="right">
