@@ -592,6 +592,10 @@ const resetQuery = async () => {
   proxy.resetForm('queryRef');
   queryParams.value.sourceOrderId = undefined;
   queryParams.value.receiptOrderDetailId = undefined;
+  queryParams.value.inBox = undefined;
+  queryParams.value.borrowed = undefined;
+  queryParams.value.itemId = undefined;
+  queryParams.value.skuId = undefined;
   queryParams.value.pageNum = 1;
   queryParams.value.pageSize = 10;
   querySkuOptions.value = [];
@@ -600,7 +604,7 @@ const resetQuery = async () => {
 };
 
 const applyRouteQuery = () => {
-  const { sourceOrderId, receiptOrderDetailId, instanceCode } = route.query;
+  const { sourceOrderId, receiptOrderDetailId, instanceCode, inBox, borrowed, itemId, skuId } = route.query;
   if (sourceOrderId) {
     queryParams.value.sourceOrderId = Number(sourceOrderId);
   }
@@ -609,6 +613,18 @@ const applyRouteQuery = () => {
   }
   if (instanceCode) {
     queryParams.value.instanceCode = instanceCode;
+  }
+  if (inBox !== undefined) {
+    queryParams.value.inBox = Number(inBox);
+  }
+  if (borrowed !== undefined) {
+    queryParams.value.borrowed = Number(borrowed);
+  }
+  if (itemId) {
+    queryParams.value.itemId = Number(itemId);
+  }
+  if (skuId) {
+    queryParams.value.skuId = Number(skuId);
   }
 };
 
@@ -780,6 +796,11 @@ watch(
   () => route.query,
   async () => {
     applyRouteQuery();
+    if (queryParams.value.itemId) {
+      await loadSkuOptions(queryParams.value.itemId, 'query');
+    } else {
+      querySkuOptions.value = [];
+    }
     await getList();
   }
 );

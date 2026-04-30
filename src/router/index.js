@@ -171,6 +171,20 @@ export const dynamicRoutes = [
         meta: { title: '单品实例' }
       }
     ]
+  },
+  {
+    path: '/wms-box',
+    component: Layout,
+    hidden: true,
+    permissions: ['wms:box:list'],
+    children: [
+      {
+        path: 'index',
+        component: () => import('@/views/wms/basic/box/index.vue'),
+        name: 'WmsBox',
+        meta: { title: '箱体管理' }
+      }
+    ]
   }
 ]
 
