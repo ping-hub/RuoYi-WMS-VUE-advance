@@ -93,19 +93,8 @@
       <el-card header="商品明细" class="mt10">
         <div class="receipt-order-content">
           <div class="flex-space-between mb8">
-            <div>
-              <span>一物一码/SN模式：</span>
-              <el-switch
-                :before-change="goSaasTip"
-                class="mr10 ml10"
-                inline-prompt
-                size="large"
-                v-model="mode"
-                :active-value="true"
-                :inactive-value="false"
-                active-text="开启"
-                inactive-text="关闭"
-              />
+            <div class="instance-tip">
+              支持按明细生成单品实例，若商品追踪模式为“单品追踪”，入库后会自动生成。
             </div>
             <el-popover
               placement="left"
@@ -131,6 +120,11 @@
               <template #default="{ row }">
                 <div>{{ row.itemSku.skuName }}</div>
                 <div v-if="row.itemSku.barcode">条码：{{row.itemSku.barcode}}</div>
+              </template>
+            </el-table-column>
+            <el-table-column label="追踪模式" width="120">
+              <template #default="{ row }">
+                <dict-tag :options="wms_tracking_mode" :value="row.itemSku.item.trackingMode" />
               </template>
             </el-table-column>
             <el-table-column label="库区" prop="itemSku.skuName" width="200">
@@ -160,6 +154,24 @@
                   :precision="0"
                   @change="handleChangeQuantity"
                 ></el-input-number>
+              </template>
+            </el-table-column>
+            <el-table-column label="生成实例" width="120">
+              <template #default="{ row }">
+                <el-switch
+                  v-model="row.generateItemInstance"
+                  :active-value="1"
+                  :inactive-value="0"
+                  inline-prompt
+                  active-text="是"
+                  inactive-text="否"
+                  :disabled="row.itemSku.item.trackingMode === 'instance'"
+                />
+              </template>
+            </el-table-column>
+            <el-table-column label="已生成数" width="100" align="right">
+              <template #default="{ row }">
+                {{ row.generatedInstanceQuantity || 0 }}
               </template>
             </el-table-column>
             <el-table-column label="价格" prop="amount" width="180">
@@ -244,8 +256,7 @@ import { numSub, generateNo } from '@/utils/ruoyi'
 import { delReceiptOrderDetail } from '@/api/wms/receiptOrderDetail'
 
 const {proxy} = getCurrentInstance();
-const { wms_receipt_type } = proxy.useDict("wms_receipt_type");
-const mode = ref(false)
+const { wms_receipt_type, wms_tracking_mode } = proxy.useDict("wms_receipt_type", "wms_tracking_mode");
 const loading = ref(false)
 const initFormData = {
   id: undefined,
@@ -319,10 +330,13 @@ const handleOkClick = (item) => {
         productionDate: undefined,
         expirationDate: undefined,
         warehouseId: form.value.warehouseId,
-        areaId: form.value.areaId
+        areaId: form.value.areaId,
+        generateItemInstance: it.item?.trackingMode === 'instance' ? 1 : 0,
+        generatedInstanceQuantity: 0
       }
     )
   })
+  handleChangeQuantity()
 }
 // 选择商品 end
 
@@ -355,7 +369,7 @@ const doSave = async (receiptOrderStatus = 0) => {
     const details = form.value.details.map(it => {
       return {
         id: it.id,
-        shipmentOrderId: form.value.id,
+        receiptOrderId: form.value.id,
         skuId: it.itemSku.id,
         amount: it.amount,
         quantity: it.quantity,
@@ -363,7 +377,9 @@ const doSave = async (receiptOrderStatus = 0) => {
         productionDate: it.productionDate,
         expirationDate: it.expirationDate,
         warehouseId: form.value.warehouseId,
-        areaId: it.areaId
+        areaId: it.areaId,
+        generateItemInstance: it.generateItemInstance,
+        generatedInstanceQuantity: it.generatedInstanceQuantity
       }
     })
 
@@ -431,7 +447,7 @@ const doWarehousing = async () => {
     const details = form.value.details.map(it => {
       return {
         id: it.id,
-        shipmentOrderId: form.value.id,
+        receiptOrderId: form.value.id,
         skuId: it.itemSku.id,
         amount: it.amount,
         quantity: it.quantity,
@@ -439,7 +455,9 @@ const doWarehousing = async () => {
         productionDate: it.productionDate,
         expirationDate: it.expirationDate,
         warehouseId: form.value.warehouseId,
-        areaId: it.areaId
+        areaId: it.areaId,
+        generateItemInstance: it.generateItemInstance,
+        generatedInstanceQuantity: it.generatedInstanceQuantity
       }
     })
 
@@ -484,7 +502,14 @@ onMounted(() => {
 const loadDetail = (id) => {
   loading.value = true
   getReceiptOrder(id).then((response) => {
-    form.value = {...response.data}
+    form.value = {
+      ...response.data,
+      details: (response.data.details || []).map(it => ({
+        ...it,
+        generateItemInstance: it.generateItemInstance ?? (it.itemSku?.item?.trackingMode === 'instance' ? 1 : 0),
+        generatedInstanceQuantity: it.generatedInstanceQuantity ?? 0
+      }))
+    }
     Promise.resolve();
   }).then(() => {
   }).finally(() => {

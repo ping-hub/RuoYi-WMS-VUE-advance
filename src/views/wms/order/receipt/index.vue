@@ -96,6 +96,11 @@
                     <div>{{ row?.itemSku?.skuName }}</div>
                   </template>
                 </el-table-column>
+                <el-table-column label="追踪模式" width="120">
+                  <template #default="{ row }">
+                    <dict-tag :options="wms_tracking_mode" :value="row?.itemSku?.item?.trackingMode" />
+                  </template>
+                </el-table-column>
                 <el-table-column label="库区" prop="areaName"/>
                 <el-table-column label="数量" prop="quantity" align="right">
                   <template #default="{ row }">
@@ -116,6 +121,26 @@
                 <el-table-column label="过期日期" prop="expirationDate">
                   <template #default="{ row }">
                     <div>{{ parseTime(row.expirationDate, '{y}-{m}-{d}') }}</div>
+                  </template>
+                </el-table-column>
+                <el-table-column label="生成实例" width="100" align="center">
+                  <template #default="{ row }">
+                    {{ row.generateItemInstance === 1 ? '是' : '否' }}
+                  </template>
+                </el-table-column>
+                <el-table-column label="已生成数" width="100" align="right">
+                  <template #default="{ row }">
+                    {{ row.generatedInstanceQuantity || 0 }}
+                  </template>
+                </el-table-column>
+                <el-table-column label="实例" width="100" align="right">
+                  <template #default="{ row }">
+                    <el-button
+                      v-if="row.generatedInstanceQuantity > 0"
+                      link
+                      type="primary"
+                      @click="handleGoInstances(props.row, row)"
+                    >查看实例</el-button>
                   </template>
                 </el-table-column>
               </el-table>
@@ -204,6 +229,12 @@
                   <el-button link type="danger" @click="handleDelete(scope.row)" v-hasPermi="['wms:receipt:all']" :disabled="scope.row.receiptOrderStatus === 1">删除</el-button>
                 </template>
               </el-popover>
+              <el-button
+                v-if="scope.row.receiptOrderStatus === 1"
+                link
+                type="primary"
+                @click="handleGoInstances(scope.row)"
+              >实例</el-button>
               <el-button link type="primary" @click="handlePrint(scope.row)" v-hasPermi="['wms:receipt:all']">打印</el-button>
             </div>
           </template>
@@ -232,7 +263,7 @@ import {ElMessageBox} from "element-plus";
 import receiptPanel from "@/components/PrintTemplate/receipt-panel";
 
 const { proxy } = getCurrentInstance();
-const { wms_receipt_status, wms_receipt_type } = proxy.useDict("wms_receipt_status", "wms_receipt_type");
+const { wms_receipt_status, wms_receipt_type, wms_tracking_mode } = proxy.useDict("wms_receipt_status", "wms_receipt_type", "wms_tracking_mode");
 const receiptOrderList = ref([]);
 const open = ref(false);
 const buttonLoading = ref(false);
@@ -336,6 +367,16 @@ function handleGoDetail(row) {
     expandedRowKeys.value.push(row.id)
     loadReceiptOrderDetail(row)
   }
+}
+
+function handleGoInstances(orderRow, detailRow) {
+  const query = {
+    sourceOrderId: orderRow.id
+  }
+  if (detailRow?.id) {
+    query.receiptOrderDetailId = detailRow.id
+  }
+  proxy.$router.push({ path: '/wms-item-instance/index', query });
 }
 
 /** 导出按钮操作 */

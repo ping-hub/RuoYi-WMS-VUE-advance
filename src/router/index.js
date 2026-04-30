@@ -157,6 +157,20 @@ export const dynamicRoutes = [
         meta: { title: '修改生成配置', activeMenu: '/tool/gen' }
       }
     ]
+  },
+  {
+    path: '/wms-item-instance',
+    component: Layout,
+    hidden: true,
+    permissions: ['wms:itemInstance:list'],
+    children: [
+      {
+        path: 'index',
+        component: () => import('@/views/wms/itemInstance/index.vue'),
+        name: 'WmsItemInstance',
+        meta: { title: '单品实例' }
+      }
+    ]
   }
 ]
 
