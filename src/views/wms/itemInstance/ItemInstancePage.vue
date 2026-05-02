@@ -134,6 +134,20 @@
         <el-table-column label="操作" align="right" width="240">
           <template #default="{ row }">
             <el-button link type="primary" @click="handleView(row)">详情</el-button>
+            <el-button
+              v-if="row.borrowed !== 1 && row.inBox !== 1"
+              link
+              type="primary"
+              @click="handleBorrow(row)"
+              v-hasPermi="['wms:borrowRecord:edit']"
+            >借出</el-button>
+            <el-button
+              v-if="row.borrowed === 1"
+              link
+              type="success"
+              @click="handleReturn(row)"
+              v-hasPermi="['wms:borrowRecord:edit']"
+            >归还</el-button>
             <el-button link type="primary" @click="handleUpdate(row)" v-hasPermi="['wms:itemInstance:edit']">修改</el-button>
             <el-button link type="primary" @click="handleUpdateStatus(row)" v-hasPermi="['wms:itemInstance:edit']">状态</el-button>
             <el-button link type="primary" @click="handleUpdateLocation(row)" v-hasPermi="['wms:itemInstance:edit']">位置</el-button>
@@ -399,7 +413,7 @@
 
 <script setup name="ItemInstance">
 import { computed, getCurrentInstance, onMounted, reactive, ref, toRefs, watch } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { ElMessageBox } from 'element-plus';
 import {
   addItemInstance,
@@ -416,6 +430,7 @@ import { useWmsStore } from '@/store/modules/wms';
 import RackSelect from '@/views/components/RackSelect.vue';
 import LocationSelect from '@/views/components/LocationSelect.vue';
 
+const router = useRouter();
 const { proxy } = getCurrentInstance();
 const route = useRoute();
 const { wms_item_instance_status } = proxy.useDict('wms_item_instance_status');
@@ -790,6 +805,25 @@ const handleDelete = async (row) => {
     }
     throw e;
   }
+};
+
+const handleBorrow = (row) => {
+  router.push({
+    path: '/wms-borrow-record/index',
+    query: {
+      itemInstanceId: row.id
+    }
+  });
+};
+
+const handleReturn = (row) => {
+  router.push({
+    path: '/wms-borrow-record/index',
+    query: {
+      itemInstanceId: row.id,
+      borrowStatus: 'borrowed'
+    }
+  });
 };
 
 watch(

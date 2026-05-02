@@ -185,6 +185,20 @@ export const dynamicRoutes = [
         meta: { title: '箱体管理' }
       }
     ]
+  },
+  {
+    path: '/wms-borrow-record',
+    component: Layout,
+    hidden: true,
+    permissions: ['wms:borrowRecord:list'],
+    children: [
+      {
+        path: 'index',
+        component: () => import('@/views/wms/business/borrow-record/index.vue'),
+        name: 'WmsBorrowRecord',
+        meta: { title: '借还管理' }
+      }
+    ]
   }
 ]
 
