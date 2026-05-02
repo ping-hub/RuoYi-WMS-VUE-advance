@@ -80,6 +80,7 @@
         <el-table-column label="操作" align="right" width="260">
           <template #default="{ row }">
             <el-button link type="primary" @click="handleView(row)">详情</el-button>
+            <el-button link type="primary" @click="handleTrace(row)" v-hasPermi="['wms:box:list']">追踪</el-button>
             <el-button link type="primary" @click="handlePack(row)" v-hasPermi="['wms:box:edit']">装箱</el-button>
             <el-button link type="primary" @click="handleUnpack(row)" v-hasPermi="['wms:box:edit']">拆箱</el-button>
             <el-button link type="primary" @click="handleUpdate(row)" v-hasPermi="['wms:box:edit']">修改</el-button>
@@ -682,6 +683,10 @@ const refreshDetailIfOpened = async (boxId) => {
 
 const handleOpenItemInstance = (row) => {
   router.push({ path: '/wms-item-instance/index', query: { instanceCode: row.instanceCode } });
+};
+
+const handleTrace = (row) => {
+  router.push({ path: '/wms-trace-box/index', query: { boxCode: row.boxCode } });
 };
 
 onMounted(async () => {

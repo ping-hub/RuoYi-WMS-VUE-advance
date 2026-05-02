@@ -92,50 +92,48 @@
         <div class="receipt-order-content">
           <div class="flex-space-between mb8">
             <div>
-              <span>一物一码/SN模式：</span>
-              <el-switch
-                :before-change="goSaasTip"
-                class="mr10 ml10"
-                inline-prompt
-                size="large"
-                v-model="mode"
-                :active-value="true"
-                :inactive-value="false"
-                active-text="开启"
-                inactive-text="关闭"
-              />
+              <el-tag type="info">支持库存出库 / 单品出库 / 整箱出库</el-tag>
             </div>
-            <el-popover
-              placement="left"
-              title="提示"
-              :width="200"
-              trigger="hover"
-              :disabled="form.warehouseId"
-              content="请先选择仓库！"
-            >
-              <template #reference>
-                <el-button type="primary" plain="plain" size="default" @click="showAddItem" icon="Plus"
-                           :disabled="!form.warehouseId">添加商品
-                </el-button>
-              </template>
-            </el-popover>
+            <div class="add-actions">
+              <el-button type="primary" plain size="default" @click="showAddInventory" icon="Plus" :disabled="!form.warehouseId">
+                按库存添加
+              </el-button>
+              <el-button type="primary" plain size="default" @click="showAddItemInstance" icon="Tickets" :disabled="!form.warehouseId">
+                按单品添加
+              </el-button>
+              <el-button type="primary" plain size="default" @click="showAddBox" icon="Box" :disabled="!form.warehouseId">
+                按整箱添加
+              </el-button>
+            </div>
           </div>
           <el-table :data="form.details" border empty-text="暂无商品明细">
             <el-table-column label="商品信息" prop="itemSku.itemName">
               <template #default="{ row }">
                 <div>{{
-                    row.itemSku.item.itemName + (row.itemSku.item.itemCode ? ('(' + row.itemSku.item.itemCode + ')') : '')
+                    (row.itemSku?.item?.itemName || row.itemName || '-') + ((row.itemSku?.item?.itemCode || row.itemCode) ? ('(' + (row.itemSku?.item?.itemCode || row.itemCode) + ')') : '')
                   }}
                 </div>
-                <div v-if="row.itemSku.item.itemBrand">
-                  品牌：{{ useWmsStore().itemBrandMap.get(row.itemSku.item.itemBrand).brandName }}
+                <div v-if="row.itemSku?.item?.itemBrand">
+                  品牌：{{ useWmsStore().itemBrandMap.get(row.itemSku.item.itemBrand)?.brandName }}
                 </div>
               </template>
             </el-table-column>
             <el-table-column label="规格信息">
               <template #default="{ row }">
-                <div>{{ row.itemSku.skuName }}</div>
-                <div v-if="row.itemSku.barcode">条码：{{row.itemSku.barcode}}</div>
+                <div>{{ row.itemSku?.skuName || row.skuName || '-' }}</div>
+                <div v-if="row.itemSku?.barcode">条码：{{ row.itemSku.barcode }}</div>
+              </template>
+            </el-table-column>
+            <el-table-column label="出库方式" width="120">
+              <template #default="{ row }">
+                <dict-tag :options="shipmentDetailSourceOptions" :value="row.detailSourceType" />
+              </template>
+            </el-table-column>
+            <el-table-column label="追踪对象" min-width="180">
+              <template #default="{ row }">
+                <div v-if="row.instanceCode">单品码：{{ row.instanceCode }}</div>
+                <div v-if="row.boxCode">箱码：{{ row.boxCode }}</div>
+                <div v-if="!row.instanceCode && !row.boxCode">-</div>
               </template>
             </el-table-column>
             <el-table-column label="库区" prop="areaName" width="200"/>
@@ -157,7 +155,19 @@
             </el-table-column>
             <el-table-column label="出库数量" prop="quantity" width="180">
               <template #default="scope">
+                <div v-if="scope.row.detailSourceType !== 'inventory'">
+                  <el-input-number
+                    v-model="scope.row.quantity"
+                    placeholder="出库数量"
+                    :min="1"
+                    :precision="0"
+                    :max="scope.row.remainQuantity"
+                    :disabled="true"
+                  ></el-input-number>
+                  <div class="table-tip">追踪出库固定为 1</div>
+                </div>
                 <el-input-number
+                  v-else
                   v-model="scope.row.quantity"
                   placeholder="出库数量"
                   :min="1"
@@ -200,6 +210,84 @@
         :area-id="form.areaId"
         :selected-inventory="selectedInventory"
       />
+      <el-dialog v-model="itemInstanceDialog.visible" title="按单品添加" width="1100px" append-to-body>
+        <el-form :inline="true" :model="itemInstanceDialog.query" label-width="88px">
+          <el-form-item label="单品码">
+            <el-input v-model="itemInstanceDialog.query.instanceCode" placeholder="请输入单品码" clearable @keyup.enter="getItemInstanceList" />
+          </el-form-item>
+          <el-form-item label="商品名称">
+            <el-input v-model="itemInstanceDialog.query.itemName" placeholder="请输入商品名称" clearable @keyup.enter="getItemInstanceList" />
+          </el-form-item>
+          <el-form-item label="规格名称">
+            <el-input v-model="itemInstanceDialog.query.skuName" placeholder="请输入规格名称" clearable @keyup.enter="getItemInstanceList" />
+          </el-form-item>
+          <el-form-item>
+            <el-button type="primary" @click="getItemInstanceList">查询</el-button>
+          </el-form-item>
+        </el-form>
+        <el-table v-loading="itemInstanceDialog.loading" :data="itemInstanceDialog.list" @selection-change="handleItemInstanceSelectionChange" border row-key="id">
+          <el-table-column type="selection" width="55" :selectable="isItemInstanceSelectable" />
+          <el-table-column label="单品码" prop="instanceCode" min-width="160" />
+          <el-table-column label="商品" prop="itemName" min-width="160" />
+          <el-table-column label="规格" prop="skuName" min-width="160" />
+          <el-table-column label="库区" prop="areaName" width="120" />
+          <el-table-column label="货位" prop="locationName" width="120" />
+          <el-table-column label="批号" prop="batchNo" min-width="120" />
+          <el-table-column label="状态" width="100">
+            <template #default="{ row }">
+              <dict-tag :options="wms_item_instance_status" :value="row.instanceStatus" />
+            </template>
+          </el-table-column>
+        </el-table>
+        <pagination
+          v-show="itemInstanceDialog.total > 0"
+          :total="itemInstanceDialog.total"
+          v-model:page="itemInstanceDialog.pageNum"
+          v-model:limit="itemInstanceDialog.pageSize"
+          @pagination="getItemInstanceList"
+        />
+        <template #footer>
+          <el-button @click="itemInstanceDialog.visible = false">取消</el-button>
+          <el-button type="primary" @click="handleConfirmItemInstance">确认添加</el-button>
+        </template>
+      </el-dialog>
+      <el-dialog v-model="boxDialog.visible" title="按整箱添加" width="1100px" append-to-body>
+        <el-form :inline="true" :model="boxDialog.query" label-width="88px">
+          <el-form-item label="箱码">
+            <el-input v-model="boxDialog.query.boxCode" placeholder="请输入箱码" clearable @keyup.enter="getBoxList" />
+          </el-form-item>
+          <el-form-item label="箱体名称">
+            <el-input v-model="boxDialog.query.boxName" placeholder="请输入箱体名称" clearable @keyup.enter="getBoxList" />
+          </el-form-item>
+          <el-form-item>
+            <el-button type="primary" @click="getBoxList">查询</el-button>
+          </el-form-item>
+        </el-form>
+        <el-table v-loading="boxDialog.loading" :data="boxDialog.list" @selection-change="handleBoxSelectionChange" border row-key="id">
+          <el-table-column type="selection" width="55" :selectable="isBoxSelectable" />
+          <el-table-column label="箱码" prop="boxCode" min-width="160" />
+          <el-table-column label="箱体名称" prop="boxName" min-width="160" />
+          <el-table-column label="库区" prop="areaName" width="120" />
+          <el-table-column label="货位" prop="locationName" width="120" />
+          <el-table-column label="箱内数量" prop="itemCount" width="100" align="right" />
+          <el-table-column label="状态" width="100">
+            <template #default="{ row }">
+              <dict-tag :options="wms_box_status" :value="row.boxStatus" />
+            </template>
+          </el-table-column>
+        </el-table>
+        <pagination
+          v-show="boxDialog.total > 0"
+          :total="boxDialog.total"
+          v-model:page="boxDialog.pageNum"
+          v-model:limit="boxDialog.pageSize"
+          @pagination="getBoxList"
+        />
+        <template #footer>
+          <el-button @click="boxDialog.visible = false">取消</el-button>
+          <el-button type="primary" @click="handleConfirmBox">确认添加</el-button>
+        </template>
+      </el-dialog>
     </div>
     <div class="footer-global">
       <div class="btn-box">
@@ -217,7 +305,7 @@
 </template>
 
 <script setup name="ShipmentOrderEdit">
-import {computed, getCurrentInstance, onMounted, reactive, ref, toRef, toRefs, watch} from "vue";
+import {computed, getCurrentInstance, onMounted, reactive, ref, toRefs} from "vue";
 import {addShipmentOrder, getShipmentOrder, updateShipmentOrder, shipment} from "@/api/wms/shipmentOrder";
 import {delShipmentOrderDetail} from "@/api/wms/shipmentOrderDetail";
 import {ElMessage, ElMessageBox} from "element-plus";
@@ -225,11 +313,19 @@ import {useRoute} from "vue-router";
 import {useWmsStore} from '@/store/modules/wms'
 import {numSub, generateNo} from '@/utils/ruoyi'
 import InventoryDetailSelect from "@/views/components/InventoryDetailSelect.vue";
+import {listInventoryDetailNoPage} from "@/api/wms/inventoryDetail";
+import {listItemInstance} from "@/api/wms/itemInstance";
+import {getBox, listBox} from "@/api/wms/box";
 
 const {proxy} = getCurrentInstance();
-const {wms_shipment_type} = proxy.useDict("wms_shipment_type");
+const {wms_shipment_type, wms_item_instance_status, wms_box_status} = proxy.useDict("wms_shipment_type", "wms_item_instance_status", "wms_box_status");
 
 const loading = ref(false)
+const shipmentDetailSourceOptions = computed(() => ([
+  { label: '库存', value: 'inventory' },
+  { label: '单品', value: 'itemInstance' },
+  { label: '整箱', value: 'box' }
+]))
 const initFormData = {
   id: undefined,
   shipmentOrderNo: undefined,
@@ -246,6 +342,34 @@ const initFormData = {
 }
 const inventorySelectRef = ref(null)
 const selectedInventory = ref([])
+const inventoryDetailOptions = ref([])
+const itemInstanceDialog = reactive({
+  visible: false,
+  loading: false,
+  list: [],
+  total: 0,
+  pageNum: 1,
+  pageSize: 10,
+  selection: [],
+  query: {
+    instanceCode: undefined,
+    itemName: undefined,
+    skuName: undefined
+  }
+})
+const boxDialog = reactive({
+  visible: false,
+  loading: false,
+  list: [],
+  total: 0,
+  pageNum: 1,
+  pageSize: 10,
+  selection: [],
+  query: {
+    boxCode: undefined,
+    boxName: undefined
+  }
+})
 const data = reactive({
   form: {...initFormData},
   rules: {
@@ -272,7 +396,7 @@ const close = () => {
 const inventorySelectShow = ref(false)
 
 // 选择商品 start
-const showAddItem = () => {
+const showAddInventory = () => {
   inventorySelectRef.value.getList()
   inventorySelectShow.value = true
 }
@@ -304,8 +428,76 @@ const handleOkClick = (item) => {
   })
 }
 
-const getPlaceAndSkuKey = (row) => {
-  return row.warehouseId + '_' + row.areaId + '_' + row.skuId
+const normalizeDateTime = (value) => {
+  if (!value) {
+    return ''
+  }
+  return String(value).replace('T', ' ').replace(/\.\d+$/, '')
+}
+
+const getInventoryAvailableQuantity = (inventoryDetailId, extraUsage = {}) => {
+  const inventory = inventoryDetailOptions.value.find(it => it.id === inventoryDetailId)
+  if (!inventory) {
+    return 0
+  }
+  const usedQuantity = form.value.details.reduce((sum, detail) => {
+    if (detail.inventoryDetailId === inventoryDetailId) {
+      return sum + Number(detail.quantity || 0)
+    }
+    return sum
+  }, 0)
+  return Number(inventory.remainQuantity || 0) - usedQuantity - Number(extraUsage[inventoryDetailId] || 0)
+}
+
+const refreshInventoryOptions = async () => {
+  if (!form.value.warehouseId) {
+    inventoryDetailOptions.value = []
+    return
+  }
+  const res = await listInventoryDetailNoPage({
+    warehouseId: form.value.warehouseId,
+    areaId: form.value.areaId
+  })
+  inventoryDetailOptions.value = res.data || []
+}
+
+const matchInventoryDetail = (source, extraUsage = {}) => {
+  const targetAreaId = source.areaId || form.value.areaId
+  const candidates = inventoryDetailOptions.value.filter(it => {
+    return it.skuId === source.skuId
+      && it.warehouseId === form.value.warehouseId
+      && (!targetAreaId || it.areaId === targetAreaId)
+      && (it.batchNo || '') === (source.batchNo || '')
+      && normalizeDateTime(it.productionDate) === normalizeDateTime(source.productionDate)
+      && normalizeDateTime(it.expirationDate) === normalizeDateTime(source.expirationDate)
+  })
+  return candidates.find(it => getInventoryAvailableQuantity(it.id, extraUsage) >= Number(source.quantity || 1))
+}
+
+const createDetailRow = (payload) => {
+  return {
+    id: payload.id,
+    itemSku: payload.itemSku,
+    itemName: payload.itemName,
+    itemCode: payload.itemCode,
+    skuName: payload.skuName,
+    skuId: payload.skuId,
+    amount: payload.amount,
+    quantity: payload.quantity,
+    remainQuantity: payload.remainQuantity,
+    batchNo: payload.batchNo,
+    productionDate: payload.productionDate,
+    expirationDate: payload.expirationDate,
+    warehouseId: payload.warehouseId,
+    areaId: payload.areaId,
+    inventoryDetailId: payload.inventoryDetailId,
+    areaName: payload.areaName,
+    itemInstanceId: payload.itemInstanceId,
+    instanceCode: payload.instanceCode,
+    boxId: payload.boxId,
+    boxCode: payload.boxCode,
+    detailSourceType: payload.detailSourceType
+  }
 }
 // 选择商品 end
 
@@ -334,7 +526,7 @@ const doSave = (shipmentOrderStatus = 0) => {
       details = form.value.details.map(it => {
         return {
           id: it.id,
-          receiptOrderId: form.value.id,
+          shipmentOrderId: form.value.id,
           skuId: it.skuId,
           amount: it.amount,
           quantity: it.quantity,
@@ -342,6 +534,8 @@ const doSave = (shipmentOrderStatus = 0) => {
           productionDate: it.productionDate,
           expirationDate: it.expirationDate,
           inventoryDetailId: it.inventoryDetailId,
+          itemInstanceId: it.itemInstanceId,
+          boxId: it.boxId,
           warehouseId: form.value.warehouseId,
           areaId: it.areaId
         }
@@ -410,7 +604,7 @@ const doShipment = async () => {
     const details = form.value.details.map(it => {
       return {
         id: it.id,
-        receiptOrderId: form.value.id,
+        shipmentOrderId: form.value.id,
         skuId: it.skuId,
         amount: it.amount,
         quantity: it.quantity,
@@ -418,6 +612,8 @@ const doShipment = async () => {
         productionDate: it.productionDate,
         expirationDate: it.expirationDate,
         inventoryDetailId: it.inventoryDetailId,
+        itemInstanceId: it.itemInstanceId,
+        boxId: it.boxId,
         warehouseId: form.value.warehouseId,
         areaId: it.areaId
       }
@@ -458,6 +654,7 @@ onMounted(() => {
     loadDetail(id)
   } else {
     form.value.shipmentOrderNo = 'CK' + generateNo()
+    refreshInventoryOptions()
   }
 })
 
@@ -469,6 +666,7 @@ const loadDetail = (id) => {
     if (response.data.details?.length) {
       response.data.details.forEach(detail => {
         detail.areaName = useWmsStore().areaMap.get(detail.areaId)?.areaName
+        detail.detailSourceType = detail.itemInstanceId ? (detail.boxId ? 'box' : 'itemInstance') : 'inventory'
       })
       selectedInventory.value = response.data.details.map(it => {
         return {
@@ -479,7 +677,7 @@ const loadDetail = (id) => {
     }
     form.value = {...response.data}
     inventorySelectRef.value.setWarehouseIdAndAreaId(form.value.warehouseId, form.value.areaId)
-    Promise.resolve();
+    return refreshInventoryOptions()
   }).then(() => {
   }).finally(() => {
     loading.value = false
@@ -490,12 +688,14 @@ const handleChangeWarehouse = (e) => {
   form.value.areaId = undefined
   form.value.details = []
   inventorySelectRef.value.setWarehouseIdAndAreaId(form.value.warehouseId, form.value.areaId)
+  refreshInventoryOptions()
 }
 
 const handleChangeArea = (e) => {
   inventorySelectRef.value.setWarehouseIdAndAreaId(form.value.warehouseId, form.value.areaId)
   form.value.details = form.value.details.filter(it => it.areaId === e)
   selectedInventory.value = selectedInventory.value.filter(selected => selected.areaId === e)
+  refreshInventoryOptions()
 }
 
 const handleChangeQuantity = () => {
@@ -532,14 +732,186 @@ const handleDeleteDetail = (row, index) => {
   } else {
     form.value.details.splice(index, 1)
   }
-  const indexOfSelected = selectedInventory.value.findIndex(it => it.id === row.inventoryDetailId)
-  selectedInventory.value.splice(indexOfSelected, 1)
+  if (row.detailSourceType === 'inventory') {
+    const indexOfSelected = selectedInventory.value.findIndex(it => it.id === row.inventoryDetailId)
+    if (indexOfSelected !== -1) {
+      selectedInventory.value.splice(indexOfSelected, 1)
+    }
+  }
+  handleChangeQuantity()
 }
-const goSaasTip = () => {
-  ElMessageBox.alert('一物一码/SN模式请去Saas版本体验！', '系统提示', {
-    confirmButtonText: '确定'
+
+const showAddItemInstance = async () => {
+  await refreshInventoryOptions()
+  itemInstanceDialog.pageNum = 1
+  itemInstanceDialog.visible = true
+  itemInstanceDialog.selection = []
+  getItemInstanceList()
+}
+
+const getItemInstanceList = () => {
+  itemInstanceDialog.loading = true
+  listItemInstance({
+    pageNum: itemInstanceDialog.pageNum,
+    pageSize: itemInstanceDialog.pageSize,
+    warehouseId: form.value.warehouseId,
+    areaId: form.value.areaId,
+    borrowed: 0,
+    inBox: 0,
+    ...itemInstanceDialog.query
+  }).then((res) => {
+    itemInstanceDialog.list = (res.rows || []).filter(it => it.instanceStatus !== 'disabled' && it.instanceStatus !== 'outbound')
+    itemInstanceDialog.total = res.total || 0
+  }).finally(() => {
+    itemInstanceDialog.loading = false
   })
-  return false
+}
+
+const handleItemInstanceSelectionChange = (selection) => {
+  itemInstanceDialog.selection = selection
+}
+
+const isItemInstanceSelectable = (row) => {
+  return !form.value.details.some(detail => detail.itemInstanceId === row.id)
+}
+
+const handleConfirmItemInstance = async () => {
+  if (!itemInstanceDialog.selection.length) {
+    ElMessage.error('请选择单品实例')
+    return
+  }
+  await refreshInventoryOptions()
+  const extraUsage = {}
+  const newRows = []
+  for (const item of itemInstanceDialog.selection) {
+    const matchedInventory = matchInventoryDetail({
+      skuId: item.skuId,
+      areaId: item.areaId,
+      batchNo: item.batchNo,
+      productionDate: item.productionDate,
+      expirationDate: item.expirationDate,
+      quantity: 1
+    }, extraUsage)
+    if (!matchedInventory) {
+      ElMessage.error(`单品 ${item.instanceCode} 未匹配到可用库存明细`)
+      return
+    }
+    extraUsage[matchedInventory.id] = Number(extraUsage[matchedInventory.id] || 0) + 1
+    newRows.push(createDetailRow({
+      skuId: item.skuId,
+      skuName: item.skuName,
+      itemName: item.itemName,
+      amount: undefined,
+      quantity: 1,
+      remainQuantity: matchedInventory.remainQuantity,
+      batchNo: item.batchNo,
+      productionDate: item.productionDate,
+      expirationDate: item.expirationDate,
+      warehouseId: form.value.warehouseId,
+      areaId: item.areaId,
+      inventoryDetailId: matchedInventory.id,
+      areaName: useWmsStore().areaMap.get(item.areaId)?.areaName,
+      itemInstanceId: item.id,
+      instanceCode: item.instanceCode,
+      detailSourceType: 'itemInstance'
+    }))
+  }
+  form.value.details.push(...newRows)
+  itemInstanceDialog.visible = false
+  handleChangeQuantity()
+}
+
+const showAddBox = async () => {
+  await refreshInventoryOptions()
+  boxDialog.pageNum = 1
+  boxDialog.visible = true
+  boxDialog.selection = []
+  getBoxList()
+}
+
+const getBoxList = () => {
+  boxDialog.loading = true
+  listBox({
+    pageNum: boxDialog.pageNum,
+    pageSize: boxDialog.pageSize,
+    warehouseId: form.value.warehouseId,
+    areaId: form.value.areaId,
+    ...boxDialog.query
+  }).then((res) => {
+    boxDialog.list = (res.rows || []).filter(it => it.boxStatus !== 'disabled' && it.boxStatus !== 'outbound' && Number(it.itemCount || 0) > 0)
+    boxDialog.total = res.total || 0
+  }).finally(() => {
+    boxDialog.loading = false
+  })
+}
+
+const handleBoxSelectionChange = (selection) => {
+  boxDialog.selection = selection
+}
+
+const isBoxSelectable = (row) => {
+  return !form.value.details.some(detail => detail.boxId === row.id)
+}
+
+const handleConfirmBox = async () => {
+  if (!boxDialog.selection.length) {
+    ElMessage.error('请选择箱体')
+    return
+  }
+  await refreshInventoryOptions()
+  const extraUsage = {}
+  const newRows = []
+  for (const selectedBox of boxDialog.selection) {
+    const detailRes = await getBox(selectedBox.id)
+    const box = detailRes.data || {}
+    const items = box.items || []
+    if (!items.length) {
+      ElMessage.error(`箱体 ${selectedBox.boxCode} 内无可出库单品`)
+      return
+    }
+    for (const item of items) {
+      if (form.value.details.some(detail => detail.itemInstanceId === item.id)) {
+        ElMessage.error(`箱体 ${selectedBox.boxCode} 内存在已添加的单品 ${item.instanceCode}`)
+        return
+      }
+      const matchedInventory = matchInventoryDetail({
+        skuId: item.skuId,
+        areaId: item.areaId,
+        batchNo: item.batchNo,
+        productionDate: item.productionDate,
+        expirationDate: item.expirationDate,
+        quantity: 1
+      }, extraUsage)
+      if (!matchedInventory) {
+        ElMessage.error(`箱体 ${selectedBox.boxCode} 中单品 ${item.instanceCode} 未匹配到可用库存明细`)
+        return
+      }
+      extraUsage[matchedInventory.id] = Number(extraUsage[matchedInventory.id] || 0) + 1
+      newRows.push(createDetailRow({
+        skuId: item.skuId,
+        skuName: item.skuName,
+        itemName: item.itemName,
+        amount: undefined,
+        quantity: 1,
+        remainQuantity: matchedInventory.remainQuantity,
+        batchNo: item.batchNo,
+        productionDate: item.productionDate,
+        expirationDate: item.expirationDate,
+        warehouseId: form.value.warehouseId,
+        areaId: item.areaId,
+        inventoryDetailId: matchedInventory.id,
+        areaName: useWmsStore().areaMap.get(item.areaId)?.areaName,
+        itemInstanceId: item.id,
+        instanceCode: item.instanceCode,
+        boxId: selectedBox.id,
+        boxCode: selectedBox.boxCode,
+        detailSourceType: 'box'
+      }))
+    }
+  }
+  form.value.details.push(...newRows)
+  boxDialog.visible = false
+  handleChangeQuantity()
 }
 </script>
 
@@ -556,5 +928,16 @@ const goSaasTip = () => {
 
 .el-statistic__content {
   font-size: 14px;
+}
+
+.add-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.table-tip {
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
+  line-height: 18px;
 }
 </style>

@@ -135,6 +135,12 @@
           <template #default="{ row }">
             <el-button link type="primary" @click="handleView(row)">详情</el-button>
             <el-button
+              link
+              type="primary"
+              @click="handleTrace(row)"
+              v-hasPermi="['wms:itemInstance:list']"
+            >追踪</el-button>
+            <el-button
               v-if="row.borrowed !== 1 && row.inBox !== 1"
               link
               type="primary"
@@ -822,6 +828,15 @@ const handleReturn = (row) => {
     query: {
       itemInstanceId: row.id,
       borrowStatus: 'borrowed'
+    }
+  });
+};
+
+const handleTrace = (row) => {
+  router.push({
+    path: '/wms-trace-item/index',
+    query: {
+      instanceCode: row.instanceCode
     }
   });
 };

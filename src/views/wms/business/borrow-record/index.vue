@@ -85,6 +85,7 @@
               v-hasPermi="['wms:borrowRecord:edit']"
             >归还</el-button>
             <el-button link type="primary" @click="handleOpenItem(row)">单品</el-button>
+            <el-button link type="primary" @click="handleTrace(row)">追踪</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -514,6 +515,10 @@ const handleView = async (row) => {
 
 const handleOpenItem = (row) => {
   router.push({ path: '/wms-item-instance/index', query: { instanceCode: row.instanceCode } });
+};
+
+const handleTrace = (row) => {
+  router.push({ path: '/wms-trace-item/index', query: { instanceCode: row.instanceCode } });
 };
 
 onMounted(async () => {

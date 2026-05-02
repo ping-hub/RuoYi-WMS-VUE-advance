@@ -96,6 +96,16 @@
                     <div>{{ row?.itemSku?.skuName }}</div>
                   </template>
                 </el-table-column>
+                <el-table-column label="单品码" min-width="160">
+                  <template #default="{ row }">
+                    <span>{{ row.instanceCode || '-' }}</span>
+                  </template>
+                </el-table-column>
+                <el-table-column label="箱码" min-width="140">
+                  <template #default="{ row }">
+                    <span>{{ row.boxCode || '-' }}</span>
+                  </template>
+                </el-table-column>
                 <el-table-column label="库区" prop="areaName"/>
                 <el-table-column label="数量" prop="quantity" align="right">
                   <template #default="{ row }">
@@ -116,6 +126,12 @@
                 <el-table-column label="过期日期" prop="expirationDate">
                   <template #default="{ row }">
                     <div>{{ parseTime(row.expirationDate, '{y}-{m}-{d}') }}</div>
+                  </template>
+                </el-table-column>
+                <el-table-column label="追踪" width="120" align="right">
+                  <template #default="{ row }">
+                    <el-button v-if="row.instanceCode" link type="primary" @click="handleGoItemTrace(row)">单品</el-button>
+                    <el-button v-if="row.boxCode" link type="primary" @click="handleGoBoxTrace(row)">箱体</el-button>
                   </template>
                 </el-table-column>
               </el-table>
@@ -336,6 +352,14 @@ function handleGoDetail(row) {
     expandedRowKeys.value.push(row.id)
     loadShipmentOrderDetail(row)
   }
+}
+
+function handleGoItemTrace(row) {
+  proxy.$router.push({ path: '/wms-trace-item/index', query: { instanceCode: row.instanceCode } })
+}
+
+function handleGoBoxTrace(row) {
+  proxy.$router.push({ path: '/wms-trace-box/index', query: { boxCode: row.boxCode } })
 }
 
 /** 导出按钮操作 */

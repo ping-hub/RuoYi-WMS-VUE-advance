@@ -199,6 +199,34 @@ export const dynamicRoutes = [
         meta: { title: '借还管理' }
       }
     ]
+  },
+  {
+    path: '/wms-trace-item',
+    component: Layout,
+    hidden: true,
+    permissions: ['wms:itemInstance:list'],
+    children: [
+      {
+        path: 'index',
+        component: () => import('@/views/wms/trace/item/index.vue'),
+        name: 'WmsTraceItem',
+        meta: { title: '单品追踪' }
+      }
+    ]
+  },
+  {
+    path: '/wms-trace-box',
+    component: Layout,
+    hidden: true,
+    permissions: ['wms:box:list'],
+    children: [
+      {
+        path: 'index',
+        component: () => import('@/views/wms/trace/box/index.vue'),
+        name: 'WmsTraceBox',
+        meta: { title: '箱码追踪' }
+      }
+    ]
   }
 ]
 
