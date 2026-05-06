@@ -30,6 +30,15 @@
             <el-option v-for="dict in wms_item_instance_status" :key="dict.value" :label="dict.label" :value="dict.value" />
           </el-select>
         </el-form-item>
+        <el-form-item label="产品标识" prop="productMark">
+          <el-input v-model="queryParams.productMark" placeholder="请输入产品标识" clearable @keyup.enter="handleQuery" />
+        </el-form-item>
+        <el-form-item label="质量等级" prop="qualityGrade">
+          <el-input v-model="queryParams.qualityGrade" placeholder="请输入质量等级" clearable @keyup.enter="handleQuery" />
+        </el-form-item>
+        <el-form-item label="所在单位" prop="belongUnit">
+          <el-input v-model="queryParams.belongUnit" placeholder="请输入所在单位" clearable @keyup.enter="handleQuery" />
+        </el-form-item>
         <el-form-item label="在箱状态" prop="inBox">
           <el-select v-model="queryParams.inBox" placeholder="请选择" clearable style="width: 120px">
             <el-option v-for="item in yesNoOptions" :key="'box-' + item.value" :label="item.label" :value="item.value" />
@@ -95,11 +104,18 @@
           <template #default="{ row }">
             <div>{{ row.itemName || '-' }}</div>
             <div v-if="row.skuName" class="sub-text">规格：{{ row.skuName }}</div>
+            <div v-if="row.productMark" class="sub-text">标识：{{ row.productMark }}</div>
           </template>
         </el-table-column>
         <el-table-column label="状态" width="100">
           <template #default="{ row }">
             <dict-tag :options="wms_item_instance_status" :value="row.instanceStatus" />
+          </template>
+        </el-table-column>
+        <el-table-column label="质量/单位" min-width="180">
+          <template #default="{ row }">
+            <div>{{ row.qualityGrade || '-' }}</div>
+            <div class="sub-text">{{ row.belongUnit || '-' }}</div>
           </template>
         </el-table-column>
         <el-table-column label="位置" min-width="220">
@@ -147,6 +163,9 @@
               @click="handleBorrow(row)"
               v-hasPermi="['wms:borrowRecord:edit']"
             >借出</el-button>
+            <el-tooltip v-else :content="row.inBox === 1 ? '单品在箱内，不能直接借出' : '单品已借出，请先归还'" placement="top">
+              <el-button link type="info" disabled>借出</el-button>
+            </el-tooltip>
             <el-button
               v-if="row.borrowed === 1"
               link
@@ -338,6 +357,9 @@
         <el-descriptions-item label="货位">{{ detailDialog.data.locationName || '-' }}</el-descriptions-item>
         <el-descriptions-item label="来源类型">{{ formatSourceType(detailDialog.data.sourceType) }}</el-descriptions-item>
         <el-descriptions-item label="来源单号">{{ detailDialog.data.sourceOrderNo || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="产品标识">{{ detailDialog.data.productMark || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="质量等级">{{ detailDialog.data.qualityGrade || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="所在单位">{{ detailDialog.data.belongUnit || '-' }}</el-descriptions-item>
         <el-descriptions-item label="来源明细ID">{{ detailDialog.data.receiptOrderDetailId || '-' }}</el-descriptions-item>
         <el-descriptions-item label="批号">{{ detailDialog.data.batchNo || '-' }}</el-descriptions-item>
         <el-descriptions-item label="生产日期">{{ detailDialog.data.productionDate ? parseTime(detailDialog.data.productionDate, '{y}-{m}-{d}') : '-' }}</el-descriptions-item>
@@ -528,6 +550,9 @@ const data = reactive({
     rackId: undefined,
     locationId: undefined,
     sourceOrderId: undefined,
+    productMark: undefined,
+    qualityGrade: undefined,
+    belongUnit: undefined,
     receiptOrderDetailId: undefined
   },
   rules: {
@@ -646,6 +671,15 @@ const applyRouteQuery = () => {
   }
   if (skuId) {
     queryParams.value.skuId = Number(skuId);
+  }
+  if (route.query.productMark) {
+    queryParams.value.productMark = route.query.productMark;
+  }
+  if (route.query.qualityGrade) {
+    queryParams.value.qualityGrade = route.query.qualityGrade;
+  }
+  if (route.query.belongUnit) {
+    queryParams.value.belongUnit = route.query.belongUnit;
   }
 };
 

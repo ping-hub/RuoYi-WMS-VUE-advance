@@ -172,7 +172,8 @@
         <div class="receipt-order-content">
           <div class="flex-space-between mb8">
             <div>
-              <el-tag type="info">支持通装/专装调拨，专装场景可录入产品标识</el-tag>
+              <el-tag v-if="form.movementType === 'special'" type="warning">专装调拨必须按单品或箱体流转，且数量必须为 1</el-tag>
+              <el-tag v-else type="info">通装调拨按数量流转，专装场景可补录单品码或箱码</el-tag>
             </div>
             <el-popover
               placement="left"
@@ -225,6 +226,12 @@
             <el-table-column label="产品标识" width="180">
               <template #default="{ row }">
                 <el-input v-model="row.productMark" :placeholder="form.movementType === 'special' ? '专装请录入产品标识' : '可选录入产品标识'" />
+              </template>
+            </el-table-column>
+            <el-table-column v-if="form.movementType === 'special'" label="单品码/箱码" min-width="240">
+              <template #default="{ row }">
+                <el-input v-model="row.instanceCode" placeholder="请输入单品码" @blur="handleSpecialCodeBlur(row, 'item')" />
+                <el-input class="mt5" v-model="row.boxCode" placeholder="请输入箱码" @blur="handleSpecialCodeBlur(row, 'box')" />
               </template>
             </el-table-column>
             <el-table-column label="质量等级" width="160">
@@ -319,6 +326,8 @@
 import {computed, getCurrentInstance, onMounted, reactive, ref, toRef, toRefs, watch} from "vue";
 import {addMovementOrder, getMovementOrder, updateMovementOrder, movement} from "@/api/wms/movementOrder";
 import {delMovementOrderDetail} from "@/api/wms/movementOrderDetail";
+import {getItemInstanceByCode} from "@/api/wms/itemInstance";
+import {getBoxByCode} from "@/api/wms/box";
 import {ElMessage, ElMessageBox} from "element-plus";
 import {useRoute} from "vue-router";
 import {useWmsStore} from '@/store/modules/wms'
@@ -404,6 +413,10 @@ const syncMovementDetail = (detail) => {
     specModel: detail.specModel ?? detail.itemSku?.specModel ?? detail.itemSku?.item?.modelText,
     productMark: detail.productMark,
     qualityGrade: detail.qualityGrade ?? detail.itemSku?.item?.defaultQualityGrade,
+    itemInstanceId: detail.itemInstanceId,
+    instanceCode: detail.instanceCode,
+    boxId: detail.boxId,
+    boxCode: detail.boxCode,
     unitPrice,
     lineAmount: detail.lineAmount ?? calcLineAmount(detail.quantity, unitPrice)
   }
@@ -411,6 +424,76 @@ const syncMovementDetail = (detail) => {
 
 const handleDetailChange = (row) => {
   row.lineAmount = calcLineAmount(row.quantity, row.unitPrice)
+}
+
+const handleSpecialCodeBlur = async (row, mode) => {
+  if (form.value.movementType !== 'special') {
+    return
+  }
+  if (mode === 'item') {
+    if (!row.instanceCode) {
+      row.itemInstanceId = undefined
+      return
+    }
+    try {
+      const res = await getItemInstanceByCode(row.instanceCode)
+      const data = res.data
+      row.itemInstanceId = data?.id
+      row.boxId = undefined
+      row.boxCode = undefined
+      if (data?.productMark && !row.productMark) {
+        row.productMark = data.productMark
+      }
+      if (data?.qualityGrade && !row.qualityGrade) {
+        row.qualityGrade = data.qualityGrade
+      }
+      row.quantity = 1
+      handleChangeQuantity()
+    } catch (e) {
+      row.itemInstanceId = undefined
+      proxy.$modal.msgError('单品码校验失败，请确认单品存在且可用于专装调拨')
+    }
+    return
+  }
+  if (!row.boxCode) {
+    row.boxId = undefined
+    return
+  }
+  try {
+    const res = await getBoxByCode(row.boxCode)
+    const data = res.data
+    row.boxId = data?.id
+    row.itemInstanceId = undefined
+    row.instanceCode = undefined
+    row.quantity = 1
+    handleChangeQuantity()
+  } catch (e) {
+    row.boxId = undefined
+    proxy.$modal.msgError('箱码校验失败，请确认箱体存在且可用于专装调拨')
+  }
+}
+
+const validateSpecialMovementDetails = (details) => {
+  if (form.value.movementType !== 'special') {
+    return true
+  }
+  for (const detail of details) {
+    const hasItem = !!detail.itemInstanceId
+    const hasBox = !!detail.boxId
+    if (!hasItem && !hasBox) {
+      ElMessage.error('专装调拨必须录入单品码或箱码')
+      return false
+    }
+    if (hasItem && hasBox) {
+      ElMessage.error('专装调拨明细不能同时录入单品码和箱码')
+      return false
+    }
+    if (Number(detail.quantity) !== 1) {
+      ElMessage.error('专装调拨数量必须为 1')
+      return false
+    }
+  }
+  return true
 }
 
 // 选择商品 start
@@ -477,6 +560,9 @@ const doSave = (movementOrderStatus = 0) => {
       if (invalidQuantityList?.length) {
         return ElMessage.error('请选择数量')
       }
+      if (!validateSpecialMovementDetails(form.value.details)) {
+        return
+      }
       // 构建参数
       details = form.value.details.map(it => {
         return {
@@ -495,6 +581,8 @@ const doSave = (movementOrderStatus = 0) => {
           productionDate: it.productionDate,
           expirationDate: it.expirationDate,
           inventoryDetailId: it.inventoryDetailId,
+          itemInstanceId: it.itemInstanceId,
+          boxId: it.boxId,
           sourceWarehouseId: form.value.sourceWarehouseId,
           sourceAreaId: it.sourceAreaId,
           targetWarehouseId: form.value.targetWarehouseId,
@@ -574,6 +662,9 @@ const doMovement = async () => {
     if (invalidQuantityList?.length) {
       return ElMessage.error('请选择移库数量')
     }
+    if (!validateSpecialMovementDetails(form.value.details)) {
+      return
+    }
     // 构建参数
     const details = form.value.details.map(it => {
       return {
@@ -585,6 +676,8 @@ const doMovement = async () => {
         productionDate: it.productionDate,
         expirationDate: it.expirationDate,
         inventoryDetailId: it.inventoryDetailId,
+        itemInstanceId: it.itemInstanceId,
+        boxId: it.boxId,
         sourceWarehouseId: form.value.sourceWarehouseId,
         sourceAreaId: it.sourceAreaId,
         targetWarehouseId: form.value.targetWarehouseId,

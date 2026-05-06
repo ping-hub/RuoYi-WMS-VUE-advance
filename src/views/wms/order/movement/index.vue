@@ -118,7 +118,23 @@
                     <div v-if="row.expirationDate">{{ parseTime(row.expirationDate, '{y}-{m}-{d}') }}</div>
                   </template>
                 </el-table-column>
+                <el-table-column label="专装对象" min-width="180">
+                  <template #default="{ row }">
+                    <div v-if="row.instanceCode">单品码：{{ row.instanceCode }}</div>
+                    <div v-if="row.boxCode" class="sub-text">箱码：{{ row.boxCode }}</div>
+                    <div v-if="!row.instanceCode && !row.boxCode">-</div>
+                  </template>
+                </el-table-column>
                 <el-table-column label="备注" prop="remark" min-width="140" show-overflow-tooltip />
+                <el-table-column label="追踪" min-width="180" align="center">
+                  <template #default="{ row }">
+                    <el-button v-if="row.instanceCode" link type="primary" @click="handleGoItem(row)">单品</el-button>
+                    <el-button v-if="row.instanceCode" link type="primary" @click="handleGoItemTrace(row)">单品追踪</el-button>
+                    <el-button v-if="row.boxCode" link type="primary" @click="handleGoBox(row)">箱体</el-button>
+                    <el-button v-if="row.boxCode" link type="primary" @click="handleGoBoxTrace(row)">箱体追踪</el-button>
+                    <span v-if="!row.instanceCode && !row.boxCode">-</span>
+                  </template>
+                </el-table-column>
               </el-table>
             </div>
           </template>
@@ -228,12 +244,14 @@
 import {listMovementOrder, delMovementOrder, getMovementOrder} from "@/api/wms/movementOrder";
 import {listByMovementOrderId} from "@/api/wms/movementOrderDetail";
 import {getCurrentInstance, reactive, ref, toRefs} from "vue";
+import { useRouter } from "vue-router";
 import {useWmsStore} from "../../../../store/modules/wms";
 import {ElMessageBox} from "element-plus";
 import WarehouseCascader from "@/views/components/WarehouseCascader.vue";
 import movementPanel from "@/components/PrintTemplate/movement-panel";
 
 const { proxy } = getCurrentInstance();
+const router = useRouter();
 const { wms_movement_status, wms_movement_type, wms_dispatch_mode, wms_basis_type, wms_quality_grade } = proxy.useDict(
   "wms_movement_status",
   "wms_movement_type",
@@ -339,6 +357,34 @@ function handleDelete(row) {
 
 function handleUpdate(row) {
   proxy.$router.push({ path: "/movementOrderEdit",  query: { id: row.id } });
+}
+
+function handleGoItem(row) {
+  if (!row.instanceCode) {
+    return;
+  }
+  router.push({ path: "/wms-item-instance/index", query: { instanceCode: row.instanceCode } });
+}
+
+function handleGoItemTrace(row) {
+  if (!row.instanceCode) {
+    return;
+  }
+  router.push({ path: "/wms-trace-item/index", query: { instanceCode: row.instanceCode } });
+}
+
+function handleGoBox(row) {
+  if (!row.boxCode) {
+    return;
+  }
+  router.push({ path: "/wms-box/index", query: { boxCode: row.boxCode } });
+}
+
+function handleGoBoxTrace(row) {
+  if (!row.boxCode) {
+    return;
+  }
+  router.push({ path: "/wms-trace-box/index", query: { boxCode: row.boxCode } });
 }
 
 function handleGoDetail(row) {
@@ -469,5 +515,10 @@ getList();
 }
 .el-table .vertical-top-cell {
   vertical-align: top
+}
+
+.sub-text {
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
 }
 </style>

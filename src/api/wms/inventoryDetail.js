@@ -51,3 +51,12 @@ export function delInventoryDetail(id) {
     method: 'delete'
   })
 }
+
+// 导出库存详情
+export function exportInventoryDetail(query) {
+  return request({
+    url: '/wms/inventoryDetail/export',
+    method: 'post',
+    params: query
+  })
+}

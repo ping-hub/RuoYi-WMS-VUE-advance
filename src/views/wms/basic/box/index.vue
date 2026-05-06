@@ -178,11 +178,18 @@
           <template #default="{ row }">
             <div>{{ row.itemName || '-' }}</div>
             <div v-if="row.skuName" class="sub-text">规格：{{ row.skuName }}</div>
+            <div v-if="row.productMark" class="sub-text">标识：{{ row.productMark }}</div>
           </template>
         </el-table-column>
         <el-table-column label="状态" width="100">
           <template #default="{ row }">
             <dict-tag :options="itemInstanceStatusOptions" :value="row.instanceStatus" />
+          </template>
+        </el-table-column>
+        <el-table-column label="质量/单位" min-width="180">
+          <template #default="{ row }">
+            <div>{{ row.qualityGrade || '-' }}</div>
+            <div class="sub-text">{{ row.belongUnit || '-' }}</div>
           </template>
         </el-table-column>
         <el-table-column label="批号/日期" min-width="180">
@@ -324,8 +331,8 @@
 </template>
 
 <script setup name="Box">
-import { computed, getCurrentInstance, onMounted, reactive, ref, toRefs } from 'vue';
-import { useRouter } from 'vue-router';
+import { computed, getCurrentInstance, onMounted, reactive, ref, toRefs, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import { ElMessageBox } from 'element-plus';
 import { addBox, delBox, getBox, listBox, packBox, unpackBox, updateBox } from '@/api/wms/box';
 import { listItem } from '@/api/wms/item';
@@ -336,6 +343,7 @@ import RackSelect from '@/views/components/RackSelect.vue';
 import LocationSelect from '@/views/components/LocationSelect.vue';
 
 const router = useRouter();
+const route = useRoute();
 const { proxy } = getCurrentInstance();
 const { wms_box_status, wms_item_instance_status } = proxy.useDict('wms_box_status', 'wms_item_instance_status');
 const wmsStore = useWmsStore();
@@ -421,6 +429,12 @@ const data = reactive({
 const { form, queryParams, rules } = toRefs(data);
 
 const itemInstanceStatusOptions = computed(() => wms_item_instance_status.value);
+
+const applyRouteQuery = () => {
+  if (route.query.boxCode) {
+    queryParams.value.boxCode = route.query.boxCode;
+  }
+};
 
 const queryAreaOptions = computed(() => {
   if (!queryParams.value.warehouseId) {
@@ -690,6 +704,7 @@ const handleTrace = (row) => {
 };
 
 onMounted(async () => {
+  applyRouteQuery();
   await Promise.all([
     wmsStore.getWarehouseList(),
     wmsStore.getAreaList(),
@@ -697,6 +712,14 @@ onMounted(async () => {
   ]);
   await getList();
 });
+
+watch(
+  () => route.query,
+  async () => {
+    applyRouteQuery();
+    await getList();
+  }
+);
 </script>
 
 <style scoped>

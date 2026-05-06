@@ -78,8 +78,9 @@
           </template>
         </el-table-column>
         <el-table-column label="备注" prop="remark" min-width="180" show-overflow-tooltip />
-        <el-table-column label="操作" align="right" width="160">
+        <el-table-column label="操作" align="right" width="240">
           <template #default="{ row }">
+            <el-button link type="primary" @click="handleViewStock(row)" v-hasPermi="['wms:location:list']">货位对象</el-button>
             <el-button link type="primary" icon="Edit" @click="handleUpdate(row)" v-hasPermi="['wms:location:edit']">修改</el-button>
             <el-button link type="primary" icon="Delete" @click="handleDelete(row)" v-hasPermi="['wms:location:edit']">删除</el-button>
           </template>
@@ -147,17 +148,84 @@
         </div>
       </template>
     </el-drawer>
+
+    <el-drawer title="货位对象" v-model="stockDialog.visible" append-to-body size="60%">
+      <el-descriptions :column="3" border class="mb16">
+        <el-descriptions-item label="货位">{{ stockDialog.data.locationName || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="货位编码">{{ stockDialog.data.locationCode || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="仓库">{{ stockDialog.data.warehouseName || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="库区">{{ stockDialog.data.areaName || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="货架">{{ stockDialog.data.rackName || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="直存单品数">{{ stockDialog.data.directItemCount || 0 }}</el-descriptions-item>
+        <el-descriptions-item label="箱体数">{{ stockDialog.data.boxCount || 0 }}</el-descriptions-item>
+      </el-descriptions>
+
+      <div class="detail-header">
+        <span class="detail-title">直存单品</span>
+      </div>
+      <el-table :data="stockDialog.data.itemInstances || []" border empty-text="当前货位暂无直存单品" cell-class-name="vertical-top-cell">
+        <el-table-column label="单品码" prop="instanceCode" min-width="170" />
+        <el-table-column label="商品/规格" min-width="200">
+          <template #default="{ row }">
+            <div>{{ row.itemName || '-' }}</div>
+            <div class="sub-text">{{ row.skuName || '-' }}</div>
+          </template>
+        </el-table-column>
+        <el-table-column label="状态" min-width="160">
+          <template #default="{ row }">
+            <el-tag size="small" :type="row.inBox === 1 ? 'warning' : 'info'">{{ row.inBox === 1 ? '在箱' : '直存' }}</el-tag>
+            <el-tag size="small" class="ml5" :type="row.borrowed === 1 ? 'danger' : 'success'">{{ row.borrowed === 1 ? '已借出' : '在库' }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="产品标识/所在单位" min-width="220">
+          <template #default="{ row }">
+            <div>{{ row.productMark || '-' }}</div>
+            <div class="sub-text">{{ row.belongUnit || '-' }}</div>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="140" align="right">
+          <template #default="{ row }">
+            <el-button link type="primary" @click="handleOpenItemInstance(row)">单品详情</el-button>
+            <el-button link type="primary" @click="handleTraceItem(row)">追踪</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+
+      <div class="detail-header mt20">
+        <span class="detail-title">箱体对象</span>
+      </div>
+      <el-table :data="stockDialog.data.boxes || []" border empty-text="当前货位暂无箱体" cell-class-name="vertical-top-cell">
+        <el-table-column label="箱码" prop="boxCode" min-width="170" />
+        <el-table-column label="箱体名称" prop="boxName" min-width="150" />
+        <el-table-column label="状态" min-width="100">
+          <template #default="{ row }">
+            <dict-tag :options="wms_box_status" :value="row.boxStatus" />
+          </template>
+        </el-table-column>
+        <el-table-column label="箱内数量" prop="itemCount" min-width="100" align="right" />
+        <el-table-column label="备注" prop="remark" min-width="180" show-overflow-tooltip />
+        <el-table-column label="操作" width="140" align="right">
+          <template #default="{ row }">
+            <el-button link type="primary" @click="handleOpenBox(row)">箱体详情</el-button>
+            <el-button link type="primary" @click="handleTraceBox(row)">追踪</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-drawer>
   </div>
 </template>
 
 <script setup name="Location">
 import { computed, getCurrentInstance, onMounted, reactive, ref, toRefs } from 'vue';
-import { addLocation, delLocation, getLocation, listLocation, updateLocation } from '@/api/wms/location';
+import { useRoute, useRouter } from 'vue-router';
+import { addLocation, delLocation, getLocation, getLocationStock, listLocation, updateLocation } from '@/api/wms/location';
 import { useWmsStore } from '@/store/modules/wms';
 import RackSelect from '@/views/components/RackSelect.vue';
 
 const { proxy } = getCurrentInstance();
-const { wms_location_status, wms_location_type } = proxy.useDict('wms_location_status', 'wms_location_type');
+const router = useRouter();
+const route = useRoute();
+const { wms_location_status, wms_location_type, wms_box_status } = proxy.useDict('wms_location_status', 'wms_location_type', 'wms_box_status');
 const wmsStore = useWmsStore();
 
 const locationList = ref([]);
@@ -167,6 +235,10 @@ const buttonLoading = ref(false);
 const total = ref(0);
 const title = ref('');
 const ids = ref([]);
+const stockDialog = reactive({
+  visible: false,
+  data: {}
+});
 
 const data = reactive({
   form: {},
@@ -317,12 +389,37 @@ async function handleDelete(row) {
   await getList();
 }
 
+async function handleViewStock(row) {
+  const res = await getLocationStock(row.id);
+  stockDialog.data = res.data || {};
+  stockDialog.visible = true;
+}
+
+const handleOpenItemInstance = (row) => {
+  router.push({ path: '/wms-item-instance/index', query: { instanceCode: row.instanceCode } });
+};
+
+const handleTraceItem = (row) => {
+  router.push({ path: '/wms-trace-item/index', query: { instanceCode: row.instanceCode } });
+};
+
+const handleOpenBox = (row) => {
+  router.push({ path: '/wms-box/index', query: { boxCode: row.boxCode } });
+};
+
+const handleTraceBox = (row) => {
+  router.push({ path: '/wms-trace-box/index', query: { boxCode: row.boxCode } });
+};
+
 onMounted(async () => {
   await Promise.all([
     wmsStore.getWarehouseList(),
     wmsStore.getAreaList()
   ]);
   await getList();
+  if (route.query.locationId) {
+    await handleViewStock({ id: Number(route.query.locationId) });
+  }
 });
 </script>
 
@@ -330,5 +427,21 @@ onMounted(async () => {
 .sub-text {
   color: var(--el-text-color-secondary);
   font-size: 12px;
+}
+
+.detail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.detail-title {
+  font-size: 16px;
+  line-height: 16px;
+}
+
+.mb16 {
+  margin-bottom: 16px;
 }
 </style>

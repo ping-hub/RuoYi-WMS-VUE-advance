@@ -76,18 +76,7 @@
         <div class="receipt-order-content">
           <div class="flex-space-between mb8">
             <div>
-              <span>一物一码/SN模式：</span>
-              <el-switch
-                :before-change="goSaasTip"
-                class="mr10 ml10"
-                inline-prompt
-                size="large"
-                v-model="mode"
-                :active-value="true"
-                :inactive-value="false"
-                active-text="开启"
-                inactive-text="关闭"
-              />
+              <el-tag type="info">盘点完成后请结合单品实例和箱体追踪复核位置与状态</el-tag>
             </div>
                   <el-button type="primary" plain="plain" size="default" @click="showSkuSelect" icon="Plus"
                              :disabled="!form.warehouseId">新增库存
@@ -114,6 +103,14 @@
                 <template v-else>
                   <div>{{ row.itemSku.skuName + (row.itemSku.barcode ? ('(' + row.itemSku.barcode + ')') : '') }}</div>
                 </template>
+                <div class="hover-text" v-if="row.specModel || row.itemSku?.specModel">规格型号：{{ row.specModel || row.itemSku?.specModel }}</div>
+              </template>
+            </el-table-column>
+            <el-table-column label="器材/标识" min-width="220">
+              <template #default="{ row }">
+                <div>器材编码：{{ row.equipmentCode || row.itemSku?.item?.itemCode || '-' }}</div>
+                <div>产品标识：{{ row.productMark || '-' }}</div>
+                <div>质量等级：{{ row.qualityGrade || '-' }}</div>
               </template>
             </el-table-column>
             <el-table-column label="库区" prop="areaName" width="200">
@@ -205,8 +202,17 @@
                 ></el-input-number>
               </template>
             </el-table-column>
-            <el-table-column label="操作" width="100" align="right" fixed="right">
+            <el-table-column label="操作" width="140" align="right" fixed="right">
               <template #default="scope">
+                <el-button
+                  v-if="scope.row.receiptOrderDetailId"
+                  icon="View"
+                  type="primary"
+                  plain
+                  size="small"
+                  @click="handleGoInstances(scope.row)"
+                  link
+                >实例</el-button>
                 <el-button icon="Delete" type="danger" plain size="small" v-if="scope.row.newInventoryDetail"
                            @click="handleDeleteDetail(scope.row, scope.$index)" link>删除
                 </el-button>
@@ -244,12 +250,13 @@ import {addCheckOrder, getCheckOrder, updateCheckOrder, check} from "@/api/wms/c
 import {delCheckOrderDetail} from "@/api/wms/checkOrderDetail";
 import {listInventoryDetailNoPage} from "@/api/wms/inventoryDetail";
 import {ElMessage, ElMessageBox} from "element-plus";
-import {useRoute} from "vue-router";
+import {useRoute, useRouter} from "vue-router";
 import {useWmsStore} from '@/store/modules/wms'
 import {numSub, generateNo} from '@/utils/ruoyi'
 import SkuSelect from "@/views/components/SkuSelect.vue";
 
 const {proxy} = getCurrentInstance();
+const router = useRouter();
 const {wms_shipment_type} = proxy.useDict("wms_shipment_type");
 const checkGreaterThanZero = ref(false)
 const loading = ref(false)
@@ -314,6 +321,11 @@ const startCheck = () => {
             quantity: Number(it.remainQuantity),
             checkQuantity: Number(it.remainQuantity),
             areaName: useWmsStore().areaMap.get(it.areaId)?.areaName,
+            equipmentCode: it.equipmentCode,
+            specModel: it.specModel,
+            productMark: it.productMark,
+            qualityGrade: it.qualityGrade,
+            receiptOrderDetailId: it.receiptOrderDetailId,
             batchNo: it.batchNo,
             productionDate: it.productionDate,
             expirationDate: it.expirationDate,
@@ -340,6 +352,11 @@ const handleOkClick = (item) => {
           quantity: 0,
           checkQuantity: 0,
           areaName: useWmsStore().areaMap.get(form.value.areaId)?.areaName,
+          equipmentCode: it.item?.itemCode,
+          specModel: it.specModel,
+          productMark: undefined,
+          qualityGrade: it.item?.defaultQualityGrade,
+          receiptOrderDetailId: undefined,
           batchNo: undefined,
           productionDate: undefined,
           expirationDate: undefined,
@@ -532,11 +549,13 @@ const handleChangeQuantity = () => {
   form.value.checkOrderTotal = checkOrderTotal
 }
 
-const goSaasTip = () => {
-  ElMessageBox.alert('一物一码/SN模式请去Saas版本体验！', '系统提示', {
-    confirmButtonText: '确定'
+const handleGoInstances = (row) => {
+  router.push({
+    path: '/wms-item-instance/index',
+    query: {
+      receiptOrderDetailId: row.receiptOrderDetailId
+    }
   })
-  return false
 }
 
 </script>
