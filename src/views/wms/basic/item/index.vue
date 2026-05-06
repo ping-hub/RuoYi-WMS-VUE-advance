@@ -8,6 +8,12 @@
         <el-form-item label="商品名称" prop="itemName">
           <el-input v-model="queryParams.itemName" placeholder="请输入商品名称" clearable @keyup.enter="handleQuery" />
         </el-form-item>
+        <el-form-item label="装备名称" prop="equipmentName">
+          <el-input v-model="queryParams.equipmentName" placeholder="请输入装备名称" clearable @keyup.enter="handleQuery" />
+        </el-form-item>
+        <el-form-item label="规格型号" prop="modelText">
+          <el-input v-model="queryParams.modelText" placeholder="请输入规格型号" clearable @keyup.enter="handleQuery" />
+        </el-form-item>
         <el-form-item label="物品类型" prop="itemType">
           <el-select v-model="queryParams.itemType" placeholder="请选择物品类型" clearable style="width: 160px">
             <el-option v-for="dict in wms_item_type" :key="dict.value" :label="dict.label" :value="dict.value" />
@@ -26,6 +32,11 @@
         <el-form-item label="规格等级" prop="specLevel">
           <el-select v-model="queryParams.specLevel" placeholder="请选择规格等级" clearable style="width: 160px">
             <el-option v-for="dict in wms_spec_level" :key="dict.value" :label="dict.label" :value="dict.value" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="质量等级" prop="defaultQualityGrade">
+          <el-select v-model="queryParams.defaultQualityGrade" placeholder="请选择质量等级" clearable style="width: 160px">
+            <el-option v-for="dict in wms_quality_grade" :key="dict.value" :label="dict.label" :value="dict.value" />
           </el-select>
         </el-form-item>
         <el-form-item>
@@ -98,6 +109,8 @@
           <el-table v-loading="loading" :data="itemList" border empty-text="暂无商品">
             <el-table-column label="商品编号" prop="itemCode" min-width="120" />
             <el-table-column label="商品名称" prop="itemName" min-width="180" />
+            <el-table-column label="装备名称" prop="equipmentName" min-width="160" show-overflow-tooltip />
+            <el-table-column label="规格型号" prop="modelText" min-width="160" show-overflow-tooltip />
             <el-table-column label="商品分类" min-width="140">
               <template #default="{ row }">
                 {{ getCategoryName(row.itemCategory) }}
@@ -129,6 +142,12 @@
                 <dict-tag :options="wms_spec_level" :value="row.specLevel" />
               </template>
             </el-table-column>
+            <el-table-column label="默认质量等级" width="130">
+              <template #default="{ row }">
+                <dict-tag :options="wms_quality_grade" :value="row.defaultQualityGrade" />
+              </template>
+            </el-table-column>
+            <el-table-column label="产品标识规则" prop="productMarkRule" min-width="160" show-overflow-tooltip />
             <el-table-column label="备注" prop="remark" min-width="180" show-overflow-tooltip />
             <el-table-column label="操作" align="right" width="160">
               <template #default="{ row }">
@@ -201,6 +220,13 @@
               </el-form-item>
             </el-col>
             <el-col :span="12">
+              <el-form-item label="装备名称" prop="equipmentName">
+                <el-input v-model="form.equipmentName" placeholder="请输入装备名称" />
+              </el-form-item>
+            </el-col>
+          </el-row>
+          <el-row :gutter="20">
+            <el-col :span="12">
               <el-form-item label="物品类型" prop="itemType">
                 <el-select v-model="form.itemType" placeholder="请选择物品类型" style="width: 100%">
                   <el-option v-for="dict in wms_item_type" :key="dict.value" :label="dict.label" :value="dict.value" />
@@ -234,6 +260,27 @@
               </el-form-item>
             </el-col>
             <el-col :span="12">
+              <el-form-item label="默认质量等级" prop="defaultQualityGrade">
+                <el-select v-model="form.defaultQualityGrade" placeholder="请选择质量等级" clearable style="width: 100%">
+                  <el-option v-for="dict in wms_quality_grade" :key="dict.value" :label="dict.label" :value="dict.value" />
+                </el-select>
+              </el-form-item>
+            </el-col>
+          </el-row>
+          <el-row :gutter="20">
+            <el-col :span="12">
+              <el-form-item label="规格型号文本" prop="modelText">
+                <el-input v-model="form.modelText" placeholder="请输入规格型号文本" />
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item label="产品标识规则" prop="productMarkRule">
+                <el-input v-model="form.productMarkRule" placeholder="请输入产品标识规则" />
+              </el-form-item>
+            </el-col>
+          </el-row>
+          <el-row :gutter="20">
+            <el-col :span="12">
               <el-form-item label="备注" prop="remark">
                 <el-input v-model="form.remark" placeholder="请输入备注" />
               </el-form-item>
@@ -255,6 +302,18 @@
                 <el-form-item :prop="'itemSkuList.' + $index + '.skuName'" :rules="skuRules.skuName" style="margin-bottom: 0">
                   <el-input v-model="row.skuName" placeholder="请输入规格名称" />
                 </el-form-item>
+              </template>
+            </el-table-column>
+            <el-table-column label="规格型号/默认单价" width="240">
+              <template #default="{ row }">
+                <div class="flex-center">
+                  <span class="field-label">型号</span>
+                  <el-input v-model="row.specModel" placeholder="规格型号" />
+                </div>
+                <div class="flex-center mt5">
+                  <span class="field-label">单价</span>
+                  <el-input-number v-model="row.defaultUnitPrice" :controls="false" :min="0" :precision="2" />
+                </div>
               </template>
             </el-table-column>
             <el-table-column label="编号/条码" width="260">
@@ -370,10 +429,11 @@ import { useWmsStore } from '@/store/modules/wms';
 
 const route = useRoute();
 const { proxy } = getCurrentInstance();
-const { wms_item_type, wms_tracking_mode, wms_spec_level } = proxy.useDict(
+const { wms_item_type, wms_tracking_mode, wms_spec_level, wms_quality_grade } = proxy.useDict(
   'wms_item_type',
   'wms_tracking_mode',
-  'wms_spec_level'
+  'wms_spec_level',
+  'wms_quality_grade'
 );
 const wmsStore = useWmsStore();
 
@@ -412,6 +472,10 @@ const initFormData = () => ({
   trackingMode: 'batch',
   allowBox: 0,
   specLevel: 'single',
+  equipmentName: undefined,
+  defaultQualityGrade: undefined,
+  productMarkRule: undefined,
+  modelText: undefined,
   remark: undefined,
   sku: []
 });
@@ -428,6 +492,8 @@ const createEmptySku = () => ({
   skuName: '',
   skuCode: '',
   barcode: '',
+  specModel: '',
+  defaultUnitPrice: undefined,
   length: undefined,
   width: undefined,
   height: undefined,
@@ -444,11 +510,14 @@ const data = reactive({
     pageSize: 10,
     itemCode: undefined,
     itemName: undefined,
+    equipmentName: undefined,
+    modelText: undefined,
     itemCategory: undefined,
     itemType: undefined,
     trackingMode: undefined,
     allowBox: undefined,
-    specLevel: undefined
+    specLevel: undefined,
+    defaultQualityGrade: undefined
   },
   rules: {
     itemName: [

@@ -10,6 +10,12 @@
         <el-form-item label="借用人" prop="borrower">
           <el-input v-model="queryParams.borrower" placeholder="请输入借用人" clearable @keyup.enter="handleQuery" />
         </el-form-item>
+        <el-form-item label="发货单位" prop="fromUnit">
+          <el-input v-model="queryParams.fromUnit" placeholder="请输入发货单位" clearable @keyup.enter="handleQuery" />
+        </el-form-item>
+        <el-form-item label="收货单位" prop="toUnit">
+          <el-input v-model="queryParams.toUnit" placeholder="请输入收货单位" clearable @keyup.enter="handleQuery" />
+        </el-form-item>
         <el-form-item label="单品码" prop="instanceCode">
           <el-input v-model="queryParams.instanceCode" placeholder="请输入单品码" clearable @keyup.enter="handleInstanceCodeQuery" />
         </el-form-item>
@@ -55,6 +61,11 @@
         <el-table-column label="借用信息" min-width="220">
           <template #default="{ row }">
             <div>借用人：{{ row.borrower }}</div>
+            <div v-if="row.fromUnit || row.toUnit" class="sub-text">单位：{{ row.fromUnit || '-' }} -> {{ row.toUnit || '-' }}</div>
+            <div v-if="row.fromPerson || row.toPerson" class="sub-text">经手：{{ row.fromPerson || '-' }} / {{ row.toPerson || '-' }}</div>
+            <div v-if="row.docDate" class="sub-text">单据日期：{{ parseTime(row.docDate, '{y}-{m}-{d}') }}</div>
+            <div v-if="row.productMark" class="sub-text">产品标识：{{ row.productMark }}</div>
+            <div v-if="row.qualityGrade" class="sub-text">质量等级：{{ proxy.selectDictLabel(wms_quality_grade, row.qualityGrade) || row.qualityGrade }}</div>
             <div class="sub-text">借用时间：{{ row.borrowTime ? parseTime(row.borrowTime, '{y}-{m}-{d} {h}:{i}:{s}') : '-' }}</div>
             <div v-if="row.borrowRemark" class="sub-text">借用备注：{{ row.borrowRemark }}</div>
           </template>
@@ -145,6 +156,53 @@
             </el-form-item>
           </el-col>
         </el-row>
+        <el-row :gutter="20">
+          <el-col :span="12">
+            <el-form-item label="发货单位" prop="fromUnit">
+              <el-input v-model="borrowDialog.form.fromUnit" placeholder="请输入发货单位" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="收货单位" prop="toUnit">
+              <el-input v-model="borrowDialog.form.toUnit" placeholder="请输入收货单位" />
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row :gutter="20">
+          <el-col :span="12">
+            <el-form-item label="发货人" prop="fromPerson">
+              <el-input v-model="borrowDialog.form.fromPerson" placeholder="请输入发货人" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="收货人" prop="toPerson">
+              <el-input v-model="borrowDialog.form.toPerson" placeholder="请输入收货人" />
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row :gutter="20">
+          <el-col :span="12">
+            <el-form-item label="单据日期" prop="docDate">
+              <el-date-picker
+                v-model="borrowDialog.form.docDate"
+                type="date"
+                format="YYYY-MM-DD"
+                value-format="YYYY-MM-DD"
+                style="width: 100%"
+              />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="质量等级" prop="qualityGrade">
+              <el-select v-model="borrowDialog.form.qualityGrade" placeholder="请选择质量等级" clearable style="width: 100%">
+                <el-option v-for="dict in wms_quality_grade" :key="dict.value" :label="dict.label" :value="dict.value" />
+              </el-select>
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-form-item label="产品标识" prop="productMark">
+          <el-input v-model="borrowDialog.form.productMark" placeholder="请输入产品标识" />
+        </el-form-item>
         <el-form-item label="借用备注" prop="borrowRemark">
           <el-input v-model="borrowDialog.form.borrowRemark" type="textarea" :rows="3" placeholder="请输入借用备注" />
         </el-form-item>
@@ -218,6 +276,13 @@
         <el-descriptions-item label="规格">{{ detailDialog.data.skuName || '-' }}</el-descriptions-item>
         <el-descriptions-item label="借用人">{{ detailDialog.data.borrower || '-' }}</el-descriptions-item>
         <el-descriptions-item label="借用时间">{{ detailDialog.data.borrowTime ? parseTime(detailDialog.data.borrowTime, '{y}-{m}-{d} {h}:{i}:{s}') : '-' }}</el-descriptions-item>
+        <el-descriptions-item label="发货单位">{{ detailDialog.data.fromUnit || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="收货单位">{{ detailDialog.data.toUnit || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="发货人">{{ detailDialog.data.fromPerson || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="收货人">{{ detailDialog.data.toPerson || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="单据日期">{{ detailDialog.data.docDate ? parseTime(detailDialog.data.docDate, '{y}-{m}-{d}') : '-' }}</el-descriptions-item>
+        <el-descriptions-item label="质量等级">{{ proxy.selectDictLabel(wms_quality_grade, detailDialog.data.qualityGrade) || detailDialog.data.qualityGrade || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="产品标识" :span="2">{{ detailDialog.data.productMark || '-' }}</el-descriptions-item>
         <el-descriptions-item label="借用备注" :span="2">{{ detailDialog.data.borrowRemark || '-' }}</el-descriptions-item>
         <el-descriptions-item label="原位置" :span="2">{{ getOriginalLocationText(detailDialog.data) }}</el-descriptions-item>
         <el-descriptions-item label="归还时间">{{ detailDialog.data.returnTime ? parseTime(detailDialog.data.returnTime, '{y}-{m}-{d} {h}:{i}:{s}') : '-' }}</el-descriptions-item>
@@ -244,7 +309,7 @@ import { listItemInstance, getItemInstanceByCode, getItemInstance } from '@/api/
 const router = useRouter();
 const route = useRoute();
 const { proxy } = getCurrentInstance();
-const { wms_borrow_status, wms_item_instance_status } = proxy.useDict('wms_borrow_status', 'wms_item_instance_status');
+const { wms_borrow_status, wms_item_instance_status, wms_quality_grade } = proxy.useDict('wms_borrow_status', 'wms_item_instance_status', 'wms_quality_grade');
 
 const loading = ref(true);
 const buttonLoading = ref(false);
@@ -261,6 +326,8 @@ const queryParams = reactive({
   itemInstanceId: undefined,
   borrowStatus: undefined,
   borrower: undefined,
+  fromUnit: undefined,
+  toUnit: undefined,
   instanceCode: undefined
 });
 
@@ -269,6 +336,13 @@ const borrowDialog = reactive({
   form: {
     itemInstanceId: undefined,
     borrower: undefined,
+    fromUnit: undefined,
+    toUnit: undefined,
+    fromPerson: undefined,
+    toPerson: undefined,
+    docDate: undefined,
+    productMark: undefined,
+    qualityGrade: undefined,
     borrowTime: undefined,
     borrowRemark: undefined
   },
@@ -412,6 +486,8 @@ const resetQuery = async () => {
   queryParams.itemInstanceId = undefined;
   queryParams.borrowStatus = undefined;
   queryParams.borrower = undefined;
+  queryParams.fromUnit = undefined;
+  queryParams.toUnit = undefined;
   queryParams.instanceCode = undefined;
   applyRouteQuery();
   if (queryParams.instanceCode) {
@@ -426,6 +502,13 @@ const handleBorrow = async (row) => {
   borrowDialog.form = {
     itemInstanceId: row?.itemInstanceId || row?.id,
     borrower: undefined,
+    fromUnit: undefined,
+    toUnit: undefined,
+    fromPerson: undefined,
+    toPerson: undefined,
+    docDate: undefined,
+    productMark: undefined,
+    qualityGrade: undefined,
     borrowTime: undefined,
     borrowRemark: undefined
   };
@@ -443,6 +526,8 @@ const handleBorrowInstanceChange = async (itemInstanceId) => {
   }
   const res = await getItemInstance(itemInstanceId);
   borrowDialog.currentItem = res.data || {};
+  borrowDialog.form.productMark = borrowDialog.form.productMark || res.data?.productMark;
+  borrowDialog.form.qualityGrade = borrowDialog.form.qualityGrade || res.data?.qualityGrade;
 };
 
 const submitBorrow = () => {

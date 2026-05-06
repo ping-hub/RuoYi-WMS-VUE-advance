@@ -33,6 +33,11 @@
         <el-form-item label="目标仓库库区" prop="targetPlace">
           <WarehouseCascader v-model:value="queryParams.targetPlace" :show-all-levels="true" size="default" @keyup.enter="handleQuery"></WarehouseCascader>
         </el-form-item>
+        <el-form-item label="调拨类型" prop="movementType">
+          <el-select v-model="queryParams.movementType" placeholder="请选择调拨类型" clearable style="width: 160px">
+            <el-option v-for="item in wms_movement_type" :key="item.value" :label="item.label" :value="item.value" />
+          </el-select>
+        </el-form-item>
         <el-form-item>
           <el-button type="primary" icon="Search" @click="handleQuery">搜索</el-button>
           <el-button icon="Refresh" @click="resetQuery">重置</el-button>
@@ -77,8 +82,26 @@
                     <div>{{ row?.itemSku?.skuName }}</div>
                   </template>
                 </el-table-column>
+                <el-table-column label="器材编码" prop="equipmentCode" min-width="120" />
+                <el-table-column label="规格型号" prop="specModel" min-width="140" />
+                <el-table-column label="产品标识" prop="productMark" min-width="140" />
+                <el-table-column label="质量等级" min-width="120">
+                  <template #default="{ row }">
+                    <dict-tag :options="wms_quality_grade" :value="row.qualityGrade" />
+                  </template>
+                </el-table-column>
                 <el-table-column label="源库区" prop="sourceAreaName"/>
                 <el-table-column label="目标库区" prop="targetAreaName"/>
+                <el-table-column label="单价(元)" align="right">
+                  <template #default="{ row }">
+                    <el-statistic :value="row.unitPrice ?? '-'" :precision="2" />
+                  </template>
+                </el-table-column>
+                <el-table-column label="总价(元)" align="right">
+                  <template #default="{ row }">
+                    <el-statistic :value="row.lineAmount ?? '-'" :precision="2" />
+                  </template>
+                </el-table-column>
                 <el-table-column label="数量" prop="quantity" align="right">
                   <template #default="{ row }">
                     <el-statistic :value="Number(row.quantity)" :precision="0"/>
@@ -95,11 +118,25 @@
                     <div v-if="row.expirationDate">{{ parseTime(row.expirationDate, '{y}-{m}-{d}') }}</div>
                   </template>
                 </el-table-column>
+                <el-table-column label="备注" prop="remark" min-width="140" show-overflow-tooltip />
               </el-table>
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="单号" align="left" prop="movementOrderNo" />
+        <el-table-column label="单号/调拨" align="left" min-width="180">
+          <template #default="{ row }">
+            <div>单号：{{ row.movementOrderNo }}</div>
+            <div v-if="row.dispatchBasis">依据：{{ proxy.selectDictLabel(wms_basis_type.value, row.dispatchBasis) }}</div>
+          </template>
+        </el-table-column>
+        <el-table-column label="调拨信息" align="left" min-width="220">
+          <template #default="{ row }">
+            <div v-if="row.movementType">类型：{{ proxy.selectDictLabel(wms_movement_type.value, row.movementType) }}</div>
+            <div v-if="row.dispatchMode">方式：{{ proxy.selectDictLabel(wms_dispatch_mode.value, row.dispatchMode) }}</div>
+            <div v-if="row.supportNo">保障号：{{ row.supportNo }}</div>
+            <div v-if="row.dispatchDate">调拨日期：{{ parseTime(row.dispatchDate, '{y}-{m}-{d}') }}</div>
+          </template>
+        </el-table-column>
         <el-table-column label="源仓库/源库区" align="left" width="260">
           <template #default="{ row }">
             <div>源仓库：{{ useWmsStore().warehouseMap.get(row.sourceWarehouseId)?.warehouseName }}</div>
@@ -197,7 +234,13 @@ import WarehouseCascader from "@/views/components/WarehouseCascader.vue";
 import movementPanel from "@/components/PrintTemplate/movement-panel";
 
 const { proxy } = getCurrentInstance();
-const { wms_movement_status } = proxy.useDict("wms_movement_status");
+const { wms_movement_status, wms_movement_type, wms_dispatch_mode, wms_basis_type, wms_quality_grade } = proxy.useDict(
+  "wms_movement_status",
+  "wms_movement_type",
+  "wms_dispatch_mode",
+  "wms_basis_type",
+  "wms_quality_grade"
+);
 const movementOrderList = ref([]);
 const open = ref(false);
 const buttonLoading = ref(false);
@@ -216,7 +259,8 @@ const data = reactive({
     movementOrderNo: undefined,
     movementOrderStatus: -2,
     sourcePlace: undefined,
-    targetPlace: undefined
+    targetPlace: undefined,
+    movementType: undefined
   },
 });
 
@@ -236,6 +280,9 @@ function getList() {
   if (query.targetPlace?.length) {
     query.targetWarehouseId = query.targetPlace[0]
     query.targetAreaId = query.targetPlace[1]
+  }
+  if (!query.movementType) {
+    delete query.movementType
   }
   listMovementOrder(query).then(response => {
     movementOrderList.value = response.rows;
@@ -318,6 +365,12 @@ async function handlePrint(row) {
         skuName: detail.itemSku.skuName,
         sourceAreaName: useWmsStore().areaMap.get(detail.sourceAreaId)?.areaName,
         targetAreaName: useWmsStore().areaMap.get(detail.targetAreaId)?.areaName,
+        equipmentCode: detail.equipmentCode,
+        specModel: detail.specModel,
+        productMark: detail.productMark,
+        qualityGrade: detail.qualityGrade,
+        unitPrice: detail.unitPrice,
+        lineAmount: detail.lineAmount,
         quantity: Number(detail.quantity).toFixed(0),
         batchNo: detail.batchNo,
         productionDate: proxy.parseTime(detail.productionDate, '{y}-{m}-{d}'),
@@ -328,6 +381,23 @@ async function handlePrint(row) {
   const printData = {
     movementOrderNo: movementOrder.movementOrderNo,
     movementOrderStatus: proxy.selectDictLabel(wms_movement_status.value, movementOrder.movementOrderStatus),
+    movementType: proxy.selectDictLabel(wms_movement_type.value, movementOrder.movementType),
+    dispatchBasis: proxy.selectDictLabel(wms_basis_type.value, movementOrder.dispatchBasis),
+    dispatchMode: proxy.selectDictLabel(wms_dispatch_mode.value, movementOrder.dispatchMode),
+    dispatchPurpose: movementOrder.dispatchPurpose,
+    supportNo: movementOrder.supportNo,
+    fromUnit: movementOrder.fromUnit,
+    toUnit: movementOrder.toUnit,
+    fromStation: movementOrder.fromStation,
+    toStation: movementOrder.toStation,
+    fromAddress: movementOrder.fromAddress,
+    toAddress: movementOrder.toAddress,
+    contactAddress: movementOrder.contactAddress,
+    dispatchDate: proxy.parseTime(movementOrder.dispatchDate, '{y}-{m}-{d}'),
+    effectiveDate: proxy.parseTime(movementOrder.effectiveDate, '{y}-{m}-{d}'),
+    issueDate: proxy.parseTime(movementOrder.issueDate, '{y}-{m}-{d}'),
+    fromHandler: movementOrder.fromHandler,
+    toHandler: movementOrder.toHandler,
     sourceWarehouseName: useWmsStore().warehouseMap.get(movementOrder.sourceWarehouseId)?.warehouseName,
     sourceAreaName: useWmsStore().areaMap.get(movementOrder.sourceAreaId)?.areaName,
     targetWarehouseName: useWmsStore().warehouseMap.get(movementOrder.targetWarehouseId)?.warehouseName,

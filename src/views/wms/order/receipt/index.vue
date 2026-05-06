@@ -52,6 +52,22 @@
             @keyup.enter="handleQuery"
           />
         </el-form-item>
+        <el-form-item label="调拨根据" prop="basisNo">
+          <el-input
+            v-model="queryParams.basisNo"
+            placeholder="请输入调拨根据"
+            clearable
+            @keyup.enter="handleQuery"
+          />
+        </el-form-item>
+        <el-form-item label="收物单位" prop="receiveUnit">
+          <el-input
+            v-model="queryParams.receiveUnit"
+            placeholder="请输入收物单位"
+            clearable
+            @keyup.enter="handleQuery"
+          />
+        </el-form-item>
         <el-form-item>
           <el-button type="primary" icon="Search" @click="handleQuery">搜索</el-button>
           <el-button icon="Refresh" @click="resetQuery">重置</el-button>
@@ -96,6 +112,14 @@
                     <div>{{ row?.itemSku?.skuName }}</div>
                   </template>
                 </el-table-column>
+                <el-table-column label="器材编码" prop="equipmentCode" min-width="120" />
+                <el-table-column label="规格型号" prop="specModel" min-width="140" />
+                <el-table-column label="产品标识" prop="productMark" min-width="140" />
+                <el-table-column label="质量等级" min-width="120">
+                  <template #default="{ row }">
+                    <dict-tag :options="wms_quality_grade" :value="row.qualityGrade" />
+                  </template>
+                </el-table-column>
                 <el-table-column label="追踪模式" width="120">
                   <template #default="{ row }">
                     <dict-tag :options="wms_tracking_mode" :value="row?.itemSku?.item?.trackingMode" />
@@ -107,9 +131,14 @@
                     <el-statistic :value="Number(row.quantity)" :precision="0"/>
                   </template>
                 </el-table-column>
-                <el-table-column label="价格(元)" align="right">
+                <el-table-column label="单价(元)" align="right">
                   <template #default="{ row }">
-                    <el-statistic :precision="2" :value="row.amount? Number(row.amount):'-'"/>
+                    <el-statistic :precision="2" :value="row.unitPrice ?? '-'"/>
+                  </template>
+                </el-table-column>
+                <el-table-column label="总价(元)" align="right">
+                  <template #default="{ row }">
+                    <el-statistic :precision="2" :value="row.lineAmount ?? row.amount ?? '-'"/>
                   </template>
                 </el-table-column>
                 <el-table-column label="批号" prop="batchNo" />
@@ -143,6 +172,7 @@
                     >查看实例</el-button>
                   </template>
                 </el-table-column>
+                <el-table-column label="备注" prop="remark" min-width="140" show-overflow-tooltip />
               </el-table>
             </div>
           </template>
@@ -151,6 +181,7 @@
           <template #default="{ row }">
             <div>单号：{{ row.receiptOrderNo }}</div>
             <div v-if="row.orderNo">订单号：{{ row.orderNo }}</div>
+            <div v-if="row.basisNo">调拨根据：{{ row.basisNo }}</div>
           </template>
         </el-table-column>
         <el-table-column label="入库类型" align="left" prop="receiptOrderType">
@@ -167,6 +198,14 @@
           <template #default="{ row }">
             <div>仓库：{{ useWmsStore().warehouseMap.get(row.warehouseId)?.warehouseName }}</div>
             <div v-if="row.areaId">库区：{{ useWmsStore().areaMap.get(row.areaId)?.areaName }}</div>
+          </template>
+        </el-table-column>
+        <el-table-column label="单据信息" align="left" min-width="220">
+          <template #default="{ row }">
+            <div v-if="row.receiveUnit">收物单位：{{ row.receiveUnit }}</div>
+            <div v-if="row.noticeOrg">通知机关：{{ row.noticeOrg }}</div>
+            <div v-if="row.dispatchMode">调拨方式：{{ proxy.selectDictLabel(wms_dispatch_mode.value, row.dispatchMode) }}</div>
+            <div v-if="row.receiptDate">入库日期：{{ parseTime(row.receiptDate, '{y}-{m}-{d}') }}</div>
           </template>
         </el-table-column>
         <el-table-column label="入库状态" align="center" prop="receiptOrderStatus" width="120">
@@ -263,7 +302,13 @@ import {ElMessageBox} from "element-plus";
 import receiptPanel from "@/components/PrintTemplate/receipt-panel";
 
 const { proxy } = getCurrentInstance();
-const { wms_receipt_status, wms_receipt_type, wms_tracking_mode } = proxy.useDict("wms_receipt_status", "wms_receipt_type", "wms_tracking_mode");
+const { wms_receipt_status, wms_receipt_type, wms_tracking_mode, wms_dispatch_mode, wms_quality_grade } = proxy.useDict(
+  "wms_receipt_status",
+  "wms_receipt_type",
+  "wms_tracking_mode",
+  "wms_dispatch_mode",
+  "wms_quality_grade"
+);
 const receiptOrderList = ref([]);
 const open = ref(false);
 const buttonLoading = ref(false);
@@ -283,6 +328,8 @@ const data = reactive({
     receiptOrderType: -1,
     merchantId: undefined,
     orderNo: undefined,
+    basisNo: undefined,
+    receiveUnit: undefined,
     payableAmount: undefined,
     receiptOrderStatus: -2,
   },
@@ -394,7 +441,12 @@ async function handlePrint(row) {
         productionDate: proxy.parseTime(detail.productionDate, '{y}-{m}-{d}'),
         expirationDate: proxy.parseTime(detail.expirationDate, '{y}-{m}-{d}'),
         quantity: Number(detail.quantity).toFixed(0),
-        amount: detail.amount
+        equipmentCode: detail.equipmentCode,
+        specModel: detail.specModel,
+        productMark: detail.productMark,
+        qualityGrade: proxy.selectDictLabel(wms_quality_grade.value, detail.qualityGrade),
+        unitPrice: detail.unitPrice,
+        amount: detail.lineAmount ?? detail.amount
       }
     })
   }
@@ -404,6 +456,15 @@ async function handlePrint(row) {
     receiptOrderStatus: proxy.selectDictLabel(wms_receipt_status.value, receiptOrder.receiptOrderStatus),
     merchantName: useWmsStore().merchantMap.get(receiptOrder.merchantId)?.merchantName,
     orderNo: receiptOrder.orderNo,
+    basisNo: receiptOrder.basisNo,
+    dispatchMode: proxy.selectDictLabel(wms_dispatch_mode.value, receiptOrder.dispatchMode),
+    noticeOrg: receiptOrder.noticeOrg,
+    receiveUnit: receiptOrder.receiveUnit,
+    purchaseDate: proxy.parseTime(receiptOrder.purchaseDate, '{y}-{m}-{d}'),
+    receiptDate: proxy.parseTime(receiptOrder.receiptDate, '{y}-{m}-{d}'),
+    purchaserName: receiptOrder.purchaserName,
+    acceptorName: receiptOrder.acceptorName,
+    keeperName: receiptOrder.keeperName,
     warehouseName: useWmsStore().warehouseMap.get(receiptOrder.warehouseId)?.warehouseName,
     areaName: useWmsStore().areaMap.get(receiptOrder.areaId)?.areaName,
     totalQuantity: Number(receiptOrder.totalQuantity).toFixed(0),

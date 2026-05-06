@@ -58,6 +58,57 @@
             </el-col>
           </el-row>
           <el-row :gutter="24">
+            <el-col :span="6">
+              <el-form-item label="调拨根据" prop="basisNo">
+                <el-input v-model="form.basisNo" placeholder="请输入调拨根据"></el-input>
+              </el-form-item>
+            </el-col>
+            <el-col :span="6">
+              <el-form-item label="调拨方式" prop="dispatchMode">
+                <el-select v-model="form.dispatchMode" placeholder="请选择调拨方式" clearable style="width: 100%">
+                  <el-option v-for="item in wms_dispatch_mode" :key="item.value" :label="item.label" :value="item.value" />
+                </el-select>
+              </el-form-item>
+            </el-col>
+            <el-col :span="6">
+              <el-form-item label="通知机关" prop="noticeOrg">
+                <el-input v-model="form.noticeOrg" placeholder="请输入通知机关"></el-input>
+              </el-form-item>
+            </el-col>
+            <el-col :span="6">
+              <el-form-item label="收物单位" prop="receiveUnit">
+                <el-input v-model="form.receiveUnit" placeholder="请输入收物单位"></el-input>
+              </el-form-item>
+            </el-col>
+          </el-row>
+          <el-row :gutter="24">
+            <el-col :span="6">
+              <el-form-item label="采购日期" prop="purchaseDate">
+                <el-date-picker v-model="form.purchaseDate" type="date" value-format="YYYY-MM-DD" format="YYYY-MM-DD" style="width: 100%" />
+              </el-form-item>
+            </el-col>
+            <el-col :span="6">
+              <el-form-item label="出库日期" prop="shipmentDate">
+                <el-date-picker v-model="form.shipmentDate" type="date" value-format="YYYY-MM-DD" format="YYYY-MM-DD" style="width: 100%" />
+              </el-form-item>
+            </el-col>
+            <el-col :span="6">
+              <el-form-item label="采购配发人" prop="purchaserName">
+                <el-input v-model="form.purchaserName" placeholder="请输入采购配发人"></el-input>
+              </el-form-item>
+            </el-col>
+            <el-col :span="6">
+              <el-form-item label="验收人" prop="acceptorName">
+                <el-input v-model="form.acceptorName" placeholder="请输入验收人"></el-input>
+              </el-form-item>
+            </el-col>
+          </el-row>
+          <el-row :gutter="24">
+            <el-col :span="6">
+              <el-form-item label="保管员" prop="keeperName">
+                <el-input v-model="form.keeperName" placeholder="请输入保管员"></el-input>
+              </el-form-item>
+            </el-col>
             <el-col :span="11">
               <el-form-item label="备注" prop="remark">
                 <el-input
@@ -124,6 +175,12 @@
                 <div v-if="row.itemSku?.barcode">条码：{{ row.itemSku.barcode }}</div>
               </template>
             </el-table-column>
+            <el-table-column label="器材编码/规格型号" min-width="180">
+              <template #default="{ row }">
+                <div>{{ row.equipmentCode || row.itemSku?.item?.itemCode || row.itemCode || '-' }}</div>
+                <div class="table-tip">{{ row.specModel || row.itemSku?.specModel || '-' }}</div>
+              </template>
+            </el-table-column>
             <el-table-column label="出库方式" width="120">
               <template #default="{ row }">
                 <dict-tag :options="shipmentDetailSourceOptions" :value="row.detailSourceType" />
@@ -134,6 +191,18 @@
                 <div v-if="row.instanceCode">单品码：{{ row.instanceCode }}</div>
                 <div v-if="row.boxCode">箱码：{{ row.boxCode }}</div>
                 <div v-if="!row.instanceCode && !row.boxCode">-</div>
+              </template>
+            </el-table-column>
+            <el-table-column label="产品标识" width="180">
+              <template #default="{ row }">
+                <el-input v-model="row.productMark" placeholder="请输入产品标识" :disabled="row.detailSourceType !== 'inventory'" />
+              </template>
+            </el-table-column>
+            <el-table-column label="质量等级" width="160">
+              <template #default="{ row }">
+                <el-select v-model="row.qualityGrade" placeholder="请选择质量等级" clearable style="width: 100%" :disabled="row.detailSourceType !== 'inventory'">
+                  <el-option v-for="item in wms_quality_grade" :key="item.value" :label="item.label" :value="item.value" />
+                </el-select>
               </template>
             </el-table-column>
             <el-table-column label="库区" prop="areaName" width="200"/>
@@ -177,15 +246,26 @@
                 ></el-input-number>
               </template>
             </el-table-column>
-            <el-table-column label="价格" prop="amount" width="180">
+            <el-table-column label="单价" prop="unitPrice" width="160">
               <template #default="scope">
                 <el-input-number
-                  v-model="scope.row.amount"
-                  placeholder="价格"
+                  v-model="scope.row.unitPrice"
+                  placeholder="单价"
                   :precision="2"
                   :min="0"
                   :max="2147483647"
+                  @change="handleDetailChange(scope.row)"
                 ></el-input-number>
+              </template>
+            </el-table-column>
+            <el-table-column label="总价" prop="lineAmount" width="160">
+              <template #default="{ row }">
+                <el-input-number v-model="row.lineAmount" :precision="2" :controls="false" :min="0" disabled></el-input-number>
+              </template>
+            </el-table-column>
+            <el-table-column label="备注" width="180">
+              <template #default="{ row }">
+                <el-input v-model="row.remark" placeholder="请输入备注" />
               </template>
             </el-table-column>
             <el-table-column label="操作" width="100" align="right" fixed="right">
@@ -318,7 +398,13 @@ import {listItemInstance} from "@/api/wms/itemInstance";
 import {getBox, listBox} from "@/api/wms/box";
 
 const {proxy} = getCurrentInstance();
-const {wms_shipment_type, wms_item_instance_status, wms_box_status} = proxy.useDict("wms_shipment_type", "wms_item_instance_status", "wms_box_status");
+const {wms_shipment_type, wms_item_instance_status, wms_box_status, wms_quality_grade, wms_dispatch_mode} = proxy.useDict(
+  "wms_shipment_type",
+  "wms_item_instance_status",
+  "wms_box_status",
+  "wms_quality_grade",
+  "wms_dispatch_mode"
+);
 
 const loading = ref(false)
 const shipmentDetailSourceOptions = computed(() => ([
@@ -332,6 +418,15 @@ const initFormData = {
   shipmentOrderType: "2",
   merchantId: undefined,
   orderNo: undefined,
+  basisNo: undefined,
+  dispatchMode: undefined,
+  noticeOrg: undefined,
+  receiveUnit: undefined,
+  purchaseDate: undefined,
+  shipmentDate: undefined,
+  purchaserName: undefined,
+  acceptorName: undefined,
+  keeperName: undefined,
   receivableAmount: undefined,
   shipmentOrderStatus: 0,
   remark: undefined,
@@ -395,6 +490,44 @@ const close = () => {
 }
 const inventorySelectShow = ref(false)
 
+const calcLineAmount = (quantity, unitPrice) => {
+  const qty = Number(quantity || 0)
+  const price = Number(unitPrice || 0)
+  return qty && price ? Number((qty * price).toFixed(2)) : 0
+}
+
+const syncShipmentDetail = (detail) => {
+  const unitPrice = detail.unitPrice ?? detail.itemSku?.defaultUnitPrice
+  const lineAmount = detail.lineAmount ?? detail.amount ?? calcLineAmount(detail.quantity, unitPrice)
+  return {
+    ...detail,
+    equipmentCode: detail.equipmentCode ?? detail.itemSku?.item?.itemCode ?? detail.itemCode,
+    specModel: detail.specModel ?? detail.itemSku?.specModel,
+    productMark: detail.productMark,
+    qualityGrade: detail.qualityGrade ?? detail.itemSku?.item?.defaultQualityGrade,
+    unitPrice,
+    lineAmount,
+    amount: lineAmount
+  }
+}
+
+const recalculateOrderSummary = () => {
+  let quantitySum = 0
+  let amountSum = 0
+  form.value.details.forEach(it => {
+    quantitySum += Number(it.quantity || 0)
+    amountSum += Number(it.lineAmount || 0)
+  })
+  form.value.totalQuantity = quantitySum
+  form.value.receivableAmount = amountSum ? Number(amountSum.toFixed(2)) : 0
+}
+
+const handleDetailChange = (row) => {
+  row.lineAmount = calcLineAmount(row.quantity, row.unitPrice)
+  row.amount = row.lineAmount
+  recalculateOrderSummary()
+}
+
 // 选择商品 start
 const showAddInventory = () => {
   inventorySelectRef.value.getList()
@@ -407,13 +540,12 @@ const handleOkClick = (item) => {
   item.forEach(it => {
     if (!form.value.details.find(detail => detail.inventoryDetailId === it.id)) {
       form.value.details.push(
-        {
+        syncShipmentDetail({
           itemSku: {
             ...it.itemSku,
             item: it.item
           },
           skuId: it.skuId,
-          amount: undefined,
           quantity: undefined,
           remainQuantity: it.remainQuantity,
           batchNo: it.batchNo,
@@ -422,10 +554,17 @@ const handleOkClick = (item) => {
           warehouseId: form.value.warehouseId,
           areaId: form.value.areaId ?? it.areaId,
           inventoryDetailId: it.id,
-          areaName: useWmsStore().areaMap.get(form.value.areaId ?? it.areaId)?.areaName
+          areaName: useWmsStore().areaMap.get(form.value.areaId ?? it.areaId)?.areaName,
+          equipmentCode: it.equipmentCode ?? it.item?.itemCode,
+          specModel: it.specModel ?? it.itemSku?.specModel,
+          productMark: it.productMark,
+          qualityGrade: it.qualityGrade ?? it.item?.defaultQualityGrade,
+          unitPrice: it.unitPrice ?? it.itemSku?.defaultUnitPrice
         })
+      )
     }
   })
+  recalculateOrderSummary()
 }
 
 const normalizeDateTime = (value) => {
@@ -482,8 +621,14 @@ const createDetailRow = (payload) => {
     itemCode: payload.itemCode,
     skuName: payload.skuName,
     skuId: payload.skuId,
-    amount: payload.amount,
+    amount: payload.lineAmount,
     quantity: payload.quantity,
+    equipmentCode: payload.equipmentCode,
+    specModel: payload.specModel,
+    productMark: payload.productMark,
+    qualityGrade: payload.qualityGrade,
+    unitPrice: payload.unitPrice,
+    lineAmount: payload.lineAmount,
     remainQuantity: payload.remainQuantity,
     batchNo: payload.batchNo,
     productionDate: payload.productionDate,
@@ -496,7 +641,8 @@ const createDetailRow = (payload) => {
     instanceCode: payload.instanceCode,
     boxId: payload.boxId,
     boxCode: payload.boxCode,
-    detailSourceType: payload.detailSourceType
+    detailSourceType: payload.detailSourceType,
+    remark: payload.remark
   }
 }
 // 选择商品 end
@@ -528,8 +674,14 @@ const doSave = (shipmentOrderStatus = 0) => {
           id: it.id,
           shipmentOrderId: form.value.id,
           skuId: it.skuId,
-          amount: it.amount,
+          amount: it.lineAmount,
           quantity: it.quantity,
+          equipmentCode: it.equipmentCode,
+          specModel: it.specModel,
+          productMark: it.productMark,
+          qualityGrade: it.qualityGrade,
+          unitPrice: it.unitPrice,
+          lineAmount: it.lineAmount,
           batchNo: it.batchNo,
           productionDate: it.productionDate,
           expirationDate: it.expirationDate,
@@ -537,7 +689,8 @@ const doSave = (shipmentOrderStatus = 0) => {
           itemInstanceId: it.itemInstanceId,
           boxId: it.boxId,
           warehouseId: form.value.warehouseId,
-          areaId: it.areaId
+          areaId: it.areaId,
+          remark: it.remark
         }
       })
     }
@@ -551,6 +704,15 @@ const doSave = (shipmentOrderStatus = 0) => {
       shipmentOrderStatus,
       merchantId: form.value.merchantId,
       orderNo: form.value.orderNo,
+      basisNo: form.value.basisNo,
+      dispatchMode: form.value.dispatchMode,
+      noticeOrg: form.value.noticeOrg,
+      receiveUnit: form.value.receiveUnit,
+      purchaseDate: form.value.purchaseDate,
+      shipmentDate: form.value.shipmentDate,
+      purchaserName: form.value.purchaserName,
+      acceptorName: form.value.acceptorName,
+      keeperName: form.value.keeperName,
       remark: form.value.remark,
       receivableAmount: form.value.receivableAmount,
       totalQuantity: form.value.totalQuantity,
@@ -626,6 +788,15 @@ const doShipment = async () => {
       shipmentOrderType: form.value.shipmentOrderType,
       merchantId: form.value.merchantId,
       orderNo: form.value.orderNo,
+      basisNo: form.value.basisNo,
+      dispatchMode: form.value.dispatchMode,
+      noticeOrg: form.value.noticeOrg,
+      receiveUnit: form.value.receiveUnit,
+      purchaseDate: form.value.purchaseDate,
+      shipmentDate: form.value.shipmentDate,
+      purchaserName: form.value.purchaserName,
+      acceptorName: form.value.acceptorName,
+      keeperName: form.value.keeperName,
       remark: form.value.remark,
       receivableAmount: form.value.receivableAmount,
       totalQuantity: form.value.totalQuantity,
@@ -675,8 +846,12 @@ const loadDetail = (id) => {
         }
       })
     }
-    form.value = {...response.data}
+    form.value = {
+      ...response.data,
+      details: (response.data.details || []).map(detail => syncShipmentDetail(detail))
+    }
     inventorySelectRef.value.setWarehouseIdAndAreaId(form.value.warehouseId, form.value.areaId)
+    recalculateOrderSummary()
     return refreshInventoryOptions()
   }).then(() => {
   }).finally(() => {
@@ -699,26 +874,24 @@ const handleChangeArea = (e) => {
 }
 
 const handleChangeQuantity = () => {
-  let sum = 0
   form.value.details.forEach(it => {
-    if (it.quantity) {
-      sum += Number(it.quantity)
-    }
+    it.lineAmount = calcLineAmount(it.quantity, it.unitPrice)
+    it.amount = it.lineAmount
   })
-  form.value.totalQuantity = sum
+  recalculateOrderSummary()
 }
 
 const handleAutoCalc = () => {
   let sum = undefined
   form.value.details.forEach(it => {
-    if (it.amount >= 0) {
+    if (it.lineAmount >= 0) {
       if (!sum) {
         sum = 0
       }
-      sum = numSub(sum, -Number(it.amount))
+      sum = numSub(sum, -Number(it.lineAmount))
     }
   })
-  form.value.receivableAmount = sum
+  form.value.receivableAmount = sum ?? 0
 }
 
 const handleDeleteDetail = (row, index) => {
@@ -801,7 +974,6 @@ const handleConfirmItemInstance = async () => {
       skuId: item.skuId,
       skuName: item.skuName,
       itemName: item.itemName,
-      amount: undefined,
       quantity: 1,
       remainQuantity: matchedInventory.remainQuantity,
       batchNo: item.batchNo,
@@ -813,10 +985,15 @@ const handleConfirmItemInstance = async () => {
       areaName: useWmsStore().areaMap.get(item.areaId)?.areaName,
       itemInstanceId: item.id,
       instanceCode: item.instanceCode,
-      detailSourceType: 'itemInstance'
+      detailSourceType: 'itemInstance',
+      equipmentCode: matchedInventory.equipmentCode ?? item.itemCode,
+      specModel: matchedInventory.specModel ?? item.specModel,
+      productMark: item.productMark,
+      qualityGrade: item.qualityGrade,
+      unitPrice: matchedInventory.unitPrice ?? item.defaultUnitPrice
     }))
   }
-  form.value.details.push(...newRows)
+  form.value.details.push(...newRows.map(it => syncShipmentDetail(it)))
   itemInstanceDialog.visible = false
   handleChangeQuantity()
 }
@@ -891,7 +1068,6 @@ const handleConfirmBox = async () => {
         skuId: item.skuId,
         skuName: item.skuName,
         itemName: item.itemName,
-        amount: undefined,
         quantity: 1,
         remainQuantity: matchedInventory.remainQuantity,
         batchNo: item.batchNo,
@@ -905,11 +1081,16 @@ const handleConfirmBox = async () => {
         instanceCode: item.instanceCode,
         boxId: selectedBox.id,
         boxCode: selectedBox.boxCode,
-        detailSourceType: 'box'
+        detailSourceType: 'box',
+        equipmentCode: matchedInventory.equipmentCode ?? item.itemCode,
+        specModel: matchedInventory.specModel ?? item.specModel,
+        productMark: item.productMark,
+        qualityGrade: item.qualityGrade,
+        unitPrice: matchedInventory.unitPrice ?? item.defaultUnitPrice
       }))
     }
   }
-  form.value.details.push(...newRows)
+  form.value.details.push(...newRows.map(it => syncShipmentDetail(it)))
   boxDialog.visible = false
   handleChangeQuantity()
 }

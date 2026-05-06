@@ -62,6 +62,57 @@
             </el-col>
           </el-row>
           <el-row :gutter="24">
+            <el-col :span="6">
+              <el-form-item label="调拨根据" prop="basisNo">
+                <el-input v-model="form.basisNo" placeholder="请输入调拨根据"></el-input>
+              </el-form-item>
+            </el-col>
+            <el-col :span="6">
+              <el-form-item label="调拨方式" prop="dispatchMode">
+                <el-select v-model="form.dispatchMode" placeholder="请选择调拨方式" clearable style="width: 100%">
+                  <el-option v-for="item in wms_dispatch_mode" :key="item.value" :label="item.label" :value="item.value" />
+                </el-select>
+              </el-form-item>
+            </el-col>
+            <el-col :span="6">
+              <el-form-item label="通知机关" prop="noticeOrg">
+                <el-input v-model="form.noticeOrg" placeholder="请输入通知机关"></el-input>
+              </el-form-item>
+            </el-col>
+            <el-col :span="6">
+              <el-form-item label="收物单位" prop="receiveUnit">
+                <el-input v-model="form.receiveUnit" placeholder="请输入收物单位"></el-input>
+              </el-form-item>
+            </el-col>
+          </el-row>
+          <el-row :gutter="24">
+            <el-col :span="6">
+              <el-form-item label="采购日期" prop="purchaseDate">
+                <el-date-picker v-model="form.purchaseDate" type="date" value-format="YYYY-MM-DD" format="YYYY-MM-DD" style="width: 100%" />
+              </el-form-item>
+            </el-col>
+            <el-col :span="6">
+              <el-form-item label="入库日期" prop="receiptDate">
+                <el-date-picker v-model="form.receiptDate" type="date" value-format="YYYY-MM-DD" format="YYYY-MM-DD" style="width: 100%" />
+              </el-form-item>
+            </el-col>
+            <el-col :span="6">
+              <el-form-item label="采购配发人" prop="purchaserName">
+                <el-input v-model="form.purchaserName" placeholder="请输入采购配发人"></el-input>
+              </el-form-item>
+            </el-col>
+            <el-col :span="6">
+              <el-form-item label="验收人" prop="acceptorName">
+                <el-input v-model="form.acceptorName" placeholder="请输入验收人"></el-input>
+              </el-form-item>
+            </el-col>
+          </el-row>
+          <el-row :gutter="24">
+            <el-col :span="6">
+              <el-form-item label="保管员" prop="keeperName">
+                <el-input v-model="form.keeperName" placeholder="请输入保管员"></el-input>
+              </el-form-item>
+            </el-col>
             <el-col :span="11">
               <el-form-item label="备注" prop="remark">
                 <el-input
@@ -122,9 +173,27 @@
                 <div v-if="row.itemSku.barcode">条码：{{row.itemSku.barcode}}</div>
               </template>
             </el-table-column>
+            <el-table-column label="器材编码/规格型号" min-width="180">
+              <template #default="{ row }">
+                <div>{{ row.equipmentCode || row.itemSku.item.itemCode || '-' }}</div>
+                <div class="sub-text">{{ row.specModel || row.itemSku.specModel || row.itemSku.item.modelText || '-' }}</div>
+              </template>
+            </el-table-column>
             <el-table-column label="追踪模式" width="120">
               <template #default="{ row }">
                 <dict-tag :options="wms_tracking_mode" :value="row.itemSku.item.trackingMode" />
+              </template>
+            </el-table-column>
+            <el-table-column label="产品标识" width="180">
+              <template #default="{ row }">
+                <el-input v-model="row.productMark" placeholder="请输入产品标识" />
+              </template>
+            </el-table-column>
+            <el-table-column label="质量等级" width="160">
+              <template #default="{ row }">
+                <el-select v-model="row.qualityGrade" placeholder="请选择质量等级" clearable style="width: 100%">
+                  <el-option v-for="item in wms_quality_grade" :key="item.value" :label="item.label" :value="item.value" />
+                </el-select>
               </template>
             </el-table-column>
             <el-table-column label="库区" prop="itemSku.skuName" width="200">
@@ -174,15 +243,21 @@
                 {{ row.generatedInstanceQuantity || 0 }}
               </template>
             </el-table-column>
-            <el-table-column label="价格" prop="amount" width="180">
+            <el-table-column label="单价" prop="unitPrice" width="160">
               <template #default="scope">
                 <el-input-number
-                  v-model="scope.row.amount"
-                  placeholder="价格"
+                  v-model="scope.row.unitPrice"
+                  placeholder="单价"
                   :precision="2"
                   :min="0"
                   :max="2147483647"
+                  @change="handleDetailChange(scope.row)"
                 ></el-input-number>
+              </template>
+            </el-table-column>
+            <el-table-column label="总价" prop="lineAmount" width="160">
+              <template #default="{ row }">
+                <el-input-number v-model="row.lineAmount" :precision="2" :min="0" :controls="false" disabled></el-input-number>
               </template>
             </el-table-column>
             <el-table-column label="批号" prop="batchNo" width="150">
@@ -212,6 +287,11 @@
                     style="width: 150px!important;"
                   />
                 </div>
+              </template>
+            </el-table-column>
+            <el-table-column label="备注" width="180">
+              <template #default="{ row }">
+                <el-input v-model="row.remark" placeholder="请输入备注" />
               </template>
             </el-table-column>
             <el-table-column label="操作" width="100" align="right" fixed="right">
@@ -256,7 +336,12 @@ import { numSub, generateNo } from '@/utils/ruoyi'
 import { delReceiptOrderDetail } from '@/api/wms/receiptOrderDetail'
 
 const {proxy} = getCurrentInstance();
-const { wms_receipt_type, wms_tracking_mode } = proxy.useDict("wms_receipt_type", "wms_tracking_mode");
+const { wms_receipt_type, wms_tracking_mode, wms_quality_grade, wms_dispatch_mode } = proxy.useDict(
+  "wms_receipt_type",
+  "wms_tracking_mode",
+  "wms_quality_grade",
+  "wms_dispatch_mode"
+);
 const loading = ref(false)
 const initFormData = {
   id: undefined,
@@ -264,6 +349,15 @@ const initFormData = {
   receiptOrderType: "2",
   merchantId: undefined,
   orderNo: undefined,
+  basisNo: undefined,
+  dispatchMode: undefined,
+  noticeOrg: undefined,
+  receiveUnit: undefined,
+  purchaseDate: undefined,
+  receiptDate: undefined,
+  purchaserName: undefined,
+  acceptorName: undefined,
+  keeperName: undefined,
   payableAmount: undefined,
   receiptOrderStatus: 0,
   remark: undefined,
@@ -317,26 +411,63 @@ const skuSelectShow = ref(false)
 const showAddItem = () => {
   skuSelectShow.value = true
 }
+
+const calcLineAmount = (quantity, unitPrice) => {
+  const qty = Number(quantity || 0)
+  const price = Number(unitPrice || 0)
+  return qty && price ? Number((qty * price).toFixed(2)) : 0
+}
+
+const syncReceiptDetail = (detail) => {
+  const unitPrice = detail.unitPrice ?? detail.itemSku?.defaultUnitPrice
+  const lineAmount = detail.lineAmount ?? detail.amount ?? calcLineAmount(detail.quantity, unitPrice)
+  return {
+    ...detail,
+    equipmentCode: detail.equipmentCode ?? detail.itemSku?.item?.itemCode,
+    specModel: detail.specModel ?? detail.itemSku?.specModel ?? detail.itemSku?.item?.modelText,
+    productMark: detail.productMark,
+    qualityGrade: detail.qualityGrade ?? detail.itemSku?.item?.defaultQualityGrade,
+    unitPrice,
+    lineAmount,
+    amount: lineAmount
+  }
+}
+
+const recalculateOrderSummary = () => {
+  let quantitySum = 0
+  let amountSum = 0
+  form.value.details.forEach(it => {
+    if (it.quantity) {
+      quantitySum += Number(it.quantity)
+    }
+    amountSum += Number(it.lineAmount || 0)
+  })
+  form.value.totalQuantity = quantitySum
+  form.value.payableAmount = amountSum ? Number(amountSum.toFixed(2)) : 0
+}
+
+const handleDetailChange = (row) => {
+  row.lineAmount = calcLineAmount(row.quantity, row.unitPrice)
+  row.amount = row.lineAmount
+  recalculateOrderSummary()
+}
 // 选择成功
 const handleOkClick = (item) => {
   skuSelectShow.value = false
   item.forEach((it) => {
-    form.value.details.push(
-      {
-        itemSku: {...it},
-        amount: undefined,
-        quantity: it.quantity,
-        batchNo: undefined,
-        productionDate: undefined,
-        expirationDate: undefined,
-        warehouseId: form.value.warehouseId,
-        areaId: form.value.areaId,
-        generateItemInstance: it.item?.trackingMode === 'instance' ? 1 : 0,
-        generatedInstanceQuantity: 0
-      }
-    )
+    form.value.details.push(syncReceiptDetail({
+      itemSku: {...it},
+      quantity: it.quantity,
+      batchNo: undefined,
+      productionDate: undefined,
+      expirationDate: undefined,
+      warehouseId: form.value.warehouseId,
+      areaId: form.value.areaId,
+      generateItemInstance: it.item?.trackingMode === 'instance' ? 1 : 0,
+      generatedInstanceQuantity: 0
+    }))
   })
-  handleChangeQuantity()
+  recalculateOrderSummary()
 }
 // 选择商品 end
 
@@ -371,15 +502,22 @@ const doSave = async (receiptOrderStatus = 0) => {
         id: it.id,
         receiptOrderId: form.value.id,
         skuId: it.itemSku.id,
-        amount: it.amount,
+        amount: it.lineAmount,
         quantity: it.quantity,
+        equipmentCode: it.equipmentCode,
+        specModel: it.specModel,
+        productMark: it.productMark,
+        qualityGrade: it.qualityGrade,
+        unitPrice: it.unitPrice,
+        lineAmount: it.lineAmount,
         batchNo: it.batchNo,
         productionDate: it.productionDate,
         expirationDate: it.expirationDate,
         warehouseId: form.value.warehouseId,
         areaId: it.areaId,
         generateItemInstance: it.generateItemInstance,
-        generatedInstanceQuantity: it.generatedInstanceQuantity
+        generatedInstanceQuantity: it.generatedInstanceQuantity,
+        remark: it.remark
       }
     })
 
@@ -390,6 +528,15 @@ const doSave = async (receiptOrderStatus = 0) => {
       receiptOrderType: form.value.receiptOrderType,
       merchantId: form.value.merchantId,
       orderNo: form.value.orderNo,
+      basisNo: form.value.basisNo,
+      dispatchMode: form.value.dispatchMode,
+      noticeOrg: form.value.noticeOrg,
+      receiveUnit: form.value.receiveUnit,
+      purchaseDate: form.value.purchaseDate,
+      receiptDate: form.value.receiptDate,
+      purchaserName: form.value.purchaserName,
+      acceptorName: form.value.acceptorName,
+      keeperName: form.value.keeperName,
       remark: form.value.remark,
       payableAmount: form.value.payableAmount,
       totalQuantity: form.value.totalQuantity,
@@ -449,15 +596,22 @@ const doWarehousing = async () => {
         id: it.id,
         receiptOrderId: form.value.id,
         skuId: it.itemSku.id,
-        amount: it.amount,
+        amount: it.lineAmount,
         quantity: it.quantity,
+        equipmentCode: it.equipmentCode,
+        specModel: it.specModel,
+        productMark: it.productMark,
+        qualityGrade: it.qualityGrade,
+        unitPrice: it.unitPrice,
+        lineAmount: it.lineAmount,
         batchNo: it.batchNo,
         productionDate: it.productionDate,
         expirationDate: it.expirationDate,
         warehouseId: form.value.warehouseId,
         areaId: it.areaId,
         generateItemInstance: it.generateItemInstance,
-        generatedInstanceQuantity: it.generatedInstanceQuantity
+        generatedInstanceQuantity: it.generatedInstanceQuantity,
+        remark: it.remark
       }
     })
 
@@ -469,6 +623,15 @@ const doWarehousing = async () => {
       receiptOrderType: form.value.receiptOrderType,
       merchantId: form.value.merchantId,
       orderNo: form.value.orderNo,
+      basisNo: form.value.basisNo,
+      dispatchMode: form.value.dispatchMode,
+      noticeOrg: form.value.noticeOrg,
+      receiveUnit: form.value.receiveUnit,
+      purchaseDate: form.value.purchaseDate,
+      receiptDate: form.value.receiptDate,
+      purchaserName: form.value.purchaserName,
+      acceptorName: form.value.acceptorName,
+      keeperName: form.value.keeperName,
       remark: form.value.remark,
       payableAmount: form.value.payableAmount,
       totalQuantity: form.value.totalQuantity,
@@ -505,11 +668,12 @@ const loadDetail = (id) => {
     form.value = {
       ...response.data,
       details: (response.data.details || []).map(it => ({
-        ...it,
+        ...syncReceiptDetail(it),
         generateItemInstance: it.generateItemInstance ?? (it.itemSku?.item?.trackingMode === 'instance' ? 1 : 0),
         generatedInstanceQuantity: it.generatedInstanceQuantity ?? 0
       }))
     }
+    recalculateOrderSummary()
     Promise.resolve();
   }).then(() => {
   }).finally(() => {
@@ -531,26 +695,24 @@ const handleChangeArea = (e) => {
 }
 
 const handleChangeQuantity = () => {
-  let sum = 0
   form.value.details.forEach(it => {
-    if (it.quantity) {
-      sum += Number(it.quantity)
-    }
+    it.lineAmount = calcLineAmount(it.quantity, it.unitPrice)
+    it.amount = it.lineAmount
   })
-  form.value.totalQuantity = sum
+  recalculateOrderSummary()
 }
 
 const handleAutoCalc = () => {
   let sum = undefined
   form.value.details.forEach(it => {
-    if (it.amount >= 0) {
+    if (it.lineAmount >= 0) {
       if (!sum) {
         sum = 0
       }
-      sum = numSub(sum, -Number(it.amount))
+      sum = numSub(sum, -Number(it.lineAmount))
     }
   })
-  form.value.payableAmount = sum
+  form.value.payableAmount = sum ?? 0
 }
 
 const handleDeleteDetail = (row, index) => {
@@ -559,10 +721,12 @@ const handleDeleteDetail = (row, index) => {
       return delReceiptOrderDetail(row.id);
     }).then(() => {
       form.value.details.splice(index, 1)
+      recalculateOrderSummary()
       proxy.$modal.msgSuccess("删除成功");
     });
   } else {
     form.value.details.splice(index, 1)
+    recalculateOrderSummary()
   }
 }
 const goSaasTip = () => {
@@ -582,5 +746,10 @@ const goSaasTip = () => {
   align-items: center;
   justify-content: space-between;
   float: right;
+}
+
+.sub-text {
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
 }
 </style>

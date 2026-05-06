@@ -31,15 +31,10 @@
           </el-row>
           <el-row :gutter="24">
             <el-col :span="11">
-              <el-form-item label="备注" prop="remark">
-                <el-input
-                  v-model="form.remark"
-                  placeholder="备注...100个字符以内"
-                  rows="4"
-                  maxlength="100"
-                  type="textarea"
-                  show-word-limit="show-word-limit"
-                ></el-input>
+              <el-form-item label="调拨类型" prop="movementType">
+                <el-radio-group v-model="form.movementType">
+                  <el-radio-button v-for="item in wms_movement_type" :key="item.value" :label="item.value">{{ item.label }}</el-radio-button>
+                </el-radio-group>
               </el-form-item>
             </el-col>
             <el-col :span="6">
@@ -65,24 +60,119 @@
               </el-form-item>
             </el-col>
           </el-row>
+          <el-row :gutter="24">
+            <el-col :span="6">
+              <el-form-item label="调拨依据" prop="dispatchBasis">
+                <el-select v-model="form.dispatchBasis" placeholder="请选择调拨依据" clearable style="width: 100%">
+                  <el-option v-for="item in wms_basis_type" :key="item.value" :label="item.label" :value="item.value" />
+                </el-select>
+              </el-form-item>
+            </el-col>
+            <el-col :span="6">
+              <el-form-item label="调拨目的" prop="dispatchPurpose">
+                <el-input v-model="form.dispatchPurpose" placeholder="请输入调拨目的"></el-input>
+              </el-form-item>
+            </el-col>
+            <el-col :span="6">
+              <el-form-item label="物资保障号" prop="supportNo">
+                <el-input v-model="form.supportNo" placeholder="请输入物资保障号"></el-input>
+              </el-form-item>
+            </el-col>
+            <el-col :span="6">
+              <el-form-item label="调拨方式" prop="dispatchMode">
+                <el-select v-model="form.dispatchMode" placeholder="请选择调拨方式" clearable style="width: 100%">
+                  <el-option v-for="item in wms_dispatch_mode" :key="item.value" :label="item.label" :value="item.value" />
+                </el-select>
+              </el-form-item>
+            </el-col>
+          </el-row>
+          <el-row :gutter="24">
+            <el-col :span="6">
+              <el-form-item label="发货单位" prop="fromUnit">
+                <el-input v-model="form.fromUnit" placeholder="请输入发货单位"></el-input>
+              </el-form-item>
+            </el-col>
+            <el-col :span="6">
+              <el-form-item label="收货单位" prop="toUnit">
+                <el-input v-model="form.toUnit" placeholder="请输入收货单位"></el-input>
+              </el-form-item>
+            </el-col>
+            <el-col :span="6">
+              <el-form-item label="发站" prop="fromStation">
+                <el-input v-model="form.fromStation" placeholder="请输入发站"></el-input>
+              </el-form-item>
+            </el-col>
+            <el-col :span="6">
+              <el-form-item label="到站" prop="toStation">
+                <el-input v-model="form.toStation" placeholder="请输入到站"></el-input>
+              </el-form-item>
+            </el-col>
+          </el-row>
+          <el-row :gutter="24">
+            <el-col :span="6">
+              <el-form-item label="发货地址" prop="fromAddress">
+                <el-input v-model="form.fromAddress" placeholder="请输入发货地址"></el-input>
+              </el-form-item>
+            </el-col>
+            <el-col :span="6">
+              <el-form-item label="收货地址" prop="toAddress">
+                <el-input v-model="form.toAddress" placeholder="请输入收货地址"></el-input>
+              </el-form-item>
+            </el-col>
+            <el-col :span="6">
+              <el-form-item label="通信地址" prop="contactAddress">
+                <el-input v-model="form.contactAddress" placeholder="请输入通信地址"></el-input>
+              </el-form-item>
+            </el-col>
+            <el-col :span="6">
+              <el-form-item label="调拨日期" prop="dispatchDate">
+                <el-date-picker v-model="form.dispatchDate" type="date" value-format="YYYY-MM-DD" format="YYYY-MM-DD" style="width: 100%" />
+              </el-form-item>
+            </el-col>
+          </el-row>
+          <el-row :gutter="24">
+            <el-col :span="6">
+              <el-form-item label="有效日期" prop="effectiveDate">
+                <el-date-picker v-model="form.effectiveDate" type="date" value-format="YYYY-MM-DD" format="YYYY-MM-DD" style="width: 100%" />
+              </el-form-item>
+            </el-col>
+            <el-col :span="6">
+              <el-form-item label="发出日期" prop="issueDate">
+                <el-date-picker v-model="form.issueDate" type="date" value-format="YYYY-MM-DD" format="YYYY-MM-DD" style="width: 100%" />
+              </el-form-item>
+            </el-col>
+            <el-col :span="6">
+              <el-form-item label="发货经手人" prop="fromHandler">
+                <el-input v-model="form.fromHandler" placeholder="请输入发货经手人"></el-input>
+              </el-form-item>
+            </el-col>
+            <el-col :span="6">
+              <el-form-item label="收货经手人" prop="toHandler">
+                <el-input v-model="form.toHandler" placeholder="请输入收货经手人"></el-input>
+              </el-form-item>
+            </el-col>
+          </el-row>
+          <el-row :gutter="24">
+            <el-col :span="11">
+              <el-form-item label="备注" prop="remark">
+                <el-input
+                  v-model="form.remark"
+                  placeholder="备注...100个字符以内"
+                  rows="4"
+                  maxlength="100"
+                  type="textarea"
+                  show-word-limit="show-word-limit"
+                ></el-input>
+              </el-form-item>
+            </el-col>
+          </el-row>
         </el-form>
       </el-card>
       <el-card header="商品明细" class="mt10">
         <div class="receipt-order-content">
           <div class="flex-space-between mb8">
             <div>
-              <span>一物一码/SN模式：</span>
-              <el-switch
-                :before-change="goSaasTip"
-                class="mr10 ml10"
-                inline-prompt
-                size="large"
-                v-model="mode"
-                :active-value="true"
-                :inactive-value="false"
-                active-text="开启"
-                inactive-text="关闭"
-              />
+              <el-tag type="info">支持通装/专装调拨，专装场景可录入产品标识</el-tag>
             </div>
             <el-popover
               placement="left"
@@ -117,12 +207,30 @@
                 <div v-if="row.itemSku.barcode">条码：{{ row.itemSku.barcode }}</div>
               </template>
             </el-table-column>
+            <el-table-column label="器材编码/规格型号" min-width="180">
+              <template #default="{ row }">
+                <div>{{ row.equipmentCode || row.itemSku.item.itemCode || '-' }}</div>
+                <div class="table-tip">{{ row.specModel || row.itemSku.specModel || row.itemSku.item.modelText || '-' }}</div>
+              </template>
+            </el-table-column>
             <el-table-column label="源库区" width="200" prop="sourceAreaName" />
             <el-table-column label="目标库区" width="200">
               <template #default="{ row }">
                 <el-select v-model="row.targetAreaId" placeholder="请选择目标库区" filterable :disabled="!!form.targetAreaId">
                   <el-option v-for="item in useWmsStore().areaList.filter(it => it.warehouseId === form.targetWarehouseId)"
                              :key="item.id" :label="item.areaName" :value="item.id"/>
+                </el-select>
+              </template>
+            </el-table-column>
+            <el-table-column label="产品标识" width="180">
+              <template #default="{ row }">
+                <el-input v-model="row.productMark" :placeholder="form.movementType === 'special' ? '专装请录入产品标识' : '可选录入产品标识'" />
+              </template>
+            </el-table-column>
+            <el-table-column label="质量等级" width="160">
+              <template #default="{ row }">
+                <el-select v-model="row.qualityGrade" placeholder="请选择质量等级" clearable style="width: 100%">
+                  <el-option v-for="item in wms_quality_grade" :key="item.value" :label="item.label" :value="item.value" />
                 </el-select>
               </template>
             </el-table-column>
@@ -142,6 +250,16 @@
                 <el-statistic :value="Number(row.remainQuantity)" :precision="0"/>
               </template>
             </el-table-column>
+            <el-table-column label="单价" prop="unitPrice" width="160">
+              <template #default="{ row }">
+                <el-input-number v-model="row.unitPrice" :precision="2" :min="0" :controls="false" @change="handleDetailChange(row)" />
+              </template>
+            </el-table-column>
+            <el-table-column label="总价" prop="lineAmount" width="160">
+              <template #default="{ row }">
+                <el-input-number v-model="row.lineAmount" :precision="2" :controls="false" disabled />
+              </template>
+            </el-table-column>
             <el-table-column label="移库数量" prop="quantity" width="180">
               <template #default="scope">
                 <el-input-number
@@ -152,6 +270,11 @@
                   :max="scope.row.remainQuantity"
                   @change="handleChangeQuantity"
                 ></el-input-number>
+              </template>
+            </el-table-column>
+            <el-table-column label="备注" width="180">
+              <template #default="{ row }">
+                <el-input v-model="row.remark" placeholder="请输入备注" />
               </template>
             </el-table-column>
             <el-table-column label="操作" width="100" align="right" fixed="right">
@@ -203,12 +326,34 @@ import {numSub, generateNo} from '@/utils/ruoyi'
 import InventoryDetailSelect from "@/views/components/InventoryDetailSelect.vue";
 
 const {proxy} = getCurrentInstance();
-const {wms_shipment_type} = proxy.useDict("wms_shipment_type");
+const {wms_movement_type, wms_dispatch_mode, wms_basis_type, wms_quality_grade} = proxy.useDict(
+  "wms_movement_type",
+  "wms_dispatch_mode",
+  "wms_basis_type",
+  "wms_quality_grade"
+);
 
 const loading = ref(false)
 const initFormData = {
   id: undefined,
   movementOrderNo: undefined,
+  movementType: 'common',
+  dispatchBasis: undefined,
+  dispatchPurpose: undefined,
+  supportNo: undefined,
+  dispatchMode: undefined,
+  fromUnit: undefined,
+  toUnit: undefined,
+  fromStation: undefined,
+  toStation: undefined,
+  fromAddress: undefined,
+  toAddress: undefined,
+  contactAddress: undefined,
+  dispatchDate: undefined,
+  effectiveDate: undefined,
+  issueDate: undefined,
+  fromHandler: undefined,
+  toHandler: undefined,
   shipmentOrderStatus: 0,
   remark: undefined,
   sourceWarehouseId: undefined,
@@ -245,6 +390,29 @@ const close = () => {
 }
 const inventorySelectShow = ref(false)
 
+const calcLineAmount = (quantity, unitPrice) => {
+  const qty = Number(quantity || 0)
+  const price = Number(unitPrice || 0)
+  return qty && price ? Number((qty * price).toFixed(2)) : 0
+}
+
+const syncMovementDetail = (detail) => {
+  const unitPrice = detail.unitPrice ?? detail.itemSku?.defaultUnitPrice
+  return {
+    ...detail,
+    equipmentCode: detail.equipmentCode ?? detail.itemSku?.item?.itemCode,
+    specModel: detail.specModel ?? detail.itemSku?.specModel ?? detail.itemSku?.item?.modelText,
+    productMark: detail.productMark,
+    qualityGrade: detail.qualityGrade ?? detail.itemSku?.item?.defaultQualityGrade,
+    unitPrice,
+    lineAmount: detail.lineAmount ?? calcLineAmount(detail.quantity, unitPrice)
+  }
+}
+
+const handleDetailChange = (row) => {
+  row.lineAmount = calcLineAmount(row.quantity, row.unitPrice)
+}
+
 // 选择商品 start
 const showAddItem = () => {
   inventorySelectRef.value.getList()
@@ -257,7 +425,7 @@ const handleOkClick = (item) => {
   item.forEach(it => {
     if (!form.value.details.find(detail => detail.inventoryDetailId === it.id)) {
       form.value.details.push(
-        {
+        syncMovementDetail({
           itemSku: {
             ...it.itemSku,
             item: it.item
@@ -268,12 +436,18 @@ const handleOkClick = (item) => {
           batchNo: it.batchNo,
           productionDate: it.productionDate,
           expirationDate: it.expirationDate,
-          sourceWarehouseId: form.value.warehouseId,
-          sourceAreaId: form.value.areaId ?? it.areaId,
+          sourceWarehouseId: form.value.sourceWarehouseId,
+          sourceAreaId: form.value.sourceAreaId ?? it.areaId,
           inventoryDetailId: it.id,
           targetAreaId: form.value.targetAreaId,
-          sourceAreaName: useWmsStore().areaMap.get(form.value.areaId ?? it.areaId)?.areaName
+          sourceAreaName: useWmsStore().areaMap.get(form.value.sourceAreaId ?? it.areaId)?.areaName,
+          equipmentCode: it.equipmentCode ?? it.item?.itemCode,
+          specModel: it.specModel ?? it.itemSku?.specModel,
+          productMark: it.productMark,
+          qualityGrade: it.qualityGrade ?? it.item?.defaultQualityGrade,
+          unitPrice: it.unitPrice ?? it.itemSku?.defaultUnitPrice
         })
+      )
     }
   })
 }
@@ -310,11 +484,18 @@ const doSave = (movementOrderStatus = 0) => {
           movementOrderId: form.value.id,
           skuId: it.skuId,
           quantity: it.quantity,
+          equipmentCode: it.equipmentCode,
+          specModel: it.specModel,
+          productMark: it.productMark,
+          qualityGrade: it.qualityGrade,
+          unitPrice: it.unitPrice,
+          lineAmount: it.lineAmount,
+          remark: it.remark,
           batchNo: it.batchNo,
           productionDate: it.productionDate,
           expirationDate: it.expirationDate,
           inventoryDetailId: it.inventoryDetailId,
-          sourceWarehouseId: form.value.warehouseId,
+          sourceWarehouseId: form.value.sourceWarehouseId,
           sourceAreaId: it.sourceAreaId,
           targetWarehouseId: form.value.targetWarehouseId,
           targetAreaId: it.targetAreaId
@@ -325,6 +506,23 @@ const doSave = (movementOrderStatus = 0) => {
     const params = {
       id: form.value.id,
       movementOrderNo: form.value.movementOrderNo,
+      movementType: form.value.movementType,
+      dispatchBasis: form.value.dispatchBasis,
+      dispatchPurpose: form.value.dispatchPurpose,
+      supportNo: form.value.supportNo,
+      dispatchMode: form.value.dispatchMode,
+      fromUnit: form.value.fromUnit,
+      toUnit: form.value.toUnit,
+      fromStation: form.value.fromStation,
+      toStation: form.value.toStation,
+      fromAddress: form.value.fromAddress,
+      toAddress: form.value.toAddress,
+      contactAddress: form.value.contactAddress,
+      dispatchDate: form.value.dispatchDate,
+      effectiveDate: form.value.effectiveDate,
+      issueDate: form.value.issueDate,
+      fromHandler: form.value.fromHandler,
+      toHandler: form.value.toHandler,
       movementOrderStatus,
       remark: form.value.remark,
       totalQuantity: form.value.totalQuantity,
@@ -398,6 +596,23 @@ const doMovement = async () => {
     const params = {
       id: form.value.id,
       movementOrderNo: form.value.movementOrderNo,
+      movementType: form.value.movementType,
+      dispatchBasis: form.value.dispatchBasis,
+      dispatchPurpose: form.value.dispatchPurpose,
+      supportNo: form.value.supportNo,
+      dispatchMode: form.value.dispatchMode,
+      fromUnit: form.value.fromUnit,
+      toUnit: form.value.toUnit,
+      fromStation: form.value.fromStation,
+      toStation: form.value.toStation,
+      fromAddress: form.value.fromAddress,
+      toAddress: form.value.toAddress,
+      contactAddress: form.value.contactAddress,
+      dispatchDate: form.value.dispatchDate,
+      effectiveDate: form.value.effectiveDate,
+      issueDate: form.value.issueDate,
+      fromHandler: form.value.fromHandler,
+      toHandler: form.value.toHandler,
       remark: form.value.remark,
       totalQuantity: form.value.totalQuantity,
       sourceWarehouseId: form.value.sourceWarehouseId,
@@ -446,6 +661,7 @@ const loadDetail = (id) => {
       })
     }
     form.value = {...response.data}
+    form.value.details = (response.data.details || []).map(detail => syncMovementDetail(detail))
     inventorySelectRef.value.setWarehouseIdAndAreaId(form.value.sourceWarehouseId, form.value.sourceAreaId)
     Promise.resolve();
   }).then(() => {
@@ -487,6 +703,7 @@ const handleChangeQuantity = () => {
     if (it.quantity) {
       sum += Number(it.quantity)
     }
+    it.lineAmount = calcLineAmount(it.quantity, it.unitPrice)
   })
   form.value.totalQuantity = sum
 }
@@ -497,12 +714,14 @@ const handleDeleteDetail = (row, index) => {
       return delMovementOrderDetail(row.id);
     }).then(() => {
       form.value.details.splice(index, 1)
+      handleChangeQuantity()
       proxy.$modal.msgSuccess("删除成功");
     })
   } else {
     form.value.details.splice(index, 1)
     const indexOfSelected = selectedInventory.value.findIndex(it => it.id === row.inventoryDetailId)
     selectedInventory.value.splice(indexOfSelected, 1)
+    handleChangeQuantity()
   }
 }
 const goSaasTip = () => {
@@ -526,5 +745,11 @@ const goSaasTip = () => {
 
 .el-statistic__content {
   font-size: 14px;
+}
+
+.table-tip {
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
+  line-height: 18px;
 }
 </style>
