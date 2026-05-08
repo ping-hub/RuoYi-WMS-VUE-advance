@@ -87,7 +87,6 @@ export default {
   },
   methods: {
     visibleChange(visible, refName, type) {
-      ///system/warehouse
       if (visible) {
         const ref = this.$refs[refName];
         let popper = ref.popperPaneRef;
@@ -121,9 +120,8 @@ export default {
       }
     },
     onClickAdd() {
-      //跳转到新增仓库页面
       const newUrl = this.$router.resolve({
-        path: '/system/warehouse'
+        path: '/wms/basic/warehouse/index'
       })
       window.open(newUrl.path, '_blank')
     },

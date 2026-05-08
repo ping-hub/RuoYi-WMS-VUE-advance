@@ -1,4 +1,4 @@
-export default {
+const movementPanel = {
   "panels": [
     {
       "index": 0,
@@ -759,3 +759,39 @@ export default {
     }
   ]
 };
+
+const movementLabelMap = [
+  ['移库单号', '调拨单号'],
+  ['移库状态', '调拨状态'],
+  ['移库单', '调拨单'],
+  ['出库单号', '调拨单号'],
+  ['入库单号', '调拨单号'],
+  ['出库类型', '调拨类型'],
+  ['出库状态', '调拨状态']
+];
+
+function normalizeMovementPanelLabels(node) {
+  if (Array.isArray(node)) {
+    node.forEach(normalizeMovementPanelLabels);
+    return;
+  }
+  if (!node || typeof node !== 'object') {
+    return;
+  }
+  Object.keys(node).forEach((key) => {
+    const value = node[key];
+    if (typeof value === 'string') {
+      let nextValue = value;
+      movementLabelMap.forEach(([from, to]) => {
+        nextValue = nextValue.replaceAll(from, to);
+      });
+      node[key] = nextValue;
+      return;
+    }
+    normalizeMovementPanelLabels(value);
+  });
+}
+
+normalizeMovementPanelLabels(movementPanel);
+
+export default movementPanel;

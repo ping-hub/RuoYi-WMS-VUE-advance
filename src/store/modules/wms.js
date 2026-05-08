@@ -12,29 +12,29 @@ export const useWmsStore = defineStore('wms', () => {
   const warehouseList = ref([]);
   const warehouseMap = ref(new Map());
 
-  const getWarehouseList = () => {
-    listWarehouseNoPage({}).then((res) => {
-      warehouseList.value = res.data;
-      const map = new Map();
-      warehouseList.value.forEach((supplier) => {
-        map.set(supplier.id, supplier);
-      });
-      warehouseMap.value = map;
+  const getWarehouseList = async () => {
+    const res = await listWarehouseNoPage({});
+    warehouseList.value = res.data;
+    const map = new Map();
+    warehouseList.value.forEach((supplier) => {
+      map.set(supplier.id, supplier);
     });
+    warehouseMap.value = map;
+    return warehouseList.value;
   };
   // 库区管理
   const areaList = ref([]);
   const areaMap = ref(new Map());
 
-  const getAreaList = () => {
-    listAreaNoPage({}).then((res) => {
-      areaList.value = res.data;
-      const map = new Map();
-      areaList.value.forEach((supplier) => {
-        map.set(supplier.id, supplier);
-      });
-      areaMap.value = map;
+  const getAreaList = async () => {
+    const res = await listAreaNoPage({});
+    areaList.value = res.data;
+    const map = new Map();
+    areaList.value.forEach((supplier) => {
+      map.set(supplier.id, supplier);
     });
+    areaMap.value = map;
+    return areaList.value;
   };
 
   // 企业管理

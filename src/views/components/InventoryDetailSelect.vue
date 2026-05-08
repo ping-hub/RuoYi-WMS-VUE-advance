@@ -10,10 +10,16 @@
       </el-form-item>
       <el-form-item label="库区">
         <el-select v-model="query.areaId" placeholder="请选择库区" :disabled="selectAreaDisable"
-                   clearable filterable @change="">
+                   clearable filterable @change="handleAreaChange">
           <el-option v-for="item in useWmsStore().areaList.filter(it => it.warehouseId === query.warehouseId)"
                      :key="item.id" :label="item.areaName" :value="item.id"/>
         </el-select>
+      </el-form-item>
+      <el-form-item label="货架">
+        <RackSelect v-model="query.rackId" :warehouse-id="query.warehouseId" :area-id="query.areaId" @update:model-value="handleRackChange" />
+      </el-form-item>
+      <el-form-item label="货位">
+        <LocationSelect v-model="query.locationId" :warehouse-id="query.warehouseId" :area-id="query.areaId" :rack-id="query.rackId" />
       </el-form-item>
       <el-form-item label="规格名称">
         <el-input class="w200" v-model="query.skuName" clearable placeholder="规格名称"></el-input>
@@ -115,6 +121,8 @@ import {ElForm} from "element-plus";
 import {useRouter} from "vue-router";
 import {useWmsStore} from '@/store/modules/wms'
 import {listInventoryDetail} from "@/api/wms/inventoryDetail";
+import RackSelect from '@/views/components/RackSelect.vue'
+import LocationSelect from '@/views/components/LocationSelect.vue'
 const {proxy} = getCurrentInstance()
 const defaultTime = reactive([new Date(0,0,0,0,0,0), new Date(0,0,0,23,59,59)])
 
@@ -128,6 +136,8 @@ const query = reactive({
   minQuantity: 1,
   areaId: null,
   warehouseId: null,
+  rackId: null,
+  locationId: null,
   batchNo: '',
   daysToExpires: null
 });
@@ -178,6 +188,15 @@ const clickQuery = () => {
   pageReq.page = 1;
   loadAll();
 };
+
+const handleAreaChange = () => {
+  query.rackId = null
+  query.locationId = null
+}
+
+const handleRackChange = () => {
+  query.locationId = null
+}
 
 const props = defineProps({
   modelValue: {
@@ -237,9 +256,11 @@ const getVolumeText = (row) => {
     + ((row.height || row.height === 0) ? (' 高：' + row.height) : '')
 }
 
-const setWarehouseIdAndAreaId = (warehouseId = null, areaId = null) => {
+const setWarehouseIdAndAreaId = (warehouseId = null, areaId = null, rackId = null, locationId = null) => {
   query.warehouseId = warehouseId
   query.areaId = areaId
+  query.rackId = rackId
+  query.locationId = locationId
   if (areaId) {
     selectAreaDisable.value = true
   } else {
@@ -275,4 +296,3 @@ onMounted(() => {
   font-size: 14px;
 }
 </style>
-

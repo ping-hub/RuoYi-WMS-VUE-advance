@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="app-container storage-layout-page">
     <el-card shadow="never">
       <el-form :model="queryParams" :inline="true" label-width="84px">
@@ -18,7 +18,7 @@
         </el-form-item>
       </el-form>
       <div class="page-tip">
-        仓储布局统一浏览仓库、库区、货架、货位；首期货位以货架二维格子图展示，点击格子查看货位摘要。
+        仓储布局统一浏览仓库、库区、货架、货位；本页用于布局浏览，不替代仓库和库区维护页面。
       </div>
     </el-card>
 
@@ -70,6 +70,13 @@
             </div>
           </div>
 
+          <el-descriptions v-if="rackGrid" :column="4" border class="mb16">
+            <el-descriptions-item label="货架">{{ currentRackInfo?.name || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="行列">{{ `${rackGrid.rowCount || 0} 行 / ${rackGrid.columnCount || 0} 列` }}</el-descriptions-item>
+            <el-descriptions-item label="尺寸">{{ formatDimensionText(rackGrid.length, rackGrid.width, rackGrid.height) }}</el-descriptions-item>
+            <el-descriptions-item label="排序号">{{ rackGrid.orderNum ?? '-' }}</el-descriptions-item>
+          </el-descriptions>
+
           <div v-loading="gridLoading" class="grid-panel">
             <el-empty v-if="!currentRackId" description="请先在左侧仓储树或上方下拉框中选择货架" />
             <el-empty v-else-if="!rackGrid" description="当前货架暂无格子图数据" />
@@ -112,6 +119,10 @@
               <el-descriptions-item label="库区">{{ locationSummary.areaName || '-' }}</el-descriptions-item>
               <el-descriptions-item label="货架">{{ locationSummary.rackName || '-' }}</el-descriptions-item>
               <el-descriptions-item label="格子坐标">{{ `第 ${locationSummary.rowNo || '-'} 行 / 第 ${locationSummary.columnNo || '-'} 列` }}</el-descriptions-item>
+              <el-descriptions-item label="尺寸">{{ formatDimensionText(locationSummary.length, locationSummary.width, locationSummary.height) }}</el-descriptions-item>
+              <el-descriptions-item label="容积">{{ locationSummary.volume ?? '-' }}</el-descriptions-item>
+              <el-descriptions-item label="最大承重">{{ locationSummary.maxWeight ?? '-' }}</el-descriptions-item>
+              <el-descriptions-item label="占用状态">{{ formatOccupiedText(locationSummary.occupiedFlag) }}</el-descriptions-item>
               <el-descriptions-item label="箱体数">{{ locationSummary.boxCount || 0 }}</el-descriptions-item>
               <el-descriptions-item label="器材数">{{ locationSummary.itemInstanceCount || 0 }}</el-descriptions-item>
             </el-descriptions>
@@ -220,6 +231,8 @@ const treeStats = computed(() => ({
   locationCount: collectNodes(treeData.value, 'location').length
 }))
 
+const currentRackInfo = computed(() => rackOptions.value.find(item => item.id === currentRackId.value))
+
 const currentRackText = computed(() => {
   const rack = rackOptions.value.find(item => item.id === currentRackId.value)
   return rack ? `${rack.name}${rack.code ? ` / ${rack.code}` : ''}` : '未选择货架'
@@ -278,6 +291,17 @@ function getCellVisualType(cell) {
     return 'occupied'
   }
   return 'empty'
+}
+
+function formatDimensionText(length, width, height) {
+  if (![length, width, height].some(value => value || value === 0)) {
+    return '-'
+  }
+  return `长 ${length ?? '-'} / 宽 ${width ?? '-'} / 高 ${height ?? '-'}`
+}
+
+function formatOccupiedText(flag) {
+  return Number(flag) === 1 ? '已占用' : '空闲'
 }
 
 async function loadLayoutTree() {
@@ -410,6 +434,10 @@ onMounted(() => {
 <style scoped>
 .storage-layout-page .mt16 {
   margin-top: 16px;
+}
+
+.storage-layout-page .mb16 {
+  margin-bottom: 16px;
 }
 
 .full-height-card {
@@ -556,4 +584,3 @@ onMounted(() => {
   color: #303133;
 }
 </style>
-

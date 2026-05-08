@@ -60,6 +60,7 @@
               </el-form-item>
             </el-col>
           </el-row>
+          <div class="form-tip">带 * 为必填项</div>
           <el-alert
             :closable="false"
             type="info"
@@ -67,12 +68,18 @@
           />
           <el-row :gutter="24">
             <el-col :span="6">
-              <el-form-item label="调拨范围" prop="movementScope">
+              <el-form-item prop="movementScope">
+                <template #label>
+                  <FormLabelHelp label="调拨范围" purpose="说明本单属于跨仓调拨还是单位间调拨，用于单据头口径确认。" example="跨仓调拨、单位间调拨" />
+                </template>
                 <el-input v-model="form.movementScope" placeholder="请输入跨仓或单位间" />
               </el-form-item>
             </el-col>
             <el-col :span="6">
-              <el-form-item label="调拨依据" prop="dispatchBasis">
+              <el-form-item prop="dispatchBasis">
+                <template #label>
+                  <FormLabelHelp label="调拨依据" purpose="记录本次调拨所依据的文件或命令类型，便于纸单口径一致。" example="命令、计划、申请" />
+                </template>
                 <el-select v-model="form.dispatchBasis" placeholder="请选择调拨依据" clearable style="width: 100%">
                   <el-option v-for="item in wms_basis_type" :key="item.value" :label="item.label" :value="item.value" />
                 </el-select>
@@ -84,12 +91,18 @@
               </el-form-item>
             </el-col>
             <el-col :span="6">
-              <el-form-item label="物资保障号" prop="supportNo">
+              <el-form-item prop="supportNo">
+                <template #label>
+                  <FormLabelHelp label="保障号" purpose="记录保障任务或保障批次编号，便于与纸单和外部任务单对照。" example="BZ-2026-015" />
+                </template>
                 <el-input v-model="form.supportNo" placeholder="请输入物资保障号"></el-input>
               </el-form-item>
             </el-col>
             <el-col :span="6">
-              <el-form-item label="调拨方式" prop="dispatchMode">
+              <el-form-item prop="dispatchMode">
+                <template #label>
+                  <FormLabelHelp label="调拨方式" purpose="表示本次调拨采用的组织或运输方式，便于表头信息完整。" example="通装、专装" />
+                </template>
                 <el-select v-model="form.dispatchMode" placeholder="请选择调拨方式" clearable style="width: 100%">
                   <el-option v-for="item in wms_dispatch_mode" :key="item.value" :label="item.label" :value="item.value" />
                 </el-select>
@@ -142,12 +155,18 @@
           </el-row>
           <el-row :gutter="24">
             <el-col :span="6">
-              <el-form-item label="目标货架" prop="targetRackId">
+              <el-form-item prop="targetRackId">
+                <template #label>
+                  <FormLabelHelp label="目标货架" purpose="指定调拨后所在货架，需先选目标仓库和目标库区。" example="A库区-01号架" />
+                </template>
                 <RackSelect v-model="form.targetRackId" :warehouse-id="form.targetWarehouseId" :area-id="form.targetAreaId" @update:model-value="handleHeaderTargetRackChange" />
               </el-form-item>
             </el-col>
             <el-col :span="6">
-              <el-form-item label="目标货位" prop="targetLocationId">
+              <el-form-item prop="targetLocationId">
+                <template #label>
+                  <FormLabelHelp label="目标货位" purpose="指定调拨后落位货位，需与目标货架保持一致。" example="A01-03-02" />
+                </template>
                 <LocationSelect
                   v-model="form.targetLocationId"
                   :warehouse-id="form.targetWarehouseId"
@@ -380,6 +399,7 @@ import {numSub, generateNo} from '@/utils/ruoyi'
 import InventoryDetailSelect from "@/views/components/InventoryDetailSelect.vue";
 import RackSelect from "@/views/components/RackSelect.vue";
 import LocationSelect from "@/views/components/LocationSelect.vue";
+import FormLabelHelp from '@/views/components/FormLabelHelp.vue'
 
 const {proxy} = getCurrentInstance();
 const {wms_movement_type, wms_dispatch_mode, wms_basis_type, wms_quality_grade} = proxy.useDict(
@@ -941,10 +961,15 @@ const goSaasTip = () => {
   font-size: 14px;
 }
 
+.form-tip,
 .table-tip {
   color: var(--el-text-color-secondary);
   font-size: 12px;
   line-height: 18px;
+}
+
+.form-tip {
+  margin: 0 0 12px;
 }
 </style>
 

@@ -68,6 +68,15 @@
             <dict-tag :options="wms_rack_type" :value="row.rackType" />
           </template>
         </el-table-column>
+        <el-table-column label="行数" prop="rowCount" width="80" align="center" />
+        <el-table-column label="列数" prop="columnCount" width="80" align="center" />
+        <el-table-column label="尺寸(cm)" min-width="180">
+          <template #default="{ row }">
+            <div>长：{{ row.length || '-' }}</div>
+            <div class="sub-text">宽：{{ row.width || '-' }} / 高：{{ row.height || '-' }}</div>
+          </template>
+        </el-table-column>
+        <el-table-column label="排序号" prop="orderNum" width="90" align="center" />
         <el-table-column label="备注" prop="remark" min-width="180" show-overflow-tooltip />
         <el-table-column label="操作" align="right" width="160">
           <template #default="{ row }">
@@ -87,8 +96,12 @@
     </el-card>
 
     <el-drawer :title="title" v-model="open" append-to-body size="40%" :close-on-click-modal="false">
-      <el-form ref="rackRef" :model="form" :rules="rules" label-width="100px">
-        <el-form-item label="货架编码" prop="rackCode">
+      <div class="form-tip">带 * 为必填项</div>
+      <el-form ref="rackRef" :model="form" :rules="rules" label-width="110px">
+        <el-form-item prop="rackCode">
+          <template #label>
+            <FormLabelHelp label="货架编码" purpose="用于唯一标识货架，在布局页和单据定位中引用。" example="RK-A01" />
+          </template>
           <el-input v-model="form.rackCode" placeholder="请输入货架编码" />
         </el-form-item>
         <el-form-item label="货架名称" prop="rackName">
@@ -119,10 +132,49 @@
             <el-option v-for="dict in wms_rack_status" :key="dict.value" :label="dict.label" :value="dict.value" />
           </el-select>
         </el-form-item>
-        <el-form-item label="货架类型" prop="rackType">
+        <el-form-item prop="rackType">
+          <template #label>
+            <FormLabelHelp label="货架类型" purpose="区分货架使用形态，便于布局和维护时识别不同存储方式。" example="标准货架、平面堆位" />
+          </template>
           <el-select v-model="form.rackType" placeholder="请选择货架类型" style="width: 100%">
             <el-option v-for="dict in wms_rack_type" :key="dict.value" :label="dict.label" :value="dict.value" />
           </el-select>
+        </el-form-item>
+        <el-form-item prop="rowCount">
+          <template #label>
+            <FormLabelHelp label="行数" purpose="用于生成货架二维格子图的纵向行数。" example="4" />
+          </template>
+          <el-input-number v-model="form.rowCount" :min="1" :precision="0" style="width: 100%" />
+        </el-form-item>
+        <el-form-item prop="columnCount">
+          <template #label>
+            <FormLabelHelp label="列数" purpose="用于生成货架二维格子图的横向列数。" example="6" />
+          </template>
+          <el-input-number v-model="form.columnCount" :min="1" :precision="0" style="width: 100%" />
+        </el-form-item>
+        <el-form-item prop="length">
+          <template #label>
+            <FormLabelHelp label="长" purpose="记录货架物理长度，便于基础资料和布局摘要展示。" example="240" />
+          </template>
+          <el-input-number v-model="form.length" :min="0" :precision="2" style="width: 100%" />
+        </el-form-item>
+        <el-form-item prop="width">
+          <template #label>
+            <FormLabelHelp label="宽" purpose="记录货架物理宽度，便于基础资料和布局摘要展示。" example="80" />
+          </template>
+          <el-input-number v-model="form.width" :min="0" :precision="2" style="width: 100%" />
+        </el-form-item>
+        <el-form-item prop="height">
+          <template #label>
+            <FormLabelHelp label="高" purpose="记录货架物理高度，便于基础资料和布局摘要展示。" example="220" />
+          </template>
+          <el-input-number v-model="form.height" :min="0" :precision="2" style="width: 100%" />
+        </el-form-item>
+        <el-form-item prop="orderNum">
+          <template #label>
+            <FormLabelHelp label="排序号" purpose="控制同库区下货架的展示顺序。" example="10" />
+          </template>
+          <el-input-number v-model="form.orderNum" :min="0" :precision="0" style="width: 100%" />
         </el-form-item>
         <el-form-item label="备注" prop="remark">
           <el-input v-model="form.remark" type="textarea" :rows="3" placeholder="请输入备注" />
@@ -143,6 +195,7 @@ import { computed, getCurrentInstance, onMounted, reactive, ref, toRefs } from '
 import { ElMessageBox } from 'element-plus';
 import { addRack, delRack, getRack, listRack, updateRack } from '@/api/wms/rack';
 import { useWmsStore } from '@/store/modules/wms';
+import FormLabelHelp from '@/views/components/FormLabelHelp.vue'
 
 const { proxy } = getCurrentInstance();
 const { wms_rack_status, wms_rack_type } = proxy.useDict('wms_rack_status', 'wms_rack_type');
@@ -206,6 +259,12 @@ function reset() {
     areaId: undefined,
     rackStatus: 'enabled',
     rackType: 'standard',
+    rowCount: 1,
+    columnCount: 1,
+    length: undefined,
+    width: undefined,
+    height: undefined,
+    orderNum: 0,
     remark: undefined
   };
   proxy.resetForm('rackRef');
@@ -305,3 +364,15 @@ onMounted(async () => {
   await getList();
 });
 </script>
+
+<style scoped lang="scss">
+.sub-text,
+.form-tip {
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
+}
+
+.form-tip {
+  margin-bottom: 12px;
+}
+</style>

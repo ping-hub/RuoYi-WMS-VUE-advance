@@ -1,6 +1,6 @@
 import request from '@/utils/request'
 
-// 查询库存移动详情列表
+// 查询调拨明细列表
 export function listMovementOrderDetail(query) {
   return request({
     url: '/wms/movementOrderDetail/list',
@@ -9,7 +9,7 @@ export function listMovementOrderDetail(query) {
   })
 }
 
-// 查询库存移动详情详细
+// 查询调拨明细详情
 export function getMovementOrderDetail(id) {
   return request({
     url: '/wms/movementOrderDetail/' + id,
@@ -17,7 +17,7 @@ export function getMovementOrderDetail(id) {
   })
 }
 
-// 新增库存移动详情
+// 新增调拨明细
 export function addMovementOrderDetail(data) {
   return request({
     url: '/wms/movementOrderDetail',
@@ -26,7 +26,7 @@ export function addMovementOrderDetail(data) {
   })
 }
 
-// 修改库存移动详情
+// 修改调拨明细
 export function updateMovementOrderDetail(data) {
   return request({
     url: '/wms/movementOrderDetail',
@@ -35,7 +35,7 @@ export function updateMovementOrderDetail(data) {
   })
 }
 
-// 查询移库单详情列表
+// 查询调拨单明细列表
 export function listByMovementOrderId(movementOrderId) {
   return request({
     url: '/wms/movementOrderDetail/list/' + movementOrderId,
@@ -43,7 +43,7 @@ export function listByMovementOrderId(movementOrderId) {
   })
 }
 
-// 删除库存移动详情
+// 删除调拨明细
 export function delMovementOrderDetail(id) {
   return request({
     url: '/wms/movementOrderDetail/' + id,

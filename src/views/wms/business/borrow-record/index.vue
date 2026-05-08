@@ -7,19 +7,31 @@
             <el-option v-for="dict in wms_borrow_status" :key="dict.value" :label="dict.label" :value="dict.value" />
           </el-select>
         </el-form-item>
-        <el-form-item label="超期状态" prop="overdueFlag">
+        <el-form-item prop="overdueFlag">
+          <template #label>
+            <FormLabelHelp label="超期状态" purpose="按是否超过计划归还日期筛选借用记录，便于快速定位预警单据。" example="已超期、正常" />
+          </template>
           <el-select v-model="queryParams.overdueFlag" placeholder="请选择超期状态" clearable style="width: 160px">
             <el-option label="正常" :value="0" />
             <el-option label="已超期" :value="1" />
           </el-select>
         </el-form-item>
-        <el-form-item label="借用人" prop="borrower">
+        <el-form-item prop="borrower">
+          <template #label>
+            <FormLabelHelp label="借用人" purpose="记录本次借用责任人，用于单据查询、催还和责任追溯。" example="张三、器材保障班" />
+          </template>
           <el-input v-model="queryParams.borrower" placeholder="请输入借用人" clearable @keyup.enter="handleQuery" />
         </el-form-item>
-        <el-form-item label="发货单位" prop="fromUnit">
+        <el-form-item prop="fromUnit">
+          <template #label>
+            <FormLabelHelp label="发货单位" purpose="表示借出方所属单位，用于借用单据头和追踪结果展示。" example="仓储保障连" />
+          </template>
           <el-input v-model="queryParams.fromUnit" placeholder="请输入发货单位" clearable @keyup.enter="handleQuery" />
         </el-form-item>
-        <el-form-item label="收货单位" prop="toUnit">
+        <el-form-item prop="toUnit">
+          <template #label>
+            <FormLabelHelp label="收货单位" purpose="表示借入方所属单位，用于借用去向记录和联调核对。" example="作训股、机动分队" />
+          </template>
           <el-input v-model="queryParams.toUnit" placeholder="请输入收货单位" clearable @keyup.enter="handleQuery" />
         </el-form-item>
         <el-form-item label="物品码" prop="instanceCode">
@@ -139,7 +151,8 @@
     </el-card>
 
     <el-dialog title="借出登记" v-model="borrowDialog.visible" width="760px" append-to-body :close-on-click-modal="false">
-      <el-form ref="borrowFormRef" :model="borrowDialog.form" :rules="borrowRules" label-width="100px">
+      <div class="form-tip">带 * 为必填项</div>
+      <el-form ref="borrowFormRef" :model="borrowDialog.form" :rules="borrowRules" label-width="110px">
         <el-form-item label="物品码" prop="itemInstanceId">
           <el-select
             v-model="borrowDialog.form.itemInstanceId"
@@ -168,7 +181,10 @@
         </el-descriptions>
         <el-row :gutter="20">
           <el-col :span="12">
-            <el-form-item label="借用人" prop="borrower">
+            <el-form-item prop="borrower">
+              <template #label>
+                <FormLabelHelp label="借用人" purpose="记录本次借出责任主体，后续归还、超期预警和追踪都按此字段检索。" example="李四、通信保障组" />
+              </template>
               <el-input v-model="borrowDialog.form.borrower" placeholder="请输入借用人" />
             </el-form-item>
           </el-col>
@@ -186,7 +202,10 @@
         </el-row>
         <el-row :gutter="20">
           <el-col :span="12">
-            <el-form-item label="计划归还" prop="planReturnDate">
+            <el-form-item prop="planReturnDate">
+              <template #label>
+                <FormLabelHelp label="计划归还" purpose="用于计算是否超期，并在借用列表和追踪页显示预警状态。" example="2026-05-20" />
+              </template>
               <el-date-picker
                 v-model="borrowDialog.form.planReturnDate"
                 type="date"
@@ -199,12 +218,18 @@
         </el-row>
         <el-row :gutter="20">
           <el-col :span="12">
-            <el-form-item label="发货单位" prop="fromUnit">
+            <el-form-item prop="fromUnit">
+              <template #label>
+                <FormLabelHelp label="发货单位" purpose="记录借出方单位信息，对应借用单语义中的发货单位。" example="器材库一连" />
+              </template>
               <el-input v-model="borrowDialog.form.fromUnit" placeholder="请输入发货单位" />
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="收货单位" prop="toUnit">
+            <el-form-item prop="toUnit">
+              <template #label>
+                <FormLabelHelp label="收货单位" purpose="记录借入方单位信息，对应借用单语义中的收货单位。" example="野外作业组" />
+              </template>
               <el-input v-model="borrowDialog.form.toUnit" placeholder="请输入收货单位" />
             </el-form-item>
           </el-col>
@@ -366,6 +391,7 @@ import {
   returnBorrowItem
 } from '@/api/wms/borrowRecord';
 import { listItemInstance, getItemInstanceByCode, getItemInstance } from '@/api/wms/itemInstance';
+import FormLabelHelp from '@/views/components/FormLabelHelp.vue'
 
 const router = useRouter();
 const route = useRoute();
@@ -725,6 +751,12 @@ onMounted(async () => {
 
 .mb16 {
   margin-bottom: 16px;
+}
+
+.form-tip {
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
+  margin-bottom: 12px;
 }
 
 .stats-row {

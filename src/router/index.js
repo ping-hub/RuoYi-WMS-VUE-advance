@@ -227,6 +227,20 @@ export const dynamicRoutes = [
         meta: { title: '箱码追踪' }
       }
     ]
+  },
+  {
+    path: '/internalMoveOrderEdit',
+    component: Layout,
+    hidden: true,
+    permissions: ['wms:internalMove:list', 'wms:internalMove:edit'],
+    children: [
+      {
+        path: 'index',
+        component: () => import('@/views/wms/internal/move/edit.vue'),
+        name: 'InternalMoveOrderEdit',
+        meta: { title: '编辑库内移库单', activeMenu: '/wms/internal/move/index' }
+      }
+    ]
   }
 ]
 

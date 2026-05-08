@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="app-container">
     <el-card>
       <el-form ref="queryRef" :model="queryParams" :inline="true" label-width="68px">
@@ -77,6 +77,28 @@
             <dict-tag :options="wms_location_type" :value="row.locationType" />
           </template>
         </el-table-column>
+        <el-table-column label="行号" prop="rowNo" width="80" align="center" />
+        <el-table-column label="列号" prop="columnNo" width="80" align="center" />
+        <el-table-column label="尺寸(cm)" min-width="180">
+          <template #default="{ row }">
+            <div>长：{{ row.length || '-' }}</div>
+            <div class="sub-text">宽：{{ row.width || '-' }} / 高：{{ row.height || '-' }}</div>
+          </template>
+        </el-table-column>
+        <el-table-column label="容积/承重" min-width="180">
+          <template #default="{ row }">
+            <div>容积：{{ row.volume || '-' }}</div>
+            <div class="sub-text">最大承重：{{ row.maxWeight || '-' }}</div>
+          </template>
+        </el-table-column>
+        <el-table-column label="占用状态" width="100" align="center">
+          <template #default="{ row }">
+            <el-tag size="small" :type="Number(row.occupiedFlag) === 1 ? 'warning' : 'success'">
+              {{ Number(row.occupiedFlag) === 1 ? '已占用' : '空闲' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="排序号" prop="sortNo" width="90" align="center" />
         <el-table-column label="备注" prop="remark" min-width="180" show-overflow-tooltip />
         <el-table-column label="操作" align="right" width="240">
           <template #default="{ row }">
@@ -97,8 +119,12 @@
     </el-card>
 
     <el-drawer :title="title" v-model="open" append-to-body size="40%" :close-on-click-modal="false">
-      <el-form ref="locationRef" :model="form" :rules="rules" label-width="100px">
-        <el-form-item label="货位编码" prop="locationCode">
+      <div class="form-tip">带 * 为必填项</div>
+      <el-form ref="locationRef" :model="form" :rules="rules" label-width="110px">
+        <el-form-item prop="locationCode">
+          <template #label>
+            <FormLabelHelp label="货位编码" purpose="用于唯一标识货位，在布局格子图和单据位置选择中使用。" example="A01-02-03" />
+          </template>
           <el-input v-model="form.locationCode" placeholder="请输入货位编码" />
         </el-form-item>
         <el-form-item label="货位名称" prop="locationName">
@@ -132,10 +158,67 @@
             <el-option v-for="dict in wms_location_status" :key="dict.value" :label="dict.label" :value="dict.value" />
           </el-select>
         </el-form-item>
-        <el-form-item label="货位类型" prop="locationType">
+        <el-form-item prop="locationType">
+          <template #label>
+            <FormLabelHelp label="货位类型" purpose="区分普通存放位、暂存位等类型，便于业务限制和识别。" example="普通货位、暂存货位" />
+          </template>
           <el-select v-model="form.locationType" placeholder="请选择货位类型" style="width: 100%">
             <el-option v-for="dict in wms_location_type" :key="dict.value" :label="dict.label" :value="dict.value" />
           </el-select>
+        </el-form-item>
+        <el-form-item prop="rowNo">
+          <template #label>
+            <FormLabelHelp label="行号" purpose="用于在货架格子图中确定货位所在行。" example="2" />
+          </template>
+          <el-input-number v-model="form.rowNo" :min="1" :precision="0" style="width: 100%" />
+        </el-form-item>
+        <el-form-item prop="columnNo">
+          <template #label>
+            <FormLabelHelp label="列号" purpose="用于在货架格子图中确定货位所在列。" example="5" />
+          </template>
+          <el-input-number v-model="form.columnNo" :min="1" :precision="0" style="width: 100%" />
+        </el-form-item>
+        <el-form-item prop="length">
+          <template #label>
+            <FormLabelHelp label="长" purpose="记录货位物理长度，用于容量与布局摘要展示。" example="60" />
+          </template>
+          <el-input-number v-model="form.length" :min="0" :precision="2" style="width: 100%" />
+        </el-form-item>
+        <el-form-item prop="width">
+          <template #label>
+            <FormLabelHelp label="宽" purpose="记录货位物理宽度，用于容量与布局摘要展示。" example="40" />
+          </template>
+          <el-input-number v-model="form.width" :min="0" :precision="2" style="width: 100%" />
+        </el-form-item>
+        <el-form-item prop="height">
+          <template #label>
+            <FormLabelHelp label="高" purpose="记录货位物理高度，用于容量与布局摘要展示。" example="50" />
+          </template>
+          <el-input-number v-model="form.height" :min="0" :precision="2" style="width: 100%" />
+        </el-form-item>
+        <el-form-item prop="volume">
+          <template #label>
+            <FormLabelHelp label="容积" purpose="表示货位可用容积，用于容量参考和货位摘要。" example="0.12" />
+          </template>
+          <el-input-number v-model="form.volume" :min="0" :precision="4" style="width: 100%" />
+        </el-form-item>
+        <el-form-item prop="maxWeight">
+          <template #label>
+            <FormLabelHelp label="最大承重" purpose="表示货位允许承载的最大重量，用于基础资料维护。" example="200" />
+          </template>
+          <el-input-number v-model="form.maxWeight" :min="0" :precision="2" style="width: 100%" />
+        </el-form-item>
+        <el-form-item label="占用状态" prop="occupiedFlag">
+          <el-radio-group v-model="form.occupiedFlag">
+            <el-radio :label="0">空闲</el-radio>
+            <el-radio :label="1">已占用</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item prop="sortNo">
+          <template #label>
+            <FormLabelHelp label="排序号" purpose="控制同货架下货位的展示顺序。" example="20" />
+          </template>
+          <el-input-number v-model="form.sortNo" :min="0" :precision="0" style="width: 100%" />
         </el-form-item>
         <el-form-item label="备注" prop="remark">
           <el-input v-model="form.remark" type="textarea" :rows="3" placeholder="请输入备注" />
@@ -221,6 +304,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { addLocation, delLocation, getLocation, getLocationStock, listLocation, updateLocation } from '@/api/wms/location';
 import { useWmsStore } from '@/store/modules/wms';
 import RackSelect from '@/views/components/RackSelect.vue';
+import FormLabelHelp from '@/views/components/FormLabelHelp.vue'
 
 const { proxy } = getCurrentInstance();
 const router = useRouter();
@@ -295,6 +379,15 @@ function reset() {
     rackId: undefined,
     locationStatus: 'enabled',
     locationType: 'normal',
+    rowNo: 1,
+    columnNo: 1,
+    length: undefined,
+    width: undefined,
+    height: undefined,
+    volume: undefined,
+    maxWeight: undefined,
+    occupiedFlag: 0,
+    sortNo: 0,
     remark: undefined
   };
   proxy.resetForm('locationRef');
@@ -424,9 +517,14 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.sub-text {
+.sub-text,
+.form-tip {
   color: var(--el-text-color-secondary);
   font-size: 12px;
+}
+
+.form-tip {
+  margin-bottom: 12px;
 }
 
 .detail-header {
@@ -445,4 +543,3 @@ onMounted(async () => {
   margin-bottom: 16px;
 }
 </style>
-

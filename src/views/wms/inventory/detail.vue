@@ -393,7 +393,7 @@ const handleBackToLedger = () => {
 const orderTypeText = (type) => {
   const map = {
     1: '入库单',
-    2: '移库单',
+    2: '调拨单',
     3: '盘点单'
   }
   return map[type] || '未知单据'
@@ -431,4 +431,3 @@ initFromRoute()
   font-size: 12px;
 }
 </style>
-
