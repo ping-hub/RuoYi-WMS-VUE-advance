@@ -1,11 +1,11 @@
-<template>
+﻿<template>
   <div class="app-container">
     <el-card>
       <el-form :inline="true" label-width="88px">
-        <el-form-item :label="isItemMode ? '单品码' : '箱码'">
+        <el-form-item :label="isItemMode ? '物品码' : '箱码'">
           <el-input
             v-model="code"
-            :placeholder="isItemMode ? '请输入单品码' : '请输入箱码'"
+            :placeholder="isItemMode ? '请输入物品码' : '请输入箱码'"
             clearable
             style="width: 320px"
             @keyup.enter="handleQuery"
@@ -22,21 +22,21 @@
       <el-card class="mt20" v-loading="loading">
         <template #header>
           <div class="panel-header">
-            <span class="panel-title">单品追踪结果</span>
-            <el-button v-if="itemTrace.itemInstance?.id" link type="primary" @click="goItemInstance(itemTrace.itemInstance.instanceCode)">查看单品实例</el-button>
+            <span class="panel-title">物品码追踪结果</span>
+            <el-button v-if="itemTrace.itemInstance?.id" link type="primary" @click="goItemInstance(itemTrace.itemInstance.instanceCode)">查看物品明细</el-button>
           </div>
         </template>
 
-        <el-empty v-if="!itemTrace.itemInstance && !loading" description="请输入单品码进行查询" />
+        <el-empty v-if="!itemTrace.itemInstance && !loading" description="请输入物品码进行查询" />
 
         <template v-else-if="itemTrace.itemInstance">
           <el-descriptions :column="2" border>
-            <el-descriptions-item label="单品码">{{ itemTrace.itemInstance.instanceCode || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="物品码">{{ itemTrace.itemInstance.instanceCode || '-' }}</el-descriptions-item>
             <el-descriptions-item label="状态">
               <dict-tag :options="wms_item_instance_status" :value="itemTrace.itemInstance.instanceStatus" />
             </el-descriptions-item>
-            <el-descriptions-item label="商品">{{ itemTrace.itemInstance.itemName || '-' }}</el-descriptions-item>
-            <el-descriptions-item label="规格">{{ itemTrace.itemInstance.skuName || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="器材">{{ itemTrace.itemInstance.itemName || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="器材规格">{{ itemTrace.itemInstance.skuName || '-' }}</el-descriptions-item>
             <el-descriptions-item label="产品标识">{{ itemTrace.itemInstance.productMark || '-' }}</el-descriptions-item>
             <el-descriptions-item label="质量等级">{{ itemTrace.itemInstance.qualityGrade || '-' }}</el-descriptions-item>
             <el-descriptions-item label="所在单位">{{ itemTrace.itemInstance.belongUnit || '-' }}</el-descriptions-item>
@@ -46,7 +46,8 @@
             <el-descriptions-item label="借出状态">{{ itemTrace.itemInstance.borrowed === 1 ? '已借出' : '未借出' }}</el-descriptions-item>
             <el-descriptions-item label="当前箱体" :span="2">
               <span v-if="itemTrace.currentBox?.boxCode">
-                {{ itemTrace.currentBox.boxCode }}
+                {{ itemTrace.currentBox.boxCode }}{{ itemTrace.currentBox.boxName ? ' / ' + itemTrace.currentBox.boxName : '' }}
+                <dict-tag class="ml8" :options="wms_box_status" :value="itemTrace.currentBox.boxStatus" />
                 <el-button link type="primary" @click="goBoxTrace(itemTrace.currentBox.boxCode)">查看箱码追踪</el-button>
               </span>
               <span v-else>-</span>
@@ -68,7 +69,7 @@
             {{ [itemTrace.currentLocation.warehouseName, itemTrace.currentLocation.areaName].filter(Boolean).join(' / ') || '-' }}
           </el-descriptions-item>
           <el-descriptions-item label="货架">{{ itemTrace.currentLocation.rackName || '-' }}</el-descriptions-item>
-          <el-descriptions-item label="直存单品数">{{ itemTrace.currentLocation.directItemCount || 0 }}</el-descriptions-item>
+          <el-descriptions-item label="直存器材数">{{ itemTrace.currentLocation.directItemCount || 0 }}</el-descriptions-item>
           <el-descriptions-item label="箱体数">{{ itemTrace.currentLocation.boxCount || 0 }}</el-descriptions-item>
         </el-descriptions>
       </el-card>
@@ -77,7 +78,7 @@
         <template #header>
           <div class="panel-header">
             <span class="panel-title">当前借用记录</span>
-            <el-button link type="primary" @click="goBorrowRecord(itemTrace.itemInstance?.id, 'borrowed')">查看借还管理</el-button>
+            <el-button link type="primary" @click="goBorrowRecord(itemTrace.itemInstance?.id, 'borrowed')">查看借用记录</el-button>
           </div>
         </template>
         <el-descriptions :column="2" border>
@@ -95,15 +96,16 @@
       <el-card class="mt20" v-if="itemTrace.borrowRecords?.length">
         <template #header>
           <div class="panel-header">
-            <span class="panel-title">借还历史</span>
+            <span class="panel-title">借用历史</span>
           </div>
         </template>
-        <el-table :data="itemTrace.borrowRecords" border empty-text="暂无借还历史">
+        <el-table :data="itemTrace.borrowRecords" border empty-text="暂无借用历史">
           <el-table-column label="状态" width="100">
             <template #default="{ row }">
               <dict-tag :options="wms_borrow_status" :value="row.borrowStatus" />
             </template>
           </el-table-column>
+          <el-table-column label="借用单号" prop="borrowNo" min-width="140" />
           <el-table-column label="借用人" prop="borrower" min-width="120" />
           <el-table-column label="单位/标识" min-width="220">
             <template #default="{ row }">
@@ -116,9 +118,20 @@
               {{ row.borrowTime ? parseTime(row.borrowTime, '{y}-{m}-{d} {h}:{i}:{s}') : '-' }}
             </template>
           </el-table-column>
+          <el-table-column label="计划归还" min-width="120">
+            <template #default="{ row }">
+              {{ row.planReturnDate ? parseTime(row.planReturnDate, '{y}-{m}-{d}') : '-' }}
+            </template>
+          </el-table-column>
           <el-table-column label="归还时间" min-width="180">
             <template #default="{ row }">
               {{ row.returnTime ? parseTime(row.returnTime, '{y}-{m}-{d} {h}:{i}:{s}') : '-' }}
+            </template>
+          </el-table-column>
+          <el-table-column label="预警" width="120" align="center">
+            <template #default="{ row }">
+              <el-tag v-if="row.overdueFlag === 1" type="danger">超期{{ row.overdueDays || 0 }}天</el-tag>
+              <el-tag v-else type="success">正常</el-tag>
             </template>
           </el-table-column>
           <el-table-column label="操作" width="100" align="right">
@@ -137,7 +150,7 @@
         </template>
         <el-table :data="itemTrace.shipmentDetails" border empty-text="暂无出库记录">
           <el-table-column label="出库单ID" prop="shipmentOrderId" width="120" />
-          <el-table-column label="规格" min-width="180">
+          <el-table-column label="器材规格" min-width="180">
             <template #default="{ row }">
               {{ row.itemSku?.skuName || '-' }}
             </template>
@@ -148,7 +161,7 @@
               <div class="sub-text">{{ row.qualityGrade || '-' }}</div>
             </template>
           </el-table-column>
-          <el-table-column label="单品码" prop="instanceCode" min-width="160" />
+          <el-table-column label="物品码" prop="instanceCode" min-width="160" />
           <el-table-column label="箱码" prop="boxCode" min-width="140" />
           <el-table-column label="数量" prop="quantity" width="80" align="right" />
           <el-table-column label="批号" prop="batchNo" min-width="120" />
@@ -181,13 +194,13 @@
               <div class="sub-text">{{ row.qualityGrade || '-' }}</div>
             </template>
           </el-table-column>
-          <el-table-column label="源库区/目标库区" min-width="220">
+          <el-table-column label="源位置/目标位置" min-width="260">
             <template #default="{ row }">
-              <div>源：{{ row.sourceAreaId || '-' }}</div>
-              <div class="sub-text">目标：{{ row.targetAreaId || '-' }}</div>
+              <div>源：{{ formatLocationPath(row, 'source') }}</div>
+              <div class="sub-text">目标：{{ formatLocationPath(row, 'target') }}</div>
             </template>
           </el-table-column>
-          <el-table-column label="单品码" prop="instanceCode" min-width="160" />
+          <el-table-column label="物品码" prop="instanceCode" min-width="160" />
           <el-table-column label="箱码" prop="boxCode" min-width="140" />
           <el-table-column label="数量" prop="quantity" width="80" align="right" />
           <el-table-column label="操作" width="150" align="right">
@@ -196,6 +209,37 @@
               <el-button v-if="row.boxCode" link type="primary" @click="goBoxTrace(row.boxCode)">箱码</el-button>
             </template>
           </el-table-column>
+        </el-table>
+      </el-card>
+
+      <el-card class="mt20" v-if="itemTrace.inventoryHistories?.length">
+        <template #header>
+          <div class="panel-header">
+            <span class="panel-title">库存流水</span>
+          </div>
+        </template>
+        <el-table :data="itemTrace.inventoryHistories" border empty-text="暂无库存流水">
+          <el-table-column label="操作单号" prop="orderNo" min-width="160" />
+          <el-table-column label="业务动作" prop="operationType" min-width="120" />
+          <el-table-column label="位置" min-width="220">
+            <template #default="{ row }">
+              {{ formatInventoryLocation(row) }}
+            </template>
+          </el-table-column>
+          <el-table-column label="变化数量" prop="quantity" width="100" align="right" />
+          <el-table-column label="前后数量" min-width="180">
+            <template #default="{ row }">
+              <div>前：{{ row.beforeQuantity ?? '-' }}</div>
+              <div class="sub-text">后：{{ row.afterQuantity ?? '-' }}</div>
+            </template>
+          </el-table-column>
+          <el-table-column label="操作人/时间" min-width="220">
+            <template #default="{ row }">
+              <div>{{ row.operatorName || '-' }}</div>
+              <div class="sub-text">{{ row.createTime ? parseTime(row.createTime, '{y}-{m}-{d} {h}:{i}:{s}') : '-' }}</div>
+            </template>
+          </el-table-column>
+          <el-table-column label="备注" prop="remark" min-width="160" show-overflow-tooltip />
         </el-table>
       </el-card>
     </template>
@@ -218,7 +262,7 @@
               <dict-tag :options="wms_box_status" :value="boxTrace.box.boxStatus" />
             </el-descriptions-item>
             <el-descriptions-item label="箱体名称">{{ boxTrace.box.boxName || '-' }}</el-descriptions-item>
-            <el-descriptions-item label="箱内数量">{{ boxTrace.box.itemCount || 0 }}</el-descriptions-item>
+            <el-descriptions-item label="当前装箱数">{{ boxTrace.box.itemCount || 0 }}</el-descriptions-item>
             <el-descriptions-item label="当前位置" :span="2">{{ getBoxLocation(boxTrace.box) }}</el-descriptions-item>
             <el-descriptions-item label="备注" :span="2">{{ boxTrace.box.remark || '-' }}</el-descriptions-item>
           </el-descriptions>
@@ -238,7 +282,7 @@
             {{ [boxTrace.currentLocation.warehouseName, boxTrace.currentLocation.areaName].filter(Boolean).join(' / ') || '-' }}
           </el-descriptions-item>
           <el-descriptions-item label="货架">{{ boxTrace.currentLocation.rackName || '-' }}</el-descriptions-item>
-          <el-descriptions-item label="直存单品数">{{ boxTrace.currentLocation.directItemCount || 0 }}</el-descriptions-item>
+          <el-descriptions-item label="直存器材数">{{ boxTrace.currentLocation.directItemCount || 0 }}</el-descriptions-item>
           <el-descriptions-item label="箱体数">{{ boxTrace.currentLocation.boxCount || 0 }}</el-descriptions-item>
         </el-descriptions>
       </el-card>
@@ -246,15 +290,15 @@
       <el-card class="mt20" v-if="boxTrace.box?.items?.length">
         <template #header>
           <div class="panel-header">
-            <span class="panel-title">箱内单品</span>
+            <span class="panel-title">当前装箱关系</span>
           </div>
         </template>
-        <el-table :data="boxTrace.box.items" border empty-text="箱内暂无单品">
-          <el-table-column label="单品码" prop="instanceCode" min-width="180" />
-          <el-table-column label="商品/规格" min-width="220">
+        <el-table :data="boxTrace.box.items" border empty-text="箱内暂无物品">
+          <el-table-column label="物品码" prop="instanceCode" min-width="180" />
+          <el-table-column label="器材/器材规格" min-width="220">
             <template #default="{ row }">
               <div>{{ row.itemName || '-' }}</div>
-              <div v-if="row.skuName" class="sub-text">规格：{{ row.skuName }}</div>
+              <div v-if="row.skuName" class="sub-text">器材规格：{{ row.skuName }}</div>
             </template>
           </el-table-column>
           <el-table-column label="产品标识/所在单位" min-width="220">
@@ -270,7 +314,7 @@
           </el-table-column>
           <el-table-column label="操作" width="120" align="right">
             <template #default="{ row }">
-              <el-button link type="primary" @click="goItemTrace(row.instanceCode)">追踪单品</el-button>
+              <el-button link type="primary" @click="goItemTrace(row.instanceCode)">追踪明细</el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -284,7 +328,7 @@
         </template>
         <el-table :data="boxTrace.shipmentDetails" border empty-text="暂无出库记录">
           <el-table-column label="出库单ID" prop="shipmentOrderId" width="120" />
-          <el-table-column label="规格" min-width="180">
+          <el-table-column label="器材规格" min-width="180">
             <template #default="{ row }">
               {{ row.itemSku?.skuName || '-' }}
             </template>
@@ -322,11 +366,48 @@
               <div class="sub-text">{{ row.qualityGrade || '-' }}</div>
             </template>
           </el-table-column>
+          <el-table-column label="源位置/目标位置" min-width="260">
+            <template #default="{ row }">
+              <div>源：{{ formatLocationPath(row, 'source') }}</div>
+              <div class="sub-text">目标：{{ formatLocationPath(row, 'target') }}</div>
+            </template>
+          </el-table-column>
           <el-table-column label="操作" width="120" align="right">
             <template #default="{ row }">
               <el-button link type="primary" @click="goMovementOrder(row.movementOrderId)">查看单据</el-button>
             </template>
           </el-table-column>
+        </el-table>
+      </el-card>
+
+      <el-card class="mt20" v-if="boxTrace.inventoryHistories?.length">
+        <template #header>
+          <div class="panel-header">
+            <span class="panel-title">库存流水</span>
+          </div>
+        </template>
+        <el-table :data="boxTrace.inventoryHistories" border empty-text="暂无库存流水">
+          <el-table-column label="操作单号" prop="orderNo" min-width="160" />
+          <el-table-column label="业务动作" prop="operationType" min-width="120" />
+          <el-table-column label="位置" min-width="220">
+            <template #default="{ row }">
+              {{ formatInventoryLocation(row) }}
+            </template>
+          </el-table-column>
+          <el-table-column label="变化数量" prop="quantity" width="100" align="right" />
+          <el-table-column label="前后数量" min-width="180">
+            <template #default="{ row }">
+              <div>前：{{ row.beforeQuantity ?? '-' }}</div>
+              <div class="sub-text">后：{{ row.afterQuantity ?? '-' }}</div>
+            </template>
+          </el-table-column>
+          <el-table-column label="操作人/时间" min-width="220">
+            <template #default="{ row }">
+              <div>{{ row.operatorName || '-' }}</div>
+              <div class="sub-text">{{ row.createTime ? parseTime(row.createTime, '{y}-{m}-{d} {h}:{i}:{s}') : '-' }}</div>
+            </template>
+          </el-table-column>
+          <el-table-column label="备注" prop="remark" min-width="160" show-overflow-tooltip />
         </el-table>
       </el-card>
     </template>
@@ -337,6 +418,7 @@
 import { getCurrentInstance, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { getBoxTrace, getItemTrace } from '@/api/wms/trace';
+import { useWmsStore } from '@/store/modules/wms';
 
 const props = defineProps({
   mode: {
@@ -348,6 +430,7 @@ const props = defineProps({
 const route = useRoute();
 const router = useRouter();
 const { proxy } = getCurrentInstance();
+const wmsStore = useWmsStore();
 const { wms_item_instance_status, wms_box_status, wms_borrow_status } = proxy.useDict(
   'wms_item_instance_status',
   'wms_box_status',
@@ -364,13 +447,15 @@ const itemTrace = reactive({
   currentBorrowRecord: null,
   borrowRecords: [],
   shipmentDetails: [],
-  movementDetails: []
+  movementDetails: [],
+  inventoryHistories: []
 });
 const boxTrace = reactive({
   box: null,
   currentLocation: null,
   shipmentDetails: [],
-  movementDetails: []
+  movementDetails: [],
+  inventoryHistories: []
 });
 
 const resetData = () => {
@@ -381,10 +466,12 @@ const resetData = () => {
   itemTrace.borrowRecords = [];
   itemTrace.shipmentDetails = [];
   itemTrace.movementDetails = [];
+  itemTrace.inventoryHistories = [];
   boxTrace.box = null;
   boxTrace.currentLocation = null;
   boxTrace.shipmentDetails = [];
   boxTrace.movementDetails = [];
+  boxTrace.inventoryHistories = [];
 };
 
 const getItemLocation = (item) => {
@@ -414,9 +501,50 @@ const getBorrowLocation = (row) => {
   return parts.length ? parts.join(' / ') : '-';
 };
 
+const getNameById = (type, id) => {
+  if (!id) {
+    return '';
+  }
+  if (type === 'warehouse') {
+    return wmsStore.warehouseMap.get(id)?.warehouseName || String(id);
+  }
+  if (type === 'area') {
+    return wmsStore.areaMap.get(id)?.areaName || String(id);
+  }
+  if (type === 'rack') {
+    return wmsStore.rackMap.get(id)?.rackName || String(id);
+  }
+  if (type === 'location') {
+    return wmsStore.locationMap.get(id)?.locationName || String(id);
+  }
+  return String(id);
+};
+
+const formatLocationPath = (row, prefix) => {
+  const parts = [];
+  const warehouseId = row[`${prefix}WarehouseId`];
+  const areaId = row[`${prefix}AreaId`];
+  const rackId = row[`${prefix}RackId`];
+  const locationId = row[`${prefix}LocationId`];
+  if (warehouseId) parts.push(getNameById('warehouse', warehouseId));
+  if (areaId) parts.push(getNameById('area', areaId));
+  if (rackId) parts.push(getNameById('rack', rackId));
+  if (locationId) parts.push(getNameById('location', locationId));
+  return parts.length ? parts.join(' / ') : '-';
+};
+
+const formatInventoryLocation = (row) => {
+  const parts = [];
+  if (row.warehouseId) parts.push(getNameById('warehouse', row.warehouseId));
+  if (row.areaId) parts.push(getNameById('area', row.areaId));
+  if (row.rackId) parts.push(getNameById('rack', row.rackId));
+  if (row.locationId) parts.push(getNameById('location', row.locationId));
+  return parts.length ? parts.join(' / ') : '-';
+};
+
 const handleQuery = async () => {
   if (!code.value) {
-    proxy.$modal.msgError(isItemMode ? '请输入单品码' : '请输入箱码');
+    proxy.$modal.msgError(isItemMode ? '请输入物品码' : '请输入箱码');
     return;
   }
   resetData();
@@ -431,7 +559,8 @@ const handleQuery = async () => {
         currentBorrowRecord: res.data?.currentBorrowRecord || null,
         borrowRecords: res.data?.borrowRecords || [],
         shipmentDetails: res.data?.shipmentDetails || [],
-        movementDetails: res.data?.movementDetails || []
+        movementDetails: res.data?.movementDetails || [],
+        inventoryHistories: res.data?.inventoryHistories || []
       });
     } else {
       const res = await getBoxTrace(code.value);
@@ -439,7 +568,8 @@ const handleQuery = async () => {
         box: res.data?.box || null,
         currentLocation: res.data?.currentLocation || null,
         shipmentDetails: res.data?.shipmentDetails || [],
-        movementDetails: res.data?.movementDetails || []
+        movementDetails: res.data?.movementDetails || [],
+        inventoryHistories: res.data?.inventoryHistories || []
       });
     }
   } finally {

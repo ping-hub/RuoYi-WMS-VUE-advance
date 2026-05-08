@@ -1,17 +1,17 @@
 <template>
   <div>
     <div class="receipt-order-edit-wrapper app-container" style="margin-bottom: 60px" v-loading="loading">
-      <el-card header="移库单基本信息">
+      <el-card header="调拨单基本信息">
         <el-form label-width="108px" :model="form" ref="movementForm" :rules="rules">
           <el-row :gutter="24">
             <el-col :span="11">
-              <el-form-item label="移库单号" prop="movementOrderNo">
-                <el-input class="w200" v-model="form.movementOrderNo" placeholder="移库单号"
+              <el-form-item label="调拨单号" prop="movementOrderNo">
+                <el-input class="w200" v-model="form.movementOrderNo" placeholder="调拨单号"
                           :disabled="form.id"></el-input>
               </el-form-item>
             </el-col>
             <el-col :span="6">
-              <el-form-item label="源仓库" prop="sourceWarehouseId">
+              <el-form-item label="原仓库" prop="sourceWarehouseId">
                 <el-select v-model="form.sourceWarehouseId" placeholder="请选择源仓库" @change="handleChangeSourceWarehouse"
                            filterable>
                   <el-option v-for="item in useWmsStore().warehouseList" :key="item.id" :label="item.warehouseName"
@@ -20,8 +20,8 @@
               </el-form-item>
             </el-col>
             <el-col :span="6">
-              <el-form-item label="源库区" prop="sourceAreaId">
-                <el-select v-model="form.sourceAreaId" placeholder="请选择源库区" :disabled="!form.sourceWarehouseId" clearable
+              <el-form-item label="原库区" prop="sourceAreaId">
+                <el-select v-model="form.sourceAreaId" placeholder="请选择原库区" :disabled="!form.sourceWarehouseId" clearable
                            filterable @change="handleChangeSourceArea" style="width: 100%!important;">
                   <el-option v-for="item in useWmsStore().areaList.filter(it => it.warehouseId === form.sourceWarehouseId)"
                              :key="item.id" :label="item.areaName" :value="item.id"/>
@@ -60,7 +60,17 @@
               </el-form-item>
             </el-col>
           </el-row>
+          <el-alert
+            :closable="false"
+            type="info"
+            title="本页按调拨单处理，仅支持跨仓调拨和单位间调拨；库内位置变化不应在此页办理。"
+          />
           <el-row :gutter="24">
+            <el-col :span="6">
+              <el-form-item label="调拨范围" prop="movementScope">
+                <el-input v-model="form.movementScope" placeholder="请输入跨仓或单位间" />
+              </el-form-item>
+            </el-col>
             <el-col :span="6">
               <el-form-item label="调拨依据" prop="dispatchBasis">
                 <el-select v-model="form.dispatchBasis" placeholder="请选择调拨依据" clearable style="width: 100%">
@@ -132,6 +142,23 @@
           </el-row>
           <el-row :gutter="24">
             <el-col :span="6">
+              <el-form-item label="目标货架" prop="targetRackId">
+                <RackSelect v-model="form.targetRackId" :warehouse-id="form.targetWarehouseId" :area-id="form.targetAreaId" @update:model-value="handleHeaderTargetRackChange" />
+              </el-form-item>
+            </el-col>
+            <el-col :span="6">
+              <el-form-item label="目标货位" prop="targetLocationId">
+                <LocationSelect
+                  v-model="form.targetLocationId"
+                  :warehouse-id="form.targetWarehouseId"
+                  :area-id="form.targetAreaId"
+                  :rack-id="form.targetRackId"
+                />
+              </el-form-item>
+            </el-col>
+          </el-row>
+          <el-row :gutter="24">
+            <el-col :span="6">
               <el-form-item label="有效日期" prop="effectiveDate">
                 <el-date-picker v-model="form.effectiveDate" type="date" value-format="YYYY-MM-DD" format="YYYY-MM-DD" style="width: 100%" />
               </el-form-item>
@@ -168,12 +195,12 @@
           </el-row>
         </el-form>
       </el-card>
-      <el-card header="商品明细" class="mt10">
+      <el-card header="调拨明细" class="mt10">
         <div class="receipt-order-content">
           <div class="flex-space-between mb8">
             <div>
-              <el-tag v-if="form.movementType === 'special'" type="warning">专装调拨必须按单品或箱体流转，且数量必须为 1</el-tag>
-              <el-tag v-else type="info">通装调拨按数量流转，专装场景可补录单品码或箱码</el-tag>
+              <el-tag v-if="form.movementType === 'special'" type="warning">专装调拨必须按物品码或箱码流转，且数量必须为 1</el-tag>
+              <el-tag v-else type="info">通装调拨按数量流转，箱码仅作为附加追踪信息</el-tag>
             </div>
             <el-popover
               placement="left"
@@ -185,13 +212,13 @@
             >
               <template #reference>
                 <el-button type="primary" plain="plain" size="default" @click="showAddItem" icon="Plus"
-                           :disabled="!form.sourceWarehouseId || !form.targetWarehouseId">添加商品
+                           :disabled="!form.sourceWarehouseId || !form.targetWarehouseId">添加器材
                 </el-button>
               </template>
             </el-popover>
           </div>
-          <el-table :data="form.details" border empty-text="暂无商品明细">
-            <el-table-column label="商品信息" prop="itemSku.itemName">
+            <el-table :data="form.details" border empty-text="暂无调拨明细">
+            <el-table-column label="器材信息" prop="itemSku.itemName">
               <template #default="{ row }">
                 <div>{{
                     row.itemSku.item.itemName + (row.itemSku.item.itemCode ? ('(' + row.itemSku.item.itemCode + ')') : '')
@@ -202,7 +229,7 @@
                 </div>
               </template>
             </el-table-column>
-            <el-table-column label="规格信息">
+            <el-table-column label="器材规格">
               <template #default="{ row }">
                 <div>{{ row.itemSku.skuName}}</div>
                 <div v-if="row.itemSku.barcode">条码：{{ row.itemSku.barcode }}</div>
@@ -214,13 +241,31 @@
                 <div class="table-tip">{{ row.specModel || row.itemSku.specModel || row.itemSku.item.modelText || '-' }}</div>
               </template>
             </el-table-column>
-            <el-table-column label="源库区" width="200" prop="sourceAreaName" />
-            <el-table-column label="目标库区" width="200">
+            <el-table-column label="源位置" min-width="180">
               <template #default="{ row }">
-                <el-select v-model="row.targetAreaId" placeholder="请选择目标库区" filterable :disabled="!!form.targetAreaId">
-                  <el-option v-for="item in useWmsStore().areaList.filter(it => it.warehouseId === form.targetWarehouseId)"
-                             :key="item.id" :label="item.areaName" :value="item.id"/>
-                </el-select>
+                <div>库区：{{ row.sourceAreaName || '-' }}</div>
+                <div class="table-tip">货架：{{ row.sourceRackId || '-' }} / 货位：{{ row.sourceLocationId || '-' }}</div>
+              </template>
+            </el-table-column>
+            <el-table-column label="目标位置" min-width="260">
+              <template #default="{ row }">
+                <div class="target-place-edit">
+                  <el-select v-model="row.targetAreaId" placeholder="目标库区" filterable :disabled="!!form.targetAreaId" style="width: 110px">
+                    <el-option
+                      v-for="item in useWmsStore().areaList.filter(it => it.warehouseId === form.targetWarehouseId)"
+                      :key="item.id"
+                      :label="item.areaName"
+                      :value="item.id"
+                    />
+                  </el-select>
+                  <RackSelect v-model="row.targetRackId" :warehouse-id="form.targetWarehouseId" :area-id="row.targetAreaId || form.targetAreaId" />
+                  <LocationSelect
+                    v-model="row.targetLocationId"
+                    :warehouse-id="form.targetWarehouseId"
+                    :area-id="row.targetAreaId || form.targetAreaId"
+                    :rack-id="row.targetRackId"
+                  />
+                </div>
               </template>
             </el-table-column>
             <el-table-column label="产品标识" width="180">
@@ -228,9 +273,9 @@
                 <el-input v-model="row.productMark" :placeholder="form.movementType === 'special' ? '专装请录入产品标识' : '可选录入产品标识'" />
               </template>
             </el-table-column>
-            <el-table-column v-if="form.movementType === 'special'" label="单品码/箱码" min-width="240">
+            <el-table-column v-if="form.movementType === 'special'" label="物品码/箱码" min-width="240">
               <template #default="{ row }">
-                <el-input v-model="row.instanceCode" placeholder="请输入单品码" @blur="handleSpecialCodeBlur(row, 'item')" />
+                <el-input v-model="row.instanceCode" placeholder="请输入物品码" @blur="handleSpecialCodeBlur(row, 'item')" />
                 <el-input class="mt5" v-model="row.boxCode" placeholder="请输入箱码" @blur="handleSpecialCodeBlur(row, 'box')" />
               </template>
             </el-table-column>
@@ -267,11 +312,11 @@
                 <el-input-number v-model="row.lineAmount" :precision="2" :controls="false" disabled />
               </template>
             </el-table-column>
-            <el-table-column label="移库数量" prop="quantity" width="180">
+            <el-table-column label="调拨数量" prop="quantity" width="180">
               <template #default="scope">
                 <el-input-number
                   v-model="scope.row.quantity"
-                  placeholder="移库数量"
+                  placeholder="调拨数量"
                   :min="1"
                   :precision="0"
                   :max="scope.row.remainQuantity"
@@ -310,7 +355,7 @@
     <div class="footer-global">
       <div class="btn-box">
         <div>
-          <el-button @click="doMovement" type="primary" class="ml10">完成移库</el-button>
+          <el-button @click="doMovement" type="primary" class="ml10">完成调拨</el-button>
           <el-button @click="updateToInvalid" type="danger" v-if="form.id">作废</el-button>
         </div>
         <div>
@@ -333,6 +378,8 @@ import {useRoute} from "vue-router";
 import {useWmsStore} from '@/store/modules/wms'
 import {numSub, generateNo} from '@/utils/ruoyi'
 import InventoryDetailSelect from "@/views/components/InventoryDetailSelect.vue";
+import RackSelect from "@/views/components/RackSelect.vue";
+import LocationSelect from "@/views/components/LocationSelect.vue";
 
 const {proxy} = getCurrentInstance();
 const {wms_movement_type, wms_dispatch_mode, wms_basis_type, wms_quality_grade} = proxy.useDict(
@@ -347,6 +394,7 @@ const initFormData = {
   id: undefined,
   movementOrderNo: undefined,
   movementType: 'common',
+  movementScope: undefined,
   dispatchBasis: undefined,
   dispatchPurpose: undefined,
   supportNo: undefined,
@@ -367,8 +415,12 @@ const initFormData = {
   remark: undefined,
   sourceWarehouseId: undefined,
   sourceAreaId: undefined,
+  sourceRackId: undefined,
+  sourceLocationId: undefined,
   targetWarehouseId: undefined,
   targetAreaId: undefined,
+  targetRackId: undefined,
+  targetLocationId: undefined,
   totalQuantity: 0,
   details: [],
 }
@@ -378,7 +430,7 @@ const data = reactive({
   form: {...initFormData},
   rules: {
     movementOrderNo: [
-      {required: true, message: "出库单号不能为空", trigger: "blur"}
+      {required: true, message: "调拨单号不能为空", trigger: "blur"}
     ],
     sourceWarehouseId: [
       {required: true, message: "请选择源仓库", trigger: ['blur', 'change']}
@@ -390,7 +442,7 @@ const data = reactive({
 });
 const {form, rules} = toRefs(data);
 const cancel = async () => {
-  await proxy?.$modal.confirm('确认取消编辑移库单吗？');
+  await proxy?.$modal.confirm('确认取消编辑调拨单吗？');
   close()
 }
 const close = () => {
@@ -417,6 +469,10 @@ const syncMovementDetail = (detail) => {
     instanceCode: detail.instanceCode,
     boxId: detail.boxId,
     boxCode: detail.boxCode,
+    sourceRackId: detail.sourceRackId,
+    sourceLocationId: detail.sourceLocationId,
+    targetRackId: detail.targetRackId,
+    targetLocationId: detail.targetLocationId,
     unitPrice,
     lineAmount: detail.lineAmount ?? calcLineAmount(detail.quantity, unitPrice)
   }
@@ -451,7 +507,7 @@ const handleSpecialCodeBlur = async (row, mode) => {
       handleChangeQuantity()
     } catch (e) {
       row.itemInstanceId = undefined
-      proxy.$modal.msgError('单品码校验失败，请确认单品存在且可用于专装调拨')
+      proxy.$modal.msgError('物品码校验失败，请确认物品存在且可用于专装调拨')
     }
     return
   }
@@ -481,11 +537,11 @@ const validateSpecialMovementDetails = (details) => {
     const hasItem = !!detail.itemInstanceId
     const hasBox = !!detail.boxId
     if (!hasItem && !hasBox) {
-      ElMessage.error('专装调拨必须录入单品码或箱码')
+      ElMessage.error('专装调拨必须录入物品码或箱码')
       return false
     }
     if (hasItem && hasBox) {
-      ElMessage.error('专装调拨明细不能同时录入单品码和箱码')
+      ElMessage.error('专装调拨明细不能同时录入物品码和箱码')
       return false
     }
     if (Number(detail.quantity) !== 1) {
@@ -496,7 +552,7 @@ const validateSpecialMovementDetails = (details) => {
   return true
 }
 
-// 选择商品 start
+// 选择器材 start
 const showAddItem = () => {
   inventorySelectRef.value.getList()
   inventorySelectShow.value = true
@@ -521,8 +577,13 @@ const handleOkClick = (item) => {
           expirationDate: it.expirationDate,
           sourceWarehouseId: form.value.sourceWarehouseId,
           sourceAreaId: form.value.sourceAreaId ?? it.areaId,
+          sourceRackId: it.rackId,
+          sourceLocationId: it.locationId,
           inventoryDetailId: it.id,
+          targetWarehouseId: form.value.targetWarehouseId,
           targetAreaId: form.value.targetAreaId,
+          targetRackId: form.value.targetRackId,
+          targetLocationId: form.value.targetLocationId,
           sourceAreaName: useWmsStore().areaMap.get(form.value.sourceAreaId ?? it.areaId)?.areaName,
           equipmentCode: it.equipmentCode ?? it.item?.itemCode,
           specModel: it.specModel ?? it.itemSku?.specModel,
@@ -538,13 +599,13 @@ const handleOkClick = (item) => {
 const getPlaceAndSkuKey = (row) => {
   return row.warehouseId + '_' + row.areaId + '_' + row.skuId
 }
-// 选择商品 end
+// 选择器材 end
 
 // 初始化receipt-order-form ref
 const movementForm = ref()
 
 const save = async () => {
-  await proxy?.$modal.confirm('确认暂存移库单吗？');
+  await proxy?.$modal.confirm('确认暂存调拨单吗？');
   doSave()
 }
 
@@ -585,8 +646,12 @@ const doSave = (movementOrderStatus = 0) => {
           boxId: it.boxId,
           sourceWarehouseId: form.value.sourceWarehouseId,
           sourceAreaId: it.sourceAreaId,
+          sourceRackId: it.sourceRackId,
+          sourceLocationId: it.sourceLocationId,
           targetWarehouseId: form.value.targetWarehouseId,
-          targetAreaId: it.targetAreaId
+          targetAreaId: it.targetAreaId,
+          targetRackId: it.targetRackId,
+          targetLocationId: it.targetLocationId
         }
       })
     }
@@ -595,6 +660,7 @@ const doSave = (movementOrderStatus = 0) => {
       id: form.value.id,
       movementOrderNo: form.value.movementOrderNo,
       movementType: form.value.movementType,
+      movementScope: form.value.movementScope,
       dispatchBasis: form.value.dispatchBasis,
       dispatchPurpose: form.value.dispatchPurpose,
       supportNo: form.value.supportNo,
@@ -616,8 +682,12 @@ const doSave = (movementOrderStatus = 0) => {
       totalQuantity: form.value.totalQuantity,
       sourceWarehouseId: form.value.sourceWarehouseId,
       sourceAreaId: form.value.sourceAreaId,
+      sourceRackId: form.value.sourceRackId,
+      sourceLocationId: form.value.sourceLocationId,
       targetWarehouseId: form.value.targetWarehouseId,
       targetAreaId: form.value.targetAreaId,
+      targetRackId: form.value.targetRackId,
+      targetLocationId: form.value.targetLocationId,
       details: details
     }
     if (params.id) {
@@ -644,23 +714,23 @@ const doSave = (movementOrderStatus = 0) => {
 
 
 const updateToInvalid = async () => {
-  await proxy?.$modal.confirm('确认作废移库单吗？');
+  await proxy?.$modal.confirm('确认作废调拨单吗？');
   doSave(-1)
 }
 
 const doMovement = async () => {
-  await proxy?.$modal.confirm('确认移库吗？');
+  await proxy?.$modal.confirm('确认执行调拨吗？');
   movementForm.value?.validate((valid) => {
     // 校验
     if (!valid) {
       return ElMessage.error('请填写必填项')
     }
     if (!form.value.details?.length) {
-      return ElMessage.error('请选择商品')
+      return ElMessage.error('请选择调拨明细')
     }
     const invalidQuantityList = form.value.details.filter(it => !it.quantity)
     if (invalidQuantityList?.length) {
-      return ElMessage.error('请选择移库数量')
+      return ElMessage.error('请选择调拨数量')
     }
     if (!validateSpecialMovementDetails(form.value.details)) {
       return
@@ -680,8 +750,12 @@ const doMovement = async () => {
         boxId: it.boxId,
         sourceWarehouseId: form.value.sourceWarehouseId,
         sourceAreaId: it.sourceAreaId,
+        sourceRackId: it.sourceRackId,
+        sourceLocationId: it.sourceLocationId,
         targetWarehouseId: form.value.targetWarehouseId,
-        targetAreaId: it.targetAreaId
+        targetAreaId: it.targetAreaId,
+        targetRackId: it.targetRackId,
+        targetLocationId: it.targetLocationId
       }
     })
 
@@ -690,6 +764,7 @@ const doMovement = async () => {
       id: form.value.id,
       movementOrderNo: form.value.movementOrderNo,
       movementType: form.value.movementType,
+      movementScope: form.value.movementScope,
       dispatchBasis: form.value.dispatchBasis,
       dispatchPurpose: form.value.dispatchPurpose,
       supportNo: form.value.supportNo,
@@ -710,13 +785,17 @@ const doMovement = async () => {
       totalQuantity: form.value.totalQuantity,
       sourceWarehouseId: form.value.sourceWarehouseId,
       sourceAreaId: form.value.sourceAreaId,
+      sourceRackId: form.value.sourceRackId,
+      sourceLocationId: form.value.sourceLocationId,
       targetWarehouseId: form.value.targetWarehouseId,
       targetAreaId: form.value.targetAreaId,
+      targetRackId: form.value.targetRackId,
+      targetLocationId: form.value.targetLocationId,
       details: details
     }
     movement(params).then((res) => {
       if (res.code === 200) {
-        ElMessage.success('移库成功')
+        ElMessage.success('调拨成功')
         close()
       } else {
         ElMessage.error(res.msg)
@@ -731,12 +810,12 @@ onMounted(() => {
   if (id) {
     loadDetail(id)
   } else {
-    form.value.movementOrderNo = 'YK' + generateNo()
+    form.value.movementOrderNo = 'DB' + generateNo()
   }
 })
 
 
-// 获取移库单详情
+// 获取调拨单详情
 const loadDetail = (id) => {
   loading.value = true
   getMovementOrder(id).then((response) => {
@@ -777,18 +856,40 @@ const handleChangeSourceArea = (e) => {
 
 const handleChangeTargetWarehouse = (e) => {
   form.value.targetAreaId = undefined
+  form.value.targetRackId = undefined
+  form.value.targetLocationId = undefined
   form.value.details.forEach(it => {
     it.targetWarehouseId = e
     it.targetAreaId = undefined
+    it.targetRackId = undefined
+    it.targetLocationId = undefined
   })
 
 }
 
 const handleChangeTargetArea = (e) => {
-  ('targetAreaId', e)
-  ('form.value.targetAreaId', form.value.targetAreaId)
-  form.value.details.forEach(it => it.targetAreaId = e)
+  form.value.targetRackId = undefined
+  form.value.targetLocationId = undefined
+  form.value.details.forEach(it => {
+    it.targetAreaId = e
+    it.targetRackId = undefined
+    it.targetLocationId = undefined
+  })
 }
+
+const handleHeaderTargetRackChange = () => {
+  form.value.targetLocationId = undefined
+  form.value.details.forEach(it => {
+    it.targetRackId = form.value.targetRackId
+    it.targetLocationId = undefined
+  })
+}
+
+watch(() => form.value.targetLocationId, (value) => {
+  form.value.details.forEach(it => {
+    it.targetLocationId = value
+  })
+})
 
 const handleChangeQuantity = () => {
   let sum = 0
@@ -803,7 +904,7 @@ const handleChangeQuantity = () => {
 
 const handleDeleteDetail = (row, index) => {
   if (row.id) {
-    proxy.$modal.confirm('确认删除本条商品明细吗？如确认会立即执行！').then(function () {
+    proxy.$modal.confirm('确认删除本条器材条目吗？如确认会立即执行！').then(function () {
       return delMovementOrderDetail(row.id);
     }).then(() => {
       form.value.details.splice(index, 1)
@@ -846,3 +947,5 @@ const goSaasTip = () => {
   line-height: 18px;
 }
 </style>
+
+

@@ -1,4 +1,4 @@
-import { createWebHistory, createRouter } from 'vue-router'
+﻿import { createWebHistory, createRouter } from 'vue-router'
 /* Layout */
 import Layout from '@/layout'
 
@@ -168,7 +168,7 @@ export const dynamicRoutes = [
         path: 'index',
         component: () => import('@/views/wms/itemInstance/index.vue'),
         name: 'WmsItemInstance',
-        meta: { title: '单品实例' }
+        meta: { title: '器材编码' }
       }
     ]
   },
@@ -196,7 +196,7 @@ export const dynamicRoutes = [
         path: 'index',
         component: () => import('@/views/wms/business/borrow-record/index.vue'),
         name: 'WmsBorrowRecord',
-        meta: { title: '借还管理' }
+        meta: { title: '器材借用' }
       }
     ]
   },
@@ -210,7 +210,7 @@ export const dynamicRoutes = [
         path: 'index',
         component: () => import('@/views/wms/trace/item/index.vue'),
         name: 'WmsTraceItem',
-        meta: { title: '单品追踪' }
+        meta: { title: '器材追踪' }
       }
     ]
   },
@@ -243,3 +243,4 @@ const router = createRouter({
 });
 
 export default router;
+

@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="app-container">
     <el-card>
       <el-form :model="queryParams" ref="queryRef" :inline="true" label-width="68px">
@@ -100,14 +100,14 @@
         <el-table-column type="expand">
           <template #default="props">
             <div style="padding: 0 50px 20px 50px">
-              <h3>商品明细</h3>
-              <el-table :data="props.row.details" v-loading="detailLoading[props.$index]" empty-text="暂无商品明细">
-                <el-table-column label="商品名称">
+              <h3>器材明细</h3>
+              <el-table :data="props.row.details" v-loading="detailLoading[props.$index]" empty-text="暂无器材明细">
+                <el-table-column label="器材名称">
                   <template #default="{ row }">
                     <div>{{ row?.itemSku?.item?.itemName }}</div>
                   </template>
                 </el-table-column>
-                <el-table-column label="规格名称">
+                <el-table-column label="器材规格">
                   <template #default="{ row }">
                     <div>{{ row?.itemSku?.skuName }}</div>
                   </template>
@@ -120,7 +120,7 @@
                     <dict-tag :options="wms_quality_grade" :value="row.qualityGrade" />
                   </template>
                 </el-table-column>
-                <el-table-column label="单品码" min-width="160">
+                <el-table-column label="器材编码" min-width="160">
                   <template #default="{ row }">
                     <span>{{ row.instanceCode || '-' }}</span>
                   </template>
@@ -159,7 +159,7 @@
                 </el-table-column>
                 <el-table-column label="追踪" width="120" align="right">
                   <template #default="{ row }">
-                    <el-button v-if="row.instanceCode" link type="primary" @click="handleGoItemTrace(row)">单品</el-button>
+                    <el-button v-if="row.instanceCode" link type="primary" @click="handleGoItemTrace(row)">明细</el-button>
                     <el-button v-if="row.boxCode" link type="primary" @click="handleGoBoxTrace(row)">箱体</el-button>
                   </template>
                 </el-table-column>
@@ -302,7 +302,7 @@ const total = ref(0);
 const title = ref("");
 // 当前展开集合
 const expandedRowKeys = ref([])
-// 商品明细table的loading状态集合
+// 器材明细 table 的 loading 状态集合
 const detailLoading = ref([])
 const data = reactive({
   queryParams: {
@@ -518,3 +518,4 @@ getList();
   vertical-align: top
 }
 </style>
+

@@ -141,11 +141,11 @@
           </el-row>
         </el-form>
       </el-card>
-      <el-card header="商品明细" class="mt10">
+      <el-card header="入库明细" class="mt10">
         <div class="receipt-order-content">
           <div class="flex-space-between mb8">
             <div class="instance-tip">
-              支持按明细生成单品实例，若商品追踪模式为“单品追踪”，入库后会自动生成。
+              支持生成器材明细、展示推荐货位，并保留手工选位与装箱交互占位。
             </div>
             <el-popover
               placement="left"
@@ -156,18 +156,18 @@
               content="请先选择仓库！"
             >
               <template #reference>
-                <el-button type="primary" plain="plain" size="default" @click="showAddItem" icon="Plus" :disabled="!form.warehouseId">添加商品</el-button>
+                <el-button type="primary" plain="plain" size="default" @click="showAddItem" icon="Plus" :disabled="!form.warehouseId">添加器材</el-button>
               </template>
             </el-popover>
           </div>
-          <el-table :data="form.details" border empty-text="暂无商品明细">
-            <el-table-column label="商品信息" prop="itemSku.itemName">
+          <el-table :data="form.details" border empty-text="暂无入库明细">
+            <el-table-column label="器材信息" prop="itemSku.itemName">
               <template #default="{ row }">
                 <div>{{ row.itemSku.item.itemName + (row.itemSku.item.itemCode ? ('(' + row.itemSku.item.itemCode + ')') : '') }}</div>
                 <div v-if="row.itemSku.item.itemBrand">品牌：{{ useWmsStore().itemBrandMap.get(row.itemSku.item.itemBrand).brandName }}</div>
               </template>
             </el-table-column>
-            <el-table-column label="规格信息">
+            <el-table-column label="器材规格">
               <template #default="{ row }">
                 <div>{{ row.itemSku.skuName }}</div>
                 <div v-if="row.itemSku.barcode">条码：{{row.itemSku.barcode}}</div>
@@ -179,9 +179,9 @@
                 <div class="sub-text">{{ row.specModel || row.itemSku.specModel || row.itemSku.item.modelText || '-' }}</div>
               </template>
             </el-table-column>
-            <el-table-column label="追踪模式" width="120">
+            <el-table-column label="明细模式" width="120">
               <template #default="{ row }">
-                <dict-tag :options="wms_tracking_mode" :value="row.itemSku.item.trackingMode" />
+                <dict-tag :options="wms_tracking_mode" :value="row.itemSku.item.defaultTrackingMode || row.itemSku.item.trackingMode" />
               </template>
             </el-table-column>
             <el-table-column label="产品标识" width="180">
@@ -196,22 +196,39 @@
                 </el-select>
               </template>
             </el-table-column>
-            <el-table-column label="库区" prop="itemSku.skuName" width="200">
+            <el-table-column label="推荐货位" min-width="220">
               <template #default="{ row }">
-                <el-popover
-                  placement="left"
-                  title="提示"
-                  :width="200"
-                  trigger="hover"
-                  :disabled="form.warehouseId"
-                  content="请先选择仓库！"
-                >
-                  <template #reference>
-                    <el-select v-model="row.areaId" placeholder="请选择库区" :disabled="!form.warehouseId || !!form.areaId" filterable>
-                      <el-option v-for="item in useWmsStore().areaList.filter(it => it.warehouseId === form.warehouseId)" :key="item.id" :label="item.areaName" :value="item.id"/>
-                    </el-select>
-                  </template>
-                </el-popover>
+                <div>{{ getRecommendLocationText(row) }}</div>
+                <div class="sub-text">{{ getRecommendLocationRemark(row) }}</div>
+              </template>
+            </el-table-column>
+            <el-table-column label="手工选位" min-width="320">
+              <template #default="{ row }">
+                <div class="location-editor">
+                  <el-select
+                    v-model="row.areaId"
+                    placeholder="库区"
+                    :disabled="!form.warehouseId || !!form.areaId"
+                    filterable
+                    style="width: 110px"
+                    @change="handleRowAreaChange(row)"
+                  >
+                    <el-option
+                      v-for="item in useWmsStore().areaList.filter(it => it.warehouseId === form.warehouseId)"
+                      :key="item.id"
+                      :label="item.areaName"
+                      :value="item.id"
+                    />
+                  </el-select>
+                  <RackSelect v-model="row.rackId" :warehouse-id="form.warehouseId" :area-id="row.areaId || form.areaId" placeholder="货架" />
+                  <LocationSelect
+                    v-model="row.locationId"
+                    :warehouse-id="form.warehouseId"
+                    :area-id="row.areaId || form.areaId"
+                    :rack-id="row.rackId"
+                    placeholder="货位"
+                  />
+                </div>
               </template>
             </el-table-column>
             <el-table-column label="数量" prop="quantity" width="180">
@@ -225,7 +242,7 @@
                 ></el-input-number>
               </template>
             </el-table-column>
-            <el-table-column label="生成实例" width="120">
+            <el-table-column label="生成器材明细" width="140">
               <template #default="{ row }">
                 <el-switch
                   v-model="row.generateItemInstance"
@@ -234,7 +251,20 @@
                   inline-prompt
                   active-text="是"
                   inactive-text="否"
-                  :disabled="row.itemSku.item.trackingMode === 'instance'"
+                  :disabled="(row.itemSku.item.defaultTrackingMode || row.itemSku.item.trackingMode) === 'instance'"
+                />
+              </template>
+            </el-table-column>
+            <el-table-column label="是否装箱" width="120">
+              <template #default="{ row }">
+                <el-switch
+                  v-model="row.needBox"
+                  :active-value="1"
+                  :inactive-value="0"
+                  inline-prompt
+                  active-text="是"
+                  inactive-text="否"
+                  :disabled="row.itemSku?.item?.allowBox !== 1"
                 />
               </template>
             </el-table-column>
@@ -330,10 +360,13 @@ import {computed, getCurrentInstance, onMounted, reactive, ref, toRef, toRefs, w
 import {addReceiptOrder, getReceiptOrder, updateReceiptOrder, warehousing} from "@/api/wms/receiptOrder";
 import {ElMessage, ElMessageBox} from "element-plus";
 import SkuSelect from "../../../components/SkuSelect.vue";
+import RackSelect from "@/views/components/RackSelect.vue";
+import LocationSelect from "@/views/components/LocationSelect.vue";
 import {useRoute} from "vue-router";
 import {useWmsStore} from '@/store/modules/wms'
 import { numSub, generateNo } from '@/utils/ruoyi'
 import { delReceiptOrderDetail } from '@/api/wms/receiptOrderDetail'
+import { listReceiptTargets } from '@/api/wms/storageLayout'
 
 const {proxy} = getCurrentInstance();
 const { wms_receipt_type, wms_tracking_mode, wms_quality_grade, wms_dispatch_mode } = proxy.useDict(
@@ -407,7 +440,7 @@ const close = () => {
 }
 const skuSelectShow = ref(false)
 
-// 选择商品 start
+// 选择器材 start
 const showAddItem = () => {
   skuSelectShow.value = true
 }
@@ -427,10 +460,64 @@ const syncReceiptDetail = (detail) => {
     specModel: detail.specModel ?? detail.itemSku?.specModel ?? detail.itemSku?.item?.modelText,
     productMark: detail.productMark,
     qualityGrade: detail.qualityGrade ?? detail.itemSku?.item?.defaultQualityGrade,
+    rackId: detail.rackId,
+    locationId: detail.locationId,
+    needBox: detail.needBox ?? 0,
+    recommendTargets: detail.recommendTargets ?? [],
     unitPrice,
     lineAmount,
     amount: lineAmount
   }
+}
+
+const buildRecommendQuery = (detail) => ({
+  warehouseId: form.value.warehouseId,
+  areaId: detail.areaId || form.value.areaId,
+  rackId: detail.rackId,
+  occupiedFlag: 0
+})
+
+const loadRecommendTargets = async (detail) => {
+  if (!form.value.warehouseId) {
+    detail.recommendTargets = []
+    return
+  }
+  try {
+    const res = await listReceiptTargets(buildRecommendQuery(detail))
+    detail.recommendTargets = (res.data || []).slice(0, 5)
+  } catch (e) {
+    detail.recommendTargets = []
+  }
+}
+
+const getRecommendLocationText = (detail) => {
+  if (detail.locationId) {
+    return '已手工指定货位'
+  }
+  const firstTarget = detail.recommendTargets?.[0]
+  if (firstTarget) {
+    return `${firstTarget.areaName || '-'} / ${firstTarget.rackName || firstTarget.rackCode || '-'} / ${firstTarget.locationName || firstTarget.locationCode || '-'}`
+  }
+  return '暂无推荐货位'
+}
+
+const getRecommendLocationRemark = (detail) => {
+  if (detail.locationId) {
+    return '当前已指定到具体货位，入库时以手工选位为准'
+  }
+  if (detail.recommendTargets?.length) {
+    return `已加载 ${detail.recommendTargets.length} 个候选货位，可继续手工修正`
+  }
+  if (detail.itemSku?.item?.allowBox === 1 && detail.needBox === 1) {
+    return '当前为装箱占位，后续联调箱体推荐逻辑'
+  }
+  return '当前支持按库区范围人工修正货架与货位'
+}
+
+const handleRowAreaChange = async (row) => {
+  row.rackId = undefined
+  row.locationId = undefined
+  await loadRecommendTargets(row)
 }
 
 const recalculateOrderSummary = () => {
@@ -454,8 +541,7 @@ const handleDetailChange = (row) => {
 // 选择成功
 const handleOkClick = (item) => {
   skuSelectShow.value = false
-  item.forEach((it) => {
-    form.value.details.push(syncReceiptDetail({
+  const newDetails = item.map((it) => syncReceiptDetail({
       itemSku: {...it},
       quantity: it.quantity,
       batchNo: undefined,
@@ -463,13 +549,19 @@ const handleOkClick = (item) => {
       expirationDate: undefined,
       warehouseId: form.value.warehouseId,
       areaId: form.value.areaId,
-      generateItemInstance: it.item?.trackingMode === 'instance' ? 1 : 0,
+      rackId: undefined,
+      locationId: undefined,
+      needBox: 0,
+      generateItemInstance: (it.item?.defaultTrackingMode || it.item?.trackingMode) === 'instance' ? 1 : 0,
       generatedInstanceQuantity: 0
     }))
+  item.forEach((_, index) => {
+    form.value.details.push(newDetails[index])
   })
+  Promise.all(newDetails.map(detail => loadRecommendTargets(detail)))
   recalculateOrderSummary()
 }
-// 选择商品 end
+// 选择器材 end
 
 // 初始化receipt-order-form ref
 const receiptForm = ref()
@@ -515,6 +607,8 @@ const doSave = async (receiptOrderStatus = 0) => {
         expirationDate: it.expirationDate,
         warehouseId: form.value.warehouseId,
         areaId: it.areaId,
+        rackId: it.rackId,
+        locationId: it.locationId,
         generateItemInstance: it.generateItemInstance,
         generatedInstanceQuantity: it.generatedInstanceQuantity,
         remark: it.remark
@@ -580,7 +674,7 @@ const doWarehousing = async () => {
       return ElMessage.error('请填写必填项')
     }
     if (!form.value.details?.length) {
-      return ElMessage.error('请选择商品')
+      return ElMessage.error('请选择器材')
     }
     const invalidAreaList = form.value.details.filter(it => !it.areaId )
     if (invalidAreaList?.length) {
@@ -609,6 +703,8 @@ const doWarehousing = async () => {
         expirationDate: it.expirationDate,
         warehouseId: form.value.warehouseId,
         areaId: it.areaId,
+        rackId: it.rackId,
+        locationId: it.locationId,
         generateItemInstance: it.generateItemInstance,
         generatedInstanceQuantity: it.generatedInstanceQuantity,
         remark: it.remark
@@ -669,10 +765,12 @@ const loadDetail = (id) => {
       ...response.data,
       details: (response.data.details || []).map(it => ({
         ...syncReceiptDetail(it),
-        generateItemInstance: it.generateItemInstance ?? (it.itemSku?.item?.trackingMode === 'instance' ? 1 : 0),
+        generateItemInstance: it.generateItemInstance ?? ((it.itemSku?.item?.defaultTrackingMode || it.itemSku?.item?.trackingMode) === 'instance' ? 1 : 0),
+        needBox: it.needBox ?? 0,
         generatedInstanceQuantity: it.generatedInstanceQuantity ?? 0
       }))
     }
+    Promise.all(form.value.details.map(detail => loadRecommendTargets(detail)))
     recalculateOrderSummary()
     Promise.resolve();
   }).then(() => {
@@ -685,13 +783,19 @@ const handleChangeWarehouse = (e) => {
   form.value.areaId = undefined
   form.value.details.forEach(it => {
     it.areaId = undefined
+    it.rackId = undefined
+    it.locationId = undefined
+    it.recommendTargets = []
   })
 }
 
 const handleChangeArea = (e) => {
   form.value.details.forEach(it => {
     it.areaId = e
+    it.rackId = undefined
+    it.locationId = undefined
   })
+  Promise.all(form.value.details.map(detail => loadRecommendTargets(detail)))
 }
 
 const handleChangeQuantity = () => {
@@ -717,7 +821,7 @@ const handleAutoCalc = () => {
 
 const handleDeleteDetail = (row, index) => {
   if (row.id) {
-    proxy.$modal.confirm('确认删除本条商品明细吗？如确认会立即执行！').then(function () {
+    proxy.$modal.confirm('确认删除本条器材明细吗？如确认会立即执行！').then(function () {
       return delReceiptOrderDetail(row.id);
     }).then(() => {
       form.value.details.splice(index, 1)

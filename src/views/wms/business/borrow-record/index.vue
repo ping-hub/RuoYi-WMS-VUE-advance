@@ -1,10 +1,16 @@
-<template>
+﻿<template>
   <div class="app-container">
     <el-card>
       <el-form ref="queryRef" :model="queryParams" :inline="true" label-width="88px">
-        <el-form-item label="借还状态" prop="borrowStatus">
-          <el-select v-model="queryParams.borrowStatus" placeholder="请选择借还状态" clearable style="width: 160px">
+        <el-form-item label="借用状态" prop="borrowStatus">
+          <el-select v-model="queryParams.borrowStatus" placeholder="请选择借用状态" clearable style="width: 160px">
             <el-option v-for="dict in wms_borrow_status" :key="dict.value" :label="dict.label" :value="dict.value" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="超期状态" prop="overdueFlag">
+          <el-select v-model="queryParams.overdueFlag" placeholder="请选择超期状态" clearable style="width: 160px">
+            <el-option label="正常" :value="0" />
+            <el-option label="已超期" :value="1" />
           </el-select>
         </el-form-item>
         <el-form-item label="借用人" prop="borrower">
@@ -16,11 +22,11 @@
         <el-form-item label="收货单位" prop="toUnit">
           <el-input v-model="queryParams.toUnit" placeholder="请输入收货单位" clearable @keyup.enter="handleQuery" />
         </el-form-item>
-        <el-form-item label="单品码" prop="instanceCode">
-          <el-input v-model="queryParams.instanceCode" placeholder="请输入单品码" clearable @keyup.enter="handleInstanceCodeQuery" />
+        <el-form-item label="物品码" prop="instanceCode">
+          <el-input v-model="queryParams.instanceCode" placeholder="请输入物品码" clearable @keyup.enter="handleInstanceCodeQuery" />
         </el-form-item>
-        <el-form-item label="商品" prop="itemInstanceId">
-          <el-select v-model="queryParams.itemInstanceId" placeholder="请选择单品实例" clearable filterable style="width: 220px">
+        <el-form-item label="物品码" prop="itemInstanceId">
+          <el-select v-model="queryParams.itemInstanceId" placeholder="请选择物品码" clearable filterable style="width: 220px">
             <el-option
               v-for="item in instanceOptions"
               :key="item.id"
@@ -36,26 +42,44 @@
       </el-form>
     </el-card>
 
+    <div class="stats-row">
+      <el-card class="stats-card">
+        <div class="stats-label">借出中</div>
+        <div class="stats-value">{{ warningStats.borrowingCount }}</div>
+      </el-card>
+      <el-card class="stats-card warning-card">
+        <div class="stats-label">超期预警</div>
+        <div class="stats-value">{{ warningStats.overdueCount }}</div>
+      </el-card>
+    </div>
+
     <el-card class="mt20">
       <el-row :gutter="10" class="mb8" type="flex" justify="space-between">
-        <el-col :span="8"><span style="font-size: large">借还管理</span></el-col>
+        <el-col :span="8"><span style="font-size: large">器材借用</span></el-col>
         <el-col :span="4" class="toolbar-right">
           <el-button type="primary" plain icon="Plus" @click="handleBorrow()" v-hasPermi="['wms:borrowRecord:edit']">借出登记</el-button>
           <el-button type="success" plain icon="RefreshLeft" @click="handleReturn()" v-hasPermi="['wms:borrowRecord:edit']">归还登记</el-button>
         </el-col>
       </el-row>
 
-      <el-table v-loading="loading" :data="borrowRecordList" border empty-text="暂无借还记录" cell-class-name="vertical-top-cell">
-        <el-table-column label="单品信息" min-width="220">
+      <el-table v-loading="loading" :data="borrowRecordList" border empty-text="暂无借用记录" cell-class-name="vertical-top-cell">
+        <el-table-column label="物品码" min-width="220">
           <template #default="{ row }">
             <div>{{ row.instanceCode || '-' }}</div>
-            <div v-if="row.itemName" class="sub-text">商品：{{ row.itemName }}</div>
-            <div v-if="row.skuName" class="sub-text">规格：{{ row.skuName }}</div>
+            <div v-if="row.itemName" class="sub-text">器材：{{ row.itemName }}</div>
+            <div v-if="row.skuName" class="sub-text">器材规格：{{ row.skuName }}</div>
+            <div v-if="row.borrowNo" class="sub-text">借用单号：{{ row.borrowNo }}</div>
           </template>
         </el-table-column>
-        <el-table-column label="借还状态" width="100">
+        <el-table-column label="借用状态" width="100">
           <template #default="{ row }">
             <dict-tag :options="wms_borrow_status" :value="row.borrowStatus" />
+          </template>
+        </el-table-column>
+        <el-table-column label="预警" width="120" align="center">
+          <template #default="{ row }">
+            <el-tag v-if="row.overdueFlag === 1" type="danger">超期{{ row.overdueDays || 0 }}天</el-tag>
+            <el-tag v-else type="success">正常</el-tag>
           </template>
         </el-table-column>
         <el-table-column label="借用信息" min-width="220">
@@ -64,6 +88,7 @@
             <div v-if="row.fromUnit || row.toUnit" class="sub-text">单位：{{ row.fromUnit || '-' }} -> {{ row.toUnit || '-' }}</div>
             <div v-if="row.fromPerson || row.toPerson" class="sub-text">经手：{{ row.fromPerson || '-' }} / {{ row.toPerson || '-' }}</div>
             <div v-if="row.docDate" class="sub-text">单据日期：{{ parseTime(row.docDate, '{y}-{m}-{d}') }}</div>
+            <div v-if="row.planReturnDate" class="sub-text">计划归还：{{ parseTime(row.planReturnDate, '{y}-{m}-{d}') }}</div>
             <div v-if="row.productMark" class="sub-text">产品标识：{{ row.productMark }}</div>
             <div v-if="row.qualityGrade" class="sub-text">质量等级：{{ proxy.selectDictLabel(wms_quality_grade, row.qualityGrade) || row.qualityGrade }}</div>
             <div class="sub-text">借用时间：{{ row.borrowTime ? parseTime(row.borrowTime, '{y}-{m}-{d} {h}:{i}:{s}') : '-' }}</div>
@@ -81,8 +106,11 @@
         <el-table-column label="归还信息" min-width="220">
           <template #default="{ row }">
             <div>{{ row.returnTime ? ('归还时间：' + parseTime(row.returnTime, '{y}-{m}-{d} {h}:{i}:{s}')) : '未归还' }}</div>
+            <div class="sub-text">归还方式：原位归还</div>
+            <div v-if="row.returnedWarehouseName || row.returnedAreaName || row.returnedRackName || row.returnedLocationName" class="sub-text">
+              归还位置：{{ getReturnedLocationText(row) }}
+            </div>
             <div v-if="row.returnRemark" class="sub-text">归还备注：{{ row.returnRemark }}</div>
-            <div v-if="row.returnedLocationName" class="sub-text">归还货位：{{ row.returnedLocationName }}</div>
           </template>
         </el-table-column>
         <el-table-column label="操作" align="right" width="180">
@@ -95,7 +123,7 @@
               @click="handleReturn(row)"
               v-hasPermi="['wms:borrowRecord:edit']"
             >归还</el-button>
-            <el-button link type="primary" @click="handleOpenItem(row)">单品</el-button>
+            <el-button link type="primary" @click="handleOpenItem(row)">明细</el-button>
             <el-button link type="primary" @click="handleTrace(row)">追踪</el-button>
           </template>
         </el-table-column>
@@ -112,10 +140,10 @@
 
     <el-dialog title="借出登记" v-model="borrowDialog.visible" width="760px" append-to-body :close-on-click-modal="false">
       <el-form ref="borrowFormRef" :model="borrowDialog.form" :rules="borrowRules" label-width="100px">
-        <el-form-item label="单品实例" prop="itemInstanceId">
+        <el-form-item label="物品码" prop="itemInstanceId">
           <el-select
             v-model="borrowDialog.form.itemInstanceId"
-            placeholder="请选择单品实例"
+            placeholder="请选择物品码"
             filterable
             clearable
             style="width: 100%"
@@ -130,9 +158,9 @@
           </el-select>
         </el-form-item>
         <el-descriptions v-if="borrowDialog.currentItem.id" :column="2" border class="mb16">
-          <el-descriptions-item label="单品码">{{ borrowDialog.currentItem.instanceCode || '-' }}</el-descriptions-item>
-          <el-descriptions-item label="商品">{{ borrowDialog.currentItem.itemName || '-' }}</el-descriptions-item>
-          <el-descriptions-item label="规格">{{ borrowDialog.currentItem.skuName || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="物品码">{{ borrowDialog.currentItem.instanceCode || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="器材">{{ borrowDialog.currentItem.itemName || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="器材规格">{{ borrowDialog.currentItem.skuName || '-' }}</el-descriptions-item>
           <el-descriptions-item label="当前状态">
             <dict-tag :options="itemInstanceStatusOptions" :value="borrowDialog.currentItem.instanceStatus" />
           </el-descriptions-item>
@@ -151,6 +179,19 @@
                 type="datetime"
                 format="YYYY-MM-DD HH:mm:ss"
                 value-format="YYYY-MM-DD HH:mm:ss"
+                style="width: 100%"
+              />
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row :gutter="20">
+          <el-col :span="12">
+            <el-form-item label="计划归还" prop="planReturnDate">
+              <el-date-picker
+                v-model="borrowDialog.form.planReturnDate"
+                type="date"
+                format="YYYY-MM-DD"
+                value-format="YYYY-MM-DD"
                 style="width: 100%"
               />
             </el-form-item>
@@ -206,6 +247,11 @@
         <el-form-item label="借用备注" prop="borrowRemark">
           <el-input v-model="borrowDialog.form.borrowRemark" type="textarea" :rows="3" placeholder="请输入借用备注" />
         </el-form-item>
+        <el-alert
+          :closable="false"
+          type="info"
+          title="当前阶段借用归还只支持原位归还，归还位置由后端按原位置回写。"
+        />
       </el-form>
       <template #footer>
         <div class="dialog-footer">
@@ -217,10 +263,10 @@
 
     <el-dialog title="归还登记" v-model="returnDialog.visible" width="760px" append-to-body :close-on-click-modal="false">
       <el-form ref="returnFormRef" :model="returnDialog.form" label-width="100px">
-        <el-form-item label="单品实例" prop="itemInstanceId">
+        <el-form-item label="物品码" prop="itemInstanceId">
           <el-select
             v-model="returnDialog.form.itemInstanceId"
-            placeholder="请选择单品实例"
+            placeholder="请选择物品码"
             filterable
             clearable
             style="width: 100%"
@@ -236,11 +282,19 @@
           </el-select>
         </el-form-item>
         <el-descriptions v-if="returnDialog.currentRecord.id" :column="2" border class="mb16">
-          <el-descriptions-item label="单品码">{{ returnDialog.currentRecord.instanceCode || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="借用单号">{{ returnDialog.currentRecord.borrowNo || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="物品码">{{ returnDialog.currentRecord.instanceCode || '-' }}</el-descriptions-item>
           <el-descriptions-item label="借用人">{{ returnDialog.currentRecord.borrower || '-' }}</el-descriptions-item>
           <el-descriptions-item label="借用时间">{{ returnDialog.currentRecord.borrowTime ? parseTime(returnDialog.currentRecord.borrowTime, '{y}-{m}-{d} {h}:{i}:{s}') : '-' }}</el-descriptions-item>
-          <el-descriptions-item label="原货位">{{ getOriginalLocationText(returnDialog.currentRecord) }}</el-descriptions-item>
+          <el-descriptions-item label="计划归还">{{ returnDialog.currentRecord.planReturnDate ? parseTime(returnDialog.currentRecord.planReturnDate, '{y}-{m}-{d}') : '-' }}</el-descriptions-item>
+          <el-descriptions-item label="原位置" :span="2">{{ getOriginalLocationText(returnDialog.currentRecord) }}</el-descriptions-item>
         </el-descriptions>
+        <el-alert
+          :closable="false"
+          type="warning"
+          class="mb16"
+          title="本阶段仅支持原位归还，不提供归还到新货位能力。"
+        />
         <el-row :gutter="20">
           <el-col :span="12">
             <el-form-item label="归还时间" prop="returnTime">
@@ -266,14 +320,15 @@
       </template>
     </el-dialog>
 
-    <el-dialog title="借还详情" v-model="detailDialog.visible" width="860px" append-to-body>
+    <el-dialog title="借用详情" v-model="detailDialog.visible" width="860px" append-to-body>
       <el-descriptions :column="2" border>
-        <el-descriptions-item label="单品码">{{ detailDialog.data.instanceCode || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="借还状态">
+        <el-descriptions-item label="借用单号">{{ detailDialog.data.borrowNo || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="物品码">{{ detailDialog.data.instanceCode || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="借用状态">
           <dict-tag :options="wms_borrow_status" :value="detailDialog.data.borrowStatus" />
         </el-descriptions-item>
-        <el-descriptions-item label="商品">{{ detailDialog.data.itemName || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="规格">{{ detailDialog.data.skuName || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="器材">{{ detailDialog.data.itemName || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="器材规格">{{ detailDialog.data.skuName || '-' }}</el-descriptions-item>
         <el-descriptions-item label="借用人">{{ detailDialog.data.borrower || '-' }}</el-descriptions-item>
         <el-descriptions-item label="借用时间">{{ detailDialog.data.borrowTime ? parseTime(detailDialog.data.borrowTime, '{y}-{m}-{d} {h}:{i}:{s}') : '-' }}</el-descriptions-item>
         <el-descriptions-item label="发货单位">{{ detailDialog.data.fromUnit || '-' }}</el-descriptions-item>
@@ -281,7 +336,12 @@
         <el-descriptions-item label="发货人">{{ detailDialog.data.fromPerson || '-' }}</el-descriptions-item>
         <el-descriptions-item label="收货人">{{ detailDialog.data.toPerson || '-' }}</el-descriptions-item>
         <el-descriptions-item label="单据日期">{{ detailDialog.data.docDate ? parseTime(detailDialog.data.docDate, '{y}-{m}-{d}') : '-' }}</el-descriptions-item>
+        <el-descriptions-item label="计划归还">{{ detailDialog.data.planReturnDate ? parseTime(detailDialog.data.planReturnDate, '{y}-{m}-{d}') : '-' }}</el-descriptions-item>
         <el-descriptions-item label="质量等级">{{ proxy.selectDictLabel(wms_quality_grade, detailDialog.data.qualityGrade) || detailDialog.data.qualityGrade || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="超期状态">
+          <el-tag v-if="detailDialog.data.overdueFlag === 1" type="danger">超期{{ detailDialog.data.overdueDays || 0 }}天</el-tag>
+          <el-tag v-else type="success">正常</el-tag>
+        </el-descriptions-item>
         <el-descriptions-item label="产品标识" :span="2">{{ detailDialog.data.productMark || '-' }}</el-descriptions-item>
         <el-descriptions-item label="借用备注" :span="2">{{ detailDialog.data.borrowRemark || '-' }}</el-descriptions-item>
         <el-descriptions-item label="原位置" :span="2">{{ getOriginalLocationText(detailDialog.data) }}</el-descriptions-item>
@@ -301,6 +361,7 @@ import {
   borrowItem,
   getBorrowRecord,
   getCurrentBorrowRecord,
+  getBorrowWarningStats,
   listBorrowRecord,
   returnBorrowItem
 } from '@/api/wms/borrowRecord';
@@ -315,6 +376,10 @@ const loading = ref(true);
 const buttonLoading = ref(false);
 const total = ref(0);
 const borrowRecordList = ref([]);
+const warningStats = reactive({
+  borrowingCount: 0,
+  overdueCount: 0
+});
 const queryRef = ref();
 const borrowFormRef = ref();
 const returnFormRef = ref();
@@ -328,6 +393,7 @@ const queryParams = reactive({
   borrower: undefined,
   fromUnit: undefined,
   toUnit: undefined,
+  overdueFlag: undefined,
   instanceCode: undefined
 });
 
@@ -343,6 +409,7 @@ const borrowDialog = reactive({
     docDate: undefined,
     productMark: undefined,
     qualityGrade: undefined,
+    planReturnDate: undefined,
     borrowTime: undefined,
     borrowRemark: undefined
   },
@@ -369,10 +436,13 @@ const detailDialog = reactive({
 
 const borrowRules = {
   itemInstanceId: [
-    { required: true, message: '单品实例不能为空', trigger: 'change' }
+    { required: true, message: '物品码不能为空', trigger: 'change' }
   ],
   borrower: [
     { required: true, message: '借用人不能为空', trigger: 'blur' }
+  ],
+  planReturnDate: [
+    { required: true, message: '计划归还日期不能为空', trigger: 'change' }
   ]
 };
 
@@ -418,6 +488,12 @@ const getList = async () => {
   }
 };
 
+const loadWarningStats = async () => {
+  const res = await getBorrowWarningStats();
+  warningStats.borrowingCount = Number(res.data?.borrowingCount || 0);
+  warningStats.overdueCount = Number(res.data?.overdueCount || 0);
+};
+
 const loadBorrowableInstances = async () => {
   const res = await listItemInstance({
     pageNum: 1,
@@ -446,10 +522,11 @@ const loadQueryInstances = async () => {
 };
 
 const applyRouteQuery = () => {
-  const { itemInstanceId, instanceCode, borrowStatus } = route.query;
+  const { itemInstanceId, instanceCode, borrowStatus, overdueFlag } = route.query;
   queryParams.itemInstanceId = itemInstanceId ? Number(itemInstanceId) : undefined;
   queryParams.instanceCode = instanceCode || undefined;
   queryParams.borrowStatus = borrowStatus || undefined;
+  queryParams.overdueFlag = overdueFlag !== undefined ? Number(overdueFlag) : undefined;
 };
 
 const handleQuery = async () => {
@@ -472,7 +549,7 @@ const handleInstanceCodeQuery = async () => {
     queryParams.itemInstanceId = res.data?.id;
   } catch (e) {
     queryParams.itemInstanceId = undefined;
-    ElMessage.error('未找到对应单品码');
+    ElMessage.error('未找到对应物品码');
     return;
   }
   queryParams.pageNum = 1;
@@ -488,6 +565,7 @@ const resetQuery = async () => {
   queryParams.borrower = undefined;
   queryParams.fromUnit = undefined;
   queryParams.toUnit = undefined;
+  queryParams.overdueFlag = undefined;
   queryParams.instanceCode = undefined;
   applyRouteQuery();
   if (queryParams.instanceCode) {
@@ -509,6 +587,7 @@ const handleBorrow = async (row) => {
     docDate: undefined,
     productMark: undefined,
     qualityGrade: undefined,
+    planReturnDate: undefined,
     borrowTime: undefined,
     borrowRemark: undefined
   };
@@ -528,6 +607,7 @@ const handleBorrowInstanceChange = async (itemInstanceId) => {
   borrowDialog.currentItem = res.data || {};
   borrowDialog.form.productMark = borrowDialog.form.productMark || res.data?.productMark;
   borrowDialog.form.qualityGrade = borrowDialog.form.qualityGrade || res.data?.qualityGrade;
+  borrowDialog.form.instanceCode = res.data?.instanceCode;
 };
 
 const submitBorrow = () => {
@@ -540,7 +620,7 @@ const submitBorrow = () => {
       await borrowItem(borrowDialog.form);
       proxy.$modal.msgSuccess('借出登记成功');
       borrowDialog.visible = false;
-      await Promise.all([getList(), loadQueryInstances()]);
+      await Promise.all([getList(), loadQueryInstances(), loadWarningStats()]);
     } finally {
       buttonLoading.value = false;
     }
@@ -578,7 +658,7 @@ const handleReturnInstanceChange = async (itemInstanceId) => {
 
 const submitReturn = async () => {
   if (!returnDialog.form.id && !returnDialog.form.itemInstanceId) {
-    proxy.$modal.msgError('请选择待归还的单品实例');
+    proxy.$modal.msgError('请选择待归还的物品码');
     return;
   }
   buttonLoading.value = true;
@@ -586,7 +666,7 @@ const submitReturn = async () => {
     await returnBorrowItem(returnDialog.form);
     proxy.$modal.msgSuccess('归还登记成功');
     returnDialog.visible = false;
-    await Promise.all([getList(), loadQueryInstances()]);
+    await Promise.all([getList(), loadQueryInstances(), loadWarningStats()]);
   } finally {
     buttonLoading.value = false;
   }
@@ -611,7 +691,8 @@ onMounted(async () => {
   await Promise.all([
     loadQueryInstances(),
     loadBorrowableInstances(),
-    loadReturnableInstances()
+    loadReturnableInstances(),
+    loadWarningStats()
   ]);
   if (queryParams.itemInstanceId && queryParams.borrowStatus === 'borrowed') {
     await handleReturn({ itemInstanceId: queryParams.itemInstanceId });
@@ -644,5 +725,32 @@ onMounted(async () => {
 
 .mb16 {
   margin-bottom: 16px;
+}
+
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.stats-card {
+  min-height: 96px;
+}
+
+.stats-label {
+  color: var(--el-text-color-secondary);
+  font-size: 14px;
+  margin-bottom: 12px;
+}
+
+.stats-value {
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.warning-card .stats-value {
+  color: var(--el-color-danger);
 }
 </style>

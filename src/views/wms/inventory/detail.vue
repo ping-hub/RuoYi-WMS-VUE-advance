@@ -72,7 +72,7 @@
           <el-button type="primary" icon="Search" @click="handleQuery">搜索</el-button>
           <el-button icon="Refresh" @click="resetQuery">重置</el-button>
           <el-button type="warning" plain icon="Download" @click="handleExport" v-hasPermi="['wms:inventoryDetail:all']">导出</el-button>
-          <el-button v-if="fromLedger" plain icon="Back" @click="handleBackToLedger">返回总账</el-button>
+          <el-button v-if="fromLedger" plain icon="Back" @click="handleBackToLedger">返回器材总账</el-button>
         </el-form-item>
       </el-form>
     </el-card>
@@ -97,8 +97,8 @@
 
     <el-card class="mt20">
       <div class="mb8 flex-space-between">
-        <div class="table-title">库存明细台账</div>
-        <div class="table-tip">已按器材编码、规格型号、产品标识、质量等级、所在单位增强筛选</div>
+        <div class="table-title">库存明细</div>
+        <div class="table-tip">支持从器材总账下钻，并联查相关单据与库存流水</div>
       </div>
       <el-table
         :data="inventoryDetailList"
@@ -119,14 +119,14 @@
               <div>{{ useWmsStore().areaMap.get(row.areaId)?.areaName || '-' }}</div>
             </template>
           </el-table-column>
-          <el-table-column label="商品信息" prop="areaIdAndItemId" min-width="180">
+          <el-table-column label="器材信息" prop="areaIdAndItemId" min-width="180">
             <template #default="{ row }">
               <div>{{ row.itemName || row.item?.itemName || '-' }}</div>
               <div class="sub-text">器材编码：{{ row.equipmentCode || row.item?.itemCode || '-' }}</div>
               <div v-if="row.equipmentName" class="sub-text">装备名称：{{ row.equipmentName }}</div>
             </template>
           </el-table-column>
-          <el-table-column label="规格信息" prop="areaIdAndSkuId" min-width="180">
+          <el-table-column label="器材规格" prop="areaIdAndSkuId" min-width="180">
             <template #default="{ row }">
               <div>{{ row.itemSku?.skuName || '-' }}</div>
               <div class="sub-text">规格型号：{{ row.specModel || row.itemSku?.specModel || '-' }}</div>
@@ -134,14 +134,14 @@
           </el-table-column>
         </template>
         <template v-else>
-          <el-table-column label="商品信息" prop="itemId" min-width="180">
+          <el-table-column label="器材信息" prop="itemId" min-width="180">
             <template #default="{ row }">
               <div>{{ row.itemName || row.item?.itemName || '-' }}</div>
               <div class="sub-text">器材编码：{{ row.equipmentCode || row.item?.itemCode || '-' }}</div>
               <div v-if="row.equipmentName" class="sub-text">装备名称：{{ row.equipmentName }}</div>
             </template>
           </el-table-column>
-          <el-table-column label="规格信息" prop="skuId" min-width="180">
+          <el-table-column label="器材规格" prop="skuId" min-width="180">
             <template #default="{ row }">
               <div>{{ row.itemSku?.skuName || '-' }}</div>
               <div class="sub-text">规格型号：{{ row.specModel || row.itemSku?.specModel || '-' }}</div>
@@ -353,7 +353,7 @@ const handleExport = () => {
 }
 
 const handleGoOrder = (row) => {
-  const orderId = row.receiptOrderId
+  const orderId = row.sourceOrderId || row.receiptOrderId
   if (!orderId) {
     proxy.$modal.msgWarning('当前记录缺少关联单据ID')
     return
@@ -394,7 +394,7 @@ const orderTypeText = (type) => {
   const map = {
     1: '入库单',
     2: '移库单',
-    3: '盘库单'
+    3: '盘点单'
   }
   return map[type] || '未知单据'
 }
@@ -431,3 +431,4 @@ initFromRoute()
   font-size: 12px;
 }
 </style>
+

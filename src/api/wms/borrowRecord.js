@@ -30,6 +30,13 @@ export function getCurrentBorrowRecord(itemInstanceId) {
   });
 }
 
+export function getBorrowWarningStats() {
+  return request({
+    url: '/wms/borrowRecord/warning/stats',
+    method: 'get'
+  });
+}
+
 export function borrowItem(data) {
   return request({
     url: '/wms/borrowRecord/borrow',

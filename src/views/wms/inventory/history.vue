@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="app-container">
     <el-card>
       <el-form :model="queryParams" ref="queryRef" :inline="true" label-width="80px">
@@ -76,10 +76,10 @@
 
     <el-card class="mt20">
       <div class="mb8 flex-space-between">
-        <div class="table-title">库存流水台账</div>
+        <div class="table-title">库存流水</div>
         <div class="table-tip">支持按操作类型与总账核心字段追溯库存变化</div>
       </div>
-      <el-table v-loading="loading" :data="inventoryHistoryList" border class="mt20" empty-text="暂无库存记录" cell-class-name="vertical-top-cell">
+      <el-table v-loading="loading" :data="inventoryHistoryList" border class="mt20" empty-text="暂无库存流水" cell-class-name="vertical-top-cell">
         <el-table-column label="操作单号" prop="orderNo" min-width="160" show-overflow-tooltip />
         <el-table-column label="器材信息" min-width="200">
           <template #default="{ row }">
@@ -318,3 +318,4 @@ getList()
   font-size: 12px;
 }
 </style>
+

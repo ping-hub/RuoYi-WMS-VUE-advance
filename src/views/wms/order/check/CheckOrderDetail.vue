@@ -1,18 +1,18 @@
 <template>
-  <el-drawer :model-value="show" :title="'盘库单【' + checkOrderNo + '】的商品明细'" @close="handleCancelClick" :size="size" :close-on-click-modal="false"
+  <el-drawer :model-value="show" :title="'盘点单【' + checkOrderNo + '】的器材明细'" @close="handleCancelClick" :size="size" :close-on-click-modal="false"
              append-to-body>
     <div class="flex-space-between">
       <div></div>
       <el-checkbox v-model="queryParams.haveProfitAndLoss" label="只查看有盈亏数的" @change="handleQuery"/>
     </div>
-    <el-table :data="list" border empty-text="暂无商品明细" v-loading="loading" ref="inventorySelectFormRef"
+    <el-table :data="list" border empty-text="暂无器材明细" v-loading="loading" ref="inventorySelectFormRef"
               cell-class-name="my-cell" class="mt20">
-      <el-table-column label="商品名称">
+      <el-table-column label="器材名称">
         <template #default="{ row }">
           <div>{{ row?.itemSku?.item?.itemName }}</div>
         </template>
       </el-table-column>
-      <el-table-column label="规格名称">
+      <el-table-column label="器材规格">
         <template #default="{ row }">
           <div>{{ row?.itemSku?.skuName }}</div>
         </template>

@@ -2,7 +2,7 @@
   <div class="app-container">
     <el-card>
       <el-form :model="queryParams" ref="queryRef" :inline="true" label-width="98px">
-        <el-form-item label="移库状态" prop="movementOrderStatus">
+        <el-form-item label="调拨状态" prop="movementOrderStatus">
           <el-radio-group v-model="queryParams.movementOrderStatus" @change="handleQuery">
             <el-radio-button
               :key="-2"
@@ -19,10 +19,10 @@
             </el-radio-button>
           </el-radio-group>
         </el-form-item>
-        <el-form-item label="移库单号" prop="movementOrderNo">
+        <el-form-item label="调拨单号" prop="movementOrderNo">
           <el-input
             v-model="queryParams.movementOrderNo"
-            placeholder="请输入移库单号"
+            placeholder="请输入调拨单号"
             clearable
             @keyup.enter="handleQuery"
           />
@@ -45,10 +45,17 @@
       </el-form>
     </el-card>
 
+    <el-alert
+      class="mt20"
+      :closable="false"
+      type="info"
+      title="本页按调拨单展示，仅处理跨仓和单位间调拨；库内位置变化请走库内移库。"
+    />
+
     <el-card class="mt20">
 
       <el-row :gutter="10" class="mb8" type="flex" justify="space-between">
-        <el-col :span="6"><span style="font-size: large">移库单</span></el-col>
+        <el-col :span="6"><span style="font-size: large">调拨单</span></el-col>
         <el-col :span="1.5">
           <el-button
             type="primary"
@@ -64,20 +71,20 @@
                 @expand-change="handleExpandExchange"
                 :row-key="getRowKey"
                 :expand-row-keys="expandedRowKeys"
-                empty-text="暂无移库单"
+                empty-text="暂无调拨单"
                 cell-class-name="vertical-top-cell"
       >
         <el-table-column type="expand">
           <template #default="props">
             <div style="padding: 0 50px 20px 50px">
-              <h3>商品明细</h3>
-              <el-table :data="props.row.details" v-loading="detailLoading[props.$index]" empty-text="暂无商品明细">
-                <el-table-column label="商品名称">
+              <h3>调拨明细</h3>
+              <el-table :data="props.row.details" v-loading="detailLoading[props.$index]" empty-text="暂无调拨明细">
+                <el-table-column label="器材名称">
                   <template #default="{ row }">
                     <div>{{ row?.itemSku?.item?.itemName }}</div>
                   </template>
                 </el-table-column>
-                <el-table-column label="规格名称">
+                <el-table-column label="器材规格">
                   <template #default="{ row }">
                     <div>{{ row?.itemSku?.skuName }}</div>
                   </template>
@@ -90,8 +97,18 @@
                     <dict-tag :options="wms_quality_grade" :value="row.qualityGrade" />
                   </template>
                 </el-table-column>
-                <el-table-column label="源库区" prop="sourceAreaName"/>
-                <el-table-column label="目标库区" prop="targetAreaName"/>
+                <el-table-column label="源位置" min-width="220">
+                  <template #default="{ row }">
+                    <div>库区：{{ row.sourceAreaName || '-' }}</div>
+                    <div class="sub-text">货架：{{ wmsStore.rackMap.get(row.sourceRackId)?.rackName || row.sourceRackId || '-' }} / 货位：{{ wmsStore.locationMap.get(row.sourceLocationId)?.locationName || row.sourceLocationId || '-' }}</div>
+                  </template>
+                </el-table-column>
+                <el-table-column label="目标位置" min-width="220">
+                  <template #default="{ row }">
+                    <div>库区：{{ row.targetAreaName || '-' }}</div>
+                    <div class="sub-text">货架：{{ wmsStore.rackMap.get(row.targetRackId)?.rackName || row.targetRackId || '-' }} / 货位：{{ wmsStore.locationMap.get(row.targetLocationId)?.locationName || row.targetLocationId || '-' }}</div>
+                  </template>
+                </el-table-column>
                 <el-table-column label="单价(元)" align="right">
                   <template #default="{ row }">
                     <el-statistic :value="row.unitPrice ?? '-'" :precision="2" />
@@ -120,7 +137,7 @@
                 </el-table-column>
                 <el-table-column label="专装对象" min-width="180">
                   <template #default="{ row }">
-                    <div v-if="row.instanceCode">单品码：{{ row.instanceCode }}</div>
+                    <div v-if="row.instanceCode">物品码：{{ row.instanceCode }}</div>
                     <div v-if="row.boxCode" class="sub-text">箱码：{{ row.boxCode }}</div>
                     <div v-if="!row.instanceCode && !row.boxCode">-</div>
                   </template>
@@ -128,8 +145,8 @@
                 <el-table-column label="备注" prop="remark" min-width="140" show-overflow-tooltip />
                 <el-table-column label="追踪" min-width="180" align="center">
                   <template #default="{ row }">
-                    <el-button v-if="row.instanceCode" link type="primary" @click="handleGoItem(row)">单品</el-button>
-                    <el-button v-if="row.instanceCode" link type="primary" @click="handleGoItemTrace(row)">单品追踪</el-button>
+                    <el-button v-if="row.instanceCode" link type="primary" @click="handleGoItem(row)">明细</el-button>
+                    <el-button v-if="row.instanceCode" link type="primary" @click="handleGoItemTrace(row)">明细追踪</el-button>
                     <el-button v-if="row.boxCode" link type="primary" @click="handleGoBox(row)">箱体</el-button>
                     <el-button v-if="row.boxCode" link type="primary" @click="handleGoBoxTrace(row)">箱体追踪</el-button>
                     <span v-if="!row.instanceCode && !row.boxCode">-</span>
@@ -145,27 +162,28 @@
             <div v-if="row.dispatchBasis">依据：{{ proxy.selectDictLabel(wms_basis_type.value, row.dispatchBasis) }}</div>
           </template>
         </el-table-column>
-        <el-table-column label="调拨信息" align="left" min-width="220">
+        <el-table-column label="调拨信息" align="left" min-width="240">
           <template #default="{ row }">
             <div v-if="row.movementType">类型：{{ proxy.selectDictLabel(wms_movement_type.value, row.movementType) }}</div>
+            <div v-if="row.movementScope">范围：{{ row.movementScope }}</div>
             <div v-if="row.dispatchMode">方式：{{ proxy.selectDictLabel(wms_dispatch_mode.value, row.dispatchMode) }}</div>
             <div v-if="row.supportNo">保障号：{{ row.supportNo }}</div>
             <div v-if="row.dispatchDate">调拨日期：{{ parseTime(row.dispatchDate, '{y}-{m}-{d}') }}</div>
           </template>
         </el-table-column>
-        <el-table-column label="源仓库/源库区" align="left" width="260">
+        <el-table-column label="原位置" align="left" width="260">
           <template #default="{ row }">
-            <div>源仓库：{{ useWmsStore().warehouseMap.get(row.sourceWarehouseId)?.warehouseName }}</div>
-            <div v-if="row.sourceAreaId">源库区：{{ useWmsStore().areaMap.get(row.sourceAreaId)?.areaName }}</div>
+            <div>仓库：{{ wmsStore.warehouseMap.get(row.sourceWarehouseId)?.warehouseName }}</div>
+            <div v-if="row.sourceAreaId">库区：{{ wmsStore.areaMap.get(row.sourceAreaId)?.areaName }}</div>
           </template>
         </el-table-column>
-        <el-table-column label="目标仓库/目标库区" align="left" width="260">
+        <el-table-column label="目标位置" align="left" width="260">
           <template #default="{ row }">
-            <div>目标仓库：{{ useWmsStore().warehouseMap.get(row.targetWarehouseId)?.warehouseName }}</div>
-            <div v-if="row.targetAreaId">目标库区：{{ useWmsStore().areaMap.get(row.targetAreaId)?.areaName }}</div>
+            <div>仓库：{{ wmsStore.warehouseMap.get(row.targetWarehouseId)?.warehouseName }}</div>
+            <div v-if="row.targetAreaId">库区：{{ wmsStore.areaMap.get(row.targetAreaId)?.areaName }}</div>
           </template>
         </el-table-column>
-        <el-table-column label="移库状态" align="center" prop="movementOrderStatus" width="120">
+        <el-table-column label="调拨状态" align="center" prop="movementOrderStatus" width="120">
           <template #default="{ row }">
             <dict-tag :options="wms_movement_status" :value="row.movementOrderStatus" />
           </template>
@@ -200,7 +218,7 @@
                 :width="300"
                 trigger="hover"
                 :disabled="scope.row.movementOrderStatus === 0"
-                :content="'移库单【' + scope.row.movementOrderNo + '】已' + (scope.row.movementOrderStatus === 1 ? '移库' : '作废') + '，无法修改！' "
+                :content="'调拨单【' + scope.row.movementOrderNo + '】已' + (scope.row.movementOrderStatus === 1 ? '调拨完成' : '作废') + '，无法修改！' "
               >
                 <template #reference>
                   <el-button link type="primary" @click="handleUpdate(scope.row)" v-hasPermi="['wms:movement:all']" :disabled="[-1, 1].includes(scope.row.movementOrderStatus)">修改</el-button>
@@ -215,13 +233,12 @@
                 :width="300"
                 trigger="hover"
                 :disabled="[-1, 0].includes(scope.row.movementOrderStatus)"
-                :content="'移库单【' + scope.row.movementOrderNo + '】已移库，无法删除！' "
+                :content="'调拨单【' + scope.row.movementOrderNo + '】已调拨完成，无法删除！' "
               >
                 <template #reference>
                   <el-button link type="danger" @click="handleDelete(scope.row)" v-hasPermi="['wms:movement:all']" :disabled="scope.row.movementOrderStatus === 1">删除</el-button>
                 </template>
               </el-popover>
-              <el-button link type="primary" @click="handlePrint(scope.row)" v-hasPermi="['wms:movement:all']">打印</el-button>
             </div>
           </template>
         </el-table-column>
@@ -241,17 +258,17 @@
 </template>
 
 <script setup name="MovementOrder">
-import {listMovementOrder, delMovementOrder, getMovementOrder} from "@/api/wms/movementOrder";
+import {listMovementOrder, delMovementOrder} from "@/api/wms/movementOrder";
 import {listByMovementOrderId} from "@/api/wms/movementOrderDetail";
 import {getCurrentInstance, reactive, ref, toRefs} from "vue";
 import { useRouter } from "vue-router";
 import {useWmsStore} from "../../../../store/modules/wms";
 import {ElMessageBox} from "element-plus";
 import WarehouseCascader from "@/views/components/WarehouseCascader.vue";
-import movementPanel from "@/components/PrintTemplate/movement-panel";
 
 const { proxy } = getCurrentInstance();
 const router = useRouter();
+const wmsStore = useWmsStore();
 const { wms_movement_status, wms_movement_type, wms_dispatch_mode, wms_basis_type, wms_quality_grade } = proxy.useDict(
   "wms_movement_status",
   "wms_movement_type",
@@ -268,7 +285,7 @@ const total = ref(0);
 const title = ref("");
 // 当前展开集合
 const expandedRowKeys = ref([])
-// 商品明细table的loading状态集合
+// 器材明细table的loading状态集合
 const detailLoading = ref([])
 const data = reactive({
   queryParams: {
@@ -333,7 +350,7 @@ function handleAdd() {
 /** 删除按钮操作 */
 function handleDelete(row) {
   const _ids = row.id || ids.value;
-  proxy.$modal.confirm('确认删除移库单【' + row.movementOrderNo + '】吗？').then(function() {
+  proxy.$modal.confirm('确认删除调拨单【' + row.movementOrderNo + '】吗？').then(function() {
     loading.value = true;
     return delMovementOrder(_ids);
   }).then(() => {
@@ -343,7 +360,7 @@ function handleDelete(row) {
   }).catch((e) => {
     if (e === 409) {
       return ElMessageBox.alert(
-        '<div>移库单【' + row.movementOrderNo + '】已移库，不能删除 ！</div><div>请联系管理员处理！</div>',
+        '<div>调拨单【' + row.movementOrderNo + '】已调拨完成，不能删除！</div><div>请联系管理员处理！</div>',
         '系统提示',
         {
           dangerouslyUseHTMLString: true,
@@ -399,74 +416,6 @@ function handleGoDetail(row) {
   }
 }
 
-/** 导出按钮操作 */
-async function handlePrint(row) {
-  const res = await getMovementOrder(row.id)
-  const movementOrder = res.data
-  let table = []
-  if (movementOrder.details?.length) {
-    table = movementOrder.details.map(detail => {
-      return {
-        itemName: detail.itemSku.item.itemName,
-        skuName: detail.itemSku.skuName,
-        sourceAreaName: useWmsStore().areaMap.get(detail.sourceAreaId)?.areaName,
-        targetAreaName: useWmsStore().areaMap.get(detail.targetAreaId)?.areaName,
-        equipmentCode: detail.equipmentCode,
-        specModel: detail.specModel,
-        productMark: detail.productMark,
-        qualityGrade: detail.qualityGrade,
-        unitPrice: detail.unitPrice,
-        lineAmount: detail.lineAmount,
-        quantity: Number(detail.quantity).toFixed(0),
-        batchNo: detail.batchNo,
-        productionDate: proxy.parseTime(detail.productionDate, '{y}-{m}-{d}'),
-        expirationDate: proxy.parseTime(detail.expirationDate, '{y}-{m}-{d}')
-      }
-    })
-  }
-  const printData = {
-    movementOrderNo: movementOrder.movementOrderNo,
-    movementOrderStatus: proxy.selectDictLabel(wms_movement_status.value, movementOrder.movementOrderStatus),
-    movementType: proxy.selectDictLabel(wms_movement_type.value, movementOrder.movementType),
-    dispatchBasis: proxy.selectDictLabel(wms_basis_type.value, movementOrder.dispatchBasis),
-    dispatchMode: proxy.selectDictLabel(wms_dispatch_mode.value, movementOrder.dispatchMode),
-    dispatchPurpose: movementOrder.dispatchPurpose,
-    supportNo: movementOrder.supportNo,
-    fromUnit: movementOrder.fromUnit,
-    toUnit: movementOrder.toUnit,
-    fromStation: movementOrder.fromStation,
-    toStation: movementOrder.toStation,
-    fromAddress: movementOrder.fromAddress,
-    toAddress: movementOrder.toAddress,
-    contactAddress: movementOrder.contactAddress,
-    dispatchDate: proxy.parseTime(movementOrder.dispatchDate, '{y}-{m}-{d}'),
-    effectiveDate: proxy.parseTime(movementOrder.effectiveDate, '{y}-{m}-{d}'),
-    issueDate: proxy.parseTime(movementOrder.issueDate, '{y}-{m}-{d}'),
-    fromHandler: movementOrder.fromHandler,
-    toHandler: movementOrder.toHandler,
-    sourceWarehouseName: useWmsStore().warehouseMap.get(movementOrder.sourceWarehouseId)?.warehouseName,
-    sourceAreaName: useWmsStore().areaMap.get(movementOrder.sourceAreaId)?.areaName,
-    targetWarehouseName: useWmsStore().warehouseMap.get(movementOrder.targetWarehouseId)?.warehouseName,
-    targetAreaName: useWmsStore().areaMap.get(movementOrder.targetAreaId)?.areaName,
-    totalQuantity: Number(movementOrder.totalQuantity).toFixed(0),
-    createBy: movementOrder.createBy,
-    createTime: proxy.parseTime(movementOrder.createTime, '{mm}-{dd} {hh}:{ii}'),
-    updateBy: movementOrder.updateBy,
-    updateTime: proxy.parseTime(movementOrder.updateTime, '{mm}-{dd} {hh}:{ii}'),
-    remark: movementOrder.remark,
-    table
-  }
-  let printTemplate = new proxy.$hiprint.PrintTemplate({template: movementPanel})
-  printTemplate.print(printData, {}, {
-    styleHandler: () => {
-      let css = '<link href="https://cyl-press.oss-cn-shenzhen.aliyuncs.com/print-lock.css" media="print" rel="stylesheet">';
-      console.info("css:", css)
-      return css
-    }
-  })
-}
-
-
 function handleExpandExchange(value, expandedRows) {
   if (!ifExpand(expandedRows)) {
     return
@@ -483,10 +432,10 @@ function loadMovementOrderDetail(row) {
       const details = res.data.map(it => {
         return {
           ...it,
-          sourceWarehouseName: useWmsStore().warehouseMap.get(it.sourceWarehouseId)?.warehouseName,
-          sourceAreaName: useWmsStore().areaMap.get(it.sourceAreaId)?.areaName,
-          targetWarehouseName: useWmsStore().warehouseMap.get(it.targetWarehouseId)?.warehouseName,
-          targetAreaName: useWmsStore().areaMap.get(it.targetAreaId)?.areaName
+          sourceWarehouseName: wmsStore.warehouseMap.get(it.sourceWarehouseId)?.warehouseName,
+          sourceAreaName: wmsStore.areaMap.get(it.sourceAreaId)?.areaName,
+          targetWarehouseName: wmsStore.warehouseMap.get(it.targetWarehouseId)?.warehouseName,
+          targetAreaName: wmsStore.areaMap.get(it.targetAreaId)?.areaName
         }
       })
       movementOrderList.value[index].details = details

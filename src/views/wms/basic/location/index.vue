@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="app-container">
     <el-card>
       <el-form ref="queryRef" :model="queryParams" :inline="true" label-width="68px">
@@ -156,16 +156,16 @@
         <el-descriptions-item label="仓库">{{ stockDialog.data.warehouseName || '-' }}</el-descriptions-item>
         <el-descriptions-item label="库区">{{ stockDialog.data.areaName || '-' }}</el-descriptions-item>
         <el-descriptions-item label="货架">{{ stockDialog.data.rackName || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="直存单品数">{{ stockDialog.data.directItemCount || 0 }}</el-descriptions-item>
+        <el-descriptions-item label="直存器材数">{{ stockDialog.data.directItemCount || 0 }}</el-descriptions-item>
         <el-descriptions-item label="箱体数">{{ stockDialog.data.boxCount || 0 }}</el-descriptions-item>
       </el-descriptions>
 
       <div class="detail-header">
-        <span class="detail-title">直存单品</span>
+        <span class="detail-title">直存器材</span>
       </div>
-      <el-table :data="stockDialog.data.itemInstances || []" border empty-text="当前货位暂无直存单品" cell-class-name="vertical-top-cell">
-        <el-table-column label="单品码" prop="instanceCode" min-width="170" />
-        <el-table-column label="商品/规格" min-width="200">
+      <el-table :data="stockDialog.data.itemInstances || []" border empty-text="当前货位暂无直存器材" cell-class-name="vertical-top-cell">
+        <el-table-column label="器材编码" prop="instanceCode" min-width="170" />
+        <el-table-column label="器材/器材规格" min-width="200">
           <template #default="{ row }">
             <div>{{ row.itemName || '-' }}</div>
             <div class="sub-text">{{ row.skuName || '-' }}</div>
@@ -185,7 +185,7 @@
         </el-table-column>
         <el-table-column label="操作" width="140" align="right">
           <template #default="{ row }">
-            <el-button link type="primary" @click="handleOpenItemInstance(row)">单品详情</el-button>
+            <el-button link type="primary" @click="handleOpenItemInstance(row)">明细详情</el-button>
             <el-button link type="primary" @click="handleTraceItem(row)">追踪</el-button>
           </template>
         </el-table-column>
@@ -445,3 +445,4 @@ onMounted(async () => {
   margin-bottom: 16px;
 }
 </style>
+

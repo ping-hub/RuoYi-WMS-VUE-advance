@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="app-container">
     <el-card>
       <el-form ref="queryRef" :model="queryParams" :inline="true" label-width="80px">
@@ -51,6 +51,13 @@
       </el-form>
     </el-card>
 
+    <el-alert
+      class="mt20"
+      :closable="false"
+      type="info"
+      title="箱体是辅助容器，不作为库存统计维度；本页仅展示当前箱码、当前位置和当前装箱关系。"
+    />
+
     <el-card class="mt20">
       <el-row :gutter="10" class="mb8" type="flex" justify="space-between">
         <el-col :span="8"><span style="font-size: large">箱体管理</span></el-col>
@@ -75,14 +82,14 @@
             <div v-if="row.locationName">货位：{{ row.locationName }}</div>
           </template>
         </el-table-column>
-        <el-table-column label="箱内数量" prop="itemCount" width="100" align="right" />
+        <el-table-column label="当前装箱数" prop="itemCount" width="110" align="right" />
         <el-table-column label="备注" prop="remark" min-width="160" show-overflow-tooltip />
         <el-table-column label="操作" align="right" width="260">
           <template #default="{ row }">
             <el-button link type="primary" @click="handleView(row)">详情</el-button>
             <el-button link type="primary" @click="handleTrace(row)" v-hasPermi="['wms:box:list']">追踪</el-button>
-            <el-button link type="primary" @click="handlePack(row)" v-hasPermi="['wms:box:edit']">装箱</el-button>
-            <el-button link type="primary" @click="handleUnpack(row)" v-hasPermi="['wms:box:edit']">拆箱</el-button>
+            <el-button link type="primary" @click="handlePack(row)" v-hasPermi="['wms:box:edit']">装箱关系</el-button>
+            <el-button link type="primary" @click="handleUnpack(row)" v-hasPermi="['wms:box:edit']">拆箱关系</el-button>
             <el-button link type="primary" @click="handleUpdate(row)" v-hasPermi="['wms:box:edit']">修改</el-button>
             <el-button link type="danger" @click="handleDelete(row)" v-hasPermi="['wms:box:edit']">删除</el-button>
           </template>
@@ -165,19 +172,19 @@
         <el-descriptions-item label="库区">{{ detailDialog.data.areaName || '-' }}</el-descriptions-item>
         <el-descriptions-item label="货架">{{ detailDialog.data.rackName || '-' }}</el-descriptions-item>
         <el-descriptions-item label="货位">{{ detailDialog.data.locationName || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="箱内数量">{{ detailDialog.data.itemCount || 0 }}</el-descriptions-item>
+        <el-descriptions-item label="当前装箱数">{{ detailDialog.data.itemCount || 0 }}</el-descriptions-item>
         <el-descriptions-item label="备注">{{ detailDialog.data.remark || '-' }}</el-descriptions-item>
       </el-descriptions>
 
       <div class="detail-header">
-        <span class="detail-title">箱内单品</span>
+        <span class="detail-title">当前装箱关系</span>
       </div>
-      <el-table :data="detailDialog.data.items || []" border empty-text="箱内暂无单品" cell-class-name="vertical-top-cell">
-        <el-table-column label="单品码" prop="instanceCode" min-width="180" />
-        <el-table-column label="商品/规格" min-width="220">
+      <el-table :data="detailDialog.data.items || []" border empty-text="箱内暂无物品" cell-class-name="vertical-top-cell">
+        <el-table-column label="物品码" prop="instanceCode" min-width="180" />
+        <el-table-column label="器材/器材规格" min-width="220">
           <template #default="{ row }">
             <div>{{ row.itemName || '-' }}</div>
-            <div v-if="row.skuName" class="sub-text">规格：{{ row.skuName }}</div>
+            <div v-if="row.skuName" class="sub-text">器材规格：{{ row.skuName }}</div>
             <div v-if="row.productMark" class="sub-text">标识：{{ row.productMark }}</div>
           </template>
         </el-table-column>
@@ -212,14 +219,14 @@
         :closable="false"
         type="info"
         class="mb16"
-        :title="packDialog.boxCode ? '当前箱体：' + packDialog.boxCode : '请选择需要装箱的单品实例'"
+        :title="packDialog.boxCode ? '当前箱体：' + packDialog.boxCode + '，仅维护当前装箱关系' : '请选择需要建立装箱关系的物品码'"
       />
       <el-form :inline="true" :model="packDialog.query" label-width="80px">
-        <el-form-item label="单品码">
-          <el-input v-model="packDialog.query.instanceCode" placeholder="请输入单品码" clearable @keyup.enter="getPackCandidates" />
+        <el-form-item label="物品码">
+          <el-input v-model="packDialog.query.instanceCode" placeholder="请输入物品码" clearable @keyup.enter="getPackCandidates" />
         </el-form-item>
-        <el-form-item label="商品">
-          <el-select v-model="packDialog.query.itemId" placeholder="请选择商品" clearable filterable style="width: 180px" @change="handlePackItemChange">
+        <el-form-item label="器材">
+          <el-select v-model="packDialog.query.itemId" placeholder="请选择器材" clearable filterable style="width: 180px" @change="handlePackItemChange">
             <el-option
               v-for="item in itemOptions"
               :key="item.id"
@@ -228,8 +235,8 @@
             />
           </el-select>
         </el-form-item>
-        <el-form-item label="规格">
-          <el-select v-model="packDialog.query.skuId" placeholder="请选择规格" clearable filterable style="width: 180px">
+        <el-form-item label="器材规格">
+          <el-select v-model="packDialog.query.skuId" placeholder="请选择器材规格" clearable filterable style="width: 180px">
             <el-option
               v-for="item in packDialog.skuOptions"
               :key="item.id"
@@ -250,15 +257,15 @@
         :data="packDialog.list"
         border
         class="mt20"
-        empty-text="暂无可装箱单品"
+        empty-text="暂无可装箱物品"
         @selection-change="handlePackSelectionChange"
       >
         <el-table-column type="selection" width="55" />
-        <el-table-column label="单品码" prop="instanceCode" min-width="180" />
-        <el-table-column label="商品/规格" min-width="220">
+        <el-table-column label="物品码" prop="instanceCode" min-width="180" />
+        <el-table-column label="器材/器材规格" min-width="220">
           <template #default="{ row }">
             <div>{{ row.itemName || '-' }}</div>
-            <div v-if="row.skuName" class="sub-text">规格：{{ row.skuName }}</div>
+            <div v-if="row.skuName" class="sub-text">器材规格：{{ row.skuName }}</div>
           </template>
         </el-table-column>
         <el-table-column label="状态" width="100">
@@ -289,22 +296,22 @@
         :closable="false"
         type="warning"
         class="mb16"
-        :title="unpackDialog.boxCode ? '当前箱体：' + unpackDialog.boxCode : '请选择要拆出的单品实例'"
+        :title="unpackDialog.boxCode ? '当前箱体：' + unpackDialog.boxCode + '，仅解除当前装箱关系' : '请选择要解除装箱关系的物品码'"
       />
       <el-table
         ref="unpackTableRef"
         v-loading="unpackDialog.loading"
         :data="unpackDialog.list"
         border
-        empty-text="箱内暂无可拆出的单品"
+        empty-text="箱内暂无可拆出的物品"
         @selection-change="handleUnpackSelectionChange"
       >
         <el-table-column type="selection" width="55" />
-        <el-table-column label="单品码" prop="instanceCode" min-width="180" />
-        <el-table-column label="商品/规格" min-width="220">
+        <el-table-column label="物品码" prop="instanceCode" min-width="180" />
+        <el-table-column label="器材/器材规格" min-width="220">
           <template #default="{ row }">
             <div>{{ row.itemName || '-' }}</div>
-            <div v-if="row.skuName" class="sub-text">规格：{{ row.skuName }}</div>
+            <div v-if="row.skuName" class="sub-text">器材规格：{{ row.skuName }}</div>
           </template>
         </el-table-column>
         <el-table-column label="状态" width="100">
@@ -573,7 +580,7 @@ const handleDelete = async (row) => {
   } catch (e) {
     if (e === 409) {
       return ElMessageBox.alert(
-        '<div>箱体【' + row.boxCode + '】内仍有单品，不能删除。</div><div>请先执行拆箱操作。</div>',
+        '<div>箱体【' + row.boxCode + '】内仍有器材，不能删除。</div><div>请先执行拆箱操作。</div>',
         '系统提示',
         { dangerouslyUseHTMLString: true }
       );
@@ -630,7 +637,7 @@ const handlePackSelectionChange = (selection) => {
 
 const submitPack = async () => {
   if (!packDialog.selectedIds.length) {
-    proxy.$modal.msgError('请先选择要装箱的单品实例');
+    proxy.$modal.msgError('请先选择要装箱的物品码');
     return;
   }
   buttonLoading.value = true;
@@ -671,7 +678,7 @@ const handleUnpackSelectionChange = (selection) => {
 
 const submitUnpack = async () => {
   if (!unpackDialog.selectedIds.length) {
-    proxy.$modal.msgError('请先选择要拆出的单品实例');
+    proxy.$modal.msgError('请先选择要拆出的物品码');
     return;
   }
   buttonLoading.value = true;

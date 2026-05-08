@@ -100,14 +100,14 @@
         <el-table-column type="expand">
           <template #default="props">
             <div style="padding: 0 50px 20px 50px">
-              <h3>商品明细</h3>
-              <el-table :data="props.row.details" v-loading="detailLoading[props.$index]" empty-text="暂无商品明细">
-                <el-table-column label="商品名称">
+              <h3>入库明细</h3>
+              <el-table :data="props.row.details" v-loading="detailLoading[props.$index]" empty-text="暂无入库明细">
+                <el-table-column label="器材名称">
                   <template #default="{ row }">
                     <div>{{ row?.itemSku?.item?.itemName }}</div>
                   </template>
                 </el-table-column>
-                <el-table-column label="规格名称">
+                <el-table-column label="器材规格">
                   <template #default="{ row }">
                     <div>{{ row?.itemSku?.skuName }}</div>
                   </template>
@@ -120,12 +120,17 @@
                     <dict-tag :options="wms_quality_grade" :value="row.qualityGrade" />
                   </template>
                 </el-table-column>
-                <el-table-column label="追踪模式" width="120">
+                <el-table-column label="明细模式" width="120">
                   <template #default="{ row }">
-                    <dict-tag :options="wms_tracking_mode" :value="row?.itemSku?.item?.trackingMode" />
+                    <dict-tag :options="wms_tracking_mode" :value="row?.itemSku?.item?.defaultTrackingMode || row?.itemSku?.item?.trackingMode" />
                   </template>
                 </el-table-column>
-                <el-table-column label="库区" prop="areaName"/>
+                <el-table-column label="货位信息" min-width="180">
+                  <template #default="{ row }">
+                    <div>库区：{{ row.areaName || '-' }}</div>
+                    <div class="sub-text">货架：{{ row.rackId || '-' }} / 货位：{{ row.locationId || '-' }}</div>
+                  </template>
+                </el-table-column>
                 <el-table-column label="数量" prop="quantity" align="right">
                   <template #default="{ row }">
                     <el-statistic :value="Number(row.quantity)" :precision="0"/>
@@ -152,7 +157,7 @@
                     <div>{{ parseTime(row.expirationDate, '{y}-{m}-{d}') }}</div>
                   </template>
                 </el-table-column>
-                <el-table-column label="生成实例" width="100" align="center">
+                <el-table-column label="生成器材明细" width="120" align="center">
                   <template #default="{ row }">
                     {{ row.generateItemInstance === 1 ? '是' : '否' }}
                   </template>
@@ -162,14 +167,14 @@
                     {{ row.generatedInstanceQuantity || 0 }}
                   </template>
                 </el-table-column>
-                <el-table-column label="实例" width="100" align="right">
+                <el-table-column label="明细" width="100" align="right">
                   <template #default="{ row }">
                     <el-button
                       v-if="row.generatedInstanceQuantity > 0"
                       link
                       type="primary"
                       @click="handleGoInstances(props.row, row)"
-                    >查看实例</el-button>
+                    >查看明细</el-button>
                   </template>
                 </el-table-column>
                 <el-table-column label="备注" prop="remark" min-width="140" show-overflow-tooltip />
@@ -273,8 +278,7 @@
                 link
                 type="primary"
                 @click="handleGoInstances(scope.row)"
-              >实例</el-button>
-              <el-button link type="primary" @click="handlePrint(scope.row)" v-hasPermi="['wms:receipt:all']">打印</el-button>
+              >明细</el-button>
             </div>
           </template>
         </el-table-column>
@@ -294,12 +298,11 @@
 </template>
 
 <script setup name="ReceiptOrder">
-import { listReceiptOrder, getReceiptOrder, delReceiptOrder, addReceiptOrder, updateReceiptOrder } from "@/api/wms/receiptOrder";
+import { listReceiptOrder, delReceiptOrder } from "@/api/wms/receiptOrder";
 import {getCurrentInstance, reactive, ref, toRefs} from "vue";
 import {useWmsStore} from "../../../../store/modules/wms";
 import {listByReceiptOrderId} from "@/api/wms/receiptOrderDetail";
 import {ElMessageBox} from "element-plus";
-import receiptPanel from "@/components/PrintTemplate/receipt-panel";
 
 const { proxy } = getCurrentInstance();
 const { wms_receipt_status, wms_receipt_type, wms_tracking_mode, wms_dispatch_mode, wms_quality_grade } = proxy.useDict(
@@ -318,7 +321,7 @@ const total = ref(0);
 const title = ref("");
 // 当前展开集合
 const expandedRowKeys = ref([])
-// 商品明细table的loading状态集合
+// 器材明细 table 的 loading 状态集合
 const detailLoading = ref([])
 const data = reactive({
   queryParams: {
@@ -425,67 +428,6 @@ function handleGoInstances(orderRow, detailRow) {
   }
   proxy.$router.push({ path: '/wms-item-instance/index', query });
 }
-
-/** 导出按钮操作 */
-async function handlePrint(row) {
-  const res = await getReceiptOrder(row.id)
-  const receiptOrder = res.data
-  let table = []
-  if (receiptOrder.details?.length) {
-    table = receiptOrder.details.map(detail => {
-      return {
-        itemName: detail.itemSku.item.itemName,
-        skuName: detail.itemSku.skuName,
-        areaName: useWmsStore().areaMap.get(detail.areaId)?.areaName,
-        batchNo: detail.batchNo,
-        productionDate: proxy.parseTime(detail.productionDate, '{y}-{m}-{d}'),
-        expirationDate: proxy.parseTime(detail.expirationDate, '{y}-{m}-{d}'),
-        quantity: Number(detail.quantity).toFixed(0),
-        equipmentCode: detail.equipmentCode,
-        specModel: detail.specModel,
-        productMark: detail.productMark,
-        qualityGrade: proxy.selectDictLabel(wms_quality_grade.value, detail.qualityGrade),
-        unitPrice: detail.unitPrice,
-        amount: detail.lineAmount ?? detail.amount
-      }
-    })
-  }
-  const printData = {
-    receiptOrderNo: receiptOrder.receiptOrderNo,
-    receiptOrderType: proxy.selectDictLabel(wms_receipt_type.value, receiptOrder.receiptOrderType),
-    receiptOrderStatus: proxy.selectDictLabel(wms_receipt_status.value, receiptOrder.receiptOrderStatus),
-    merchantName: useWmsStore().merchantMap.get(receiptOrder.merchantId)?.merchantName,
-    orderNo: receiptOrder.orderNo,
-    basisNo: receiptOrder.basisNo,
-    dispatchMode: proxy.selectDictLabel(wms_dispatch_mode.value, receiptOrder.dispatchMode),
-    noticeOrg: receiptOrder.noticeOrg,
-    receiveUnit: receiptOrder.receiveUnit,
-    purchaseDate: proxy.parseTime(receiptOrder.purchaseDate, '{y}-{m}-{d}'),
-    receiptDate: proxy.parseTime(receiptOrder.receiptDate, '{y}-{m}-{d}'),
-    purchaserName: receiptOrder.purchaserName,
-    acceptorName: receiptOrder.acceptorName,
-    keeperName: receiptOrder.keeperName,
-    warehouseName: useWmsStore().warehouseMap.get(receiptOrder.warehouseId)?.warehouseName,
-    areaName: useWmsStore().areaMap.get(receiptOrder.areaId)?.areaName,
-    totalQuantity: Number(receiptOrder.totalQuantity).toFixed(0),
-    payableAmount: ((receiptOrder.payableAmount || receiptOrder.payableAmount === 0) ? (receiptOrder.payableAmount + '元') : ''),
-    createBy: receiptOrder.createBy,
-    createTime: proxy.parseTime(receiptOrder.createTime, '{mm}-{dd} {hh}:{ii}'),
-    updateBy: receiptOrder.updateBy,
-    updateTime: proxy.parseTime(receiptOrder.updateTime, '{mm}-{dd} {hh}:{ii}'),
-    remark: receiptOrder.remark,
-    table
-  }
-  let printTemplate = new proxy.$hiprint.PrintTemplate({template: receiptPanel})
-  printTemplate.print(printData, {}, {
-    styleHandler: () => {
-      let css = '<link href="https://cyl-press.oss-cn-shenzhen.aliyuncs.com/print-lock.css" media="print" rel="stylesheet">';
-      console.info("css:", css)
-      return css
-    }
-  })
-}
-
 
 function handleExpandExchange(value, expandedRows) {
   if (!ifExpand(expandedRows)) {

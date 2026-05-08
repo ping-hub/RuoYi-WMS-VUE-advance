@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div>
     <div class="receipt-order-edit-wrapper app-container" style="margin-bottom: 60px" v-loading="loading">
       <el-card header="出库单基本信息">
@@ -139,26 +139,26 @@
           </el-row>
         </el-form>
       </el-card>
-      <el-card header="商品明细" class="mt10">
+      <el-card header="器材明细" class="mt10">
         <div class="receipt-order-content">
           <div class="flex-space-between mb8">
             <div>
-              <el-tag type="info">支持库存出库 / 单品出库 / 整箱出库</el-tag>
+              <el-tag type="info">支持库存出库 / 器材编码出库 / 整箱出库</el-tag>
             </div>
             <div class="add-actions">
               <el-button type="primary" plain size="default" @click="showAddInventory" icon="Plus" :disabled="!form.warehouseId">
                 按库存添加
               </el-button>
               <el-button type="primary" plain size="default" @click="showAddItemInstance" icon="Tickets" :disabled="!form.warehouseId">
-                按单品添加
+                按器材编码添加
               </el-button>
               <el-button type="primary" plain size="default" @click="showAddBox" icon="Box" :disabled="!form.warehouseId">
                 按整箱添加
               </el-button>
             </div>
           </div>
-          <el-table :data="form.details" border empty-text="暂无商品明细">
-            <el-table-column label="商品信息" prop="itemSku.itemName">
+          <el-table :data="form.details" border empty-text="暂无器材明细">
+            <el-table-column label="器材信息" prop="itemSku.itemName">
               <template #default="{ row }">
                 <div>{{
                     (row.itemSku?.item?.itemName || row.itemName || '-') + ((row.itemSku?.item?.itemCode || row.itemCode) ? ('(' + (row.itemSku?.item?.itemCode || row.itemCode) + ')') : '')
@@ -169,7 +169,7 @@
                 </div>
               </template>
             </el-table-column>
-            <el-table-column label="规格信息">
+            <el-table-column label="器材规格">
               <template #default="{ row }">
                 <div>{{ row.itemSku?.skuName || row.skuName || '-' }}</div>
                 <div v-if="row.itemSku?.barcode">条码：{{ row.itemSku.barcode }}</div>
@@ -188,7 +188,7 @@
             </el-table-column>
             <el-table-column label="追踪对象" min-width="180">
               <template #default="{ row }">
-                <div v-if="row.instanceCode">单品码：{{ row.instanceCode }}</div>
+                <div v-if="row.instanceCode">器材编码：{{ row.instanceCode }}</div>
                 <div v-if="row.boxCode">箱码：{{ row.boxCode }}</div>
                 <div v-if="!row.instanceCode && !row.boxCode">-</div>
               </template>
@@ -290,16 +290,16 @@
         :area-id="form.areaId"
         :selected-inventory="selectedInventory"
       />
-      <el-dialog v-model="itemInstanceDialog.visible" title="按单品添加" width="1100px" append-to-body>
+      <el-dialog v-model="itemInstanceDialog.visible" title="按器材编码添加" width="1100px" append-to-body>
         <el-form :inline="true" :model="itemInstanceDialog.query" label-width="88px">
-          <el-form-item label="单品码">
-            <el-input v-model="itemInstanceDialog.query.instanceCode" placeholder="请输入单品码" clearable @keyup.enter="getItemInstanceList" />
+          <el-form-item label="器材编码">
+            <el-input v-model="itemInstanceDialog.query.instanceCode" placeholder="请输入器材编码" clearable @keyup.enter="getItemInstanceList" />
           </el-form-item>
-          <el-form-item label="商品名称">
-            <el-input v-model="itemInstanceDialog.query.itemName" placeholder="请输入商品名称" clearable @keyup.enter="getItemInstanceList" />
+          <el-form-item label="器材名称">
+            <el-input v-model="itemInstanceDialog.query.itemName" placeholder="请输入器材名称" clearable @keyup.enter="getItemInstanceList" />
           </el-form-item>
-          <el-form-item label="规格名称">
-            <el-input v-model="itemInstanceDialog.query.skuName" placeholder="请输入规格名称" clearable @keyup.enter="getItemInstanceList" />
+          <el-form-item label="器材规格">
+            <el-input v-model="itemInstanceDialog.query.skuName" placeholder="请输入器材规格" clearable @keyup.enter="getItemInstanceList" />
           </el-form-item>
           <el-form-item>
             <el-button type="primary" @click="getItemInstanceList">查询</el-button>
@@ -307,9 +307,9 @@
         </el-form>
         <el-table v-loading="itemInstanceDialog.loading" :data="itemInstanceDialog.list" @selection-change="handleItemInstanceSelectionChange" border row-key="id">
           <el-table-column type="selection" width="55" :selectable="isItemInstanceSelectable" />
-          <el-table-column label="单品码" prop="instanceCode" min-width="160" />
-          <el-table-column label="商品" prop="itemName" min-width="160" />
-          <el-table-column label="规格" prop="skuName" min-width="160" />
+          <el-table-column label="器材编码" prop="instanceCode" min-width="160" />
+          <el-table-column label="器材" prop="itemName" min-width="160" />
+          <el-table-column label="器材规格" prop="skuName" min-width="160" />
           <el-table-column label="库区" prop="areaName" width="120" />
           <el-table-column label="货位" prop="locationName" width="120" />
           <el-table-column label="批号" prop="batchNo" min-width="120" />
@@ -409,7 +409,7 @@ const {wms_shipment_type, wms_item_instance_status, wms_box_status, wms_quality_
 const loading = ref(false)
 const shipmentDetailSourceOptions = computed(() => ([
   { label: '库存', value: 'inventory' },
-  { label: '单品', value: 'itemInstance' },
+  { label: '器材编码', value: 'itemInstance' },
   { label: '整箱', value: 'box' }
 ]))
 const initFormData = {
@@ -528,7 +528,7 @@ const handleDetailChange = (row) => {
   recalculateOrderSummary()
 }
 
-// 选择商品 start
+// 选择器材 start
 const showAddInventory = () => {
   inventorySelectRef.value.getList()
   inventorySelectShow.value = true
@@ -645,7 +645,7 @@ const createDetailRow = (payload) => {
     remark: payload.remark
   }
 }
-// 选择商品 end
+// 选择器材 end
 
 // 初始化receipt-order-form ref
 const shipmentForm = ref()
@@ -756,7 +756,7 @@ const doShipment = async () => {
       return ElMessage.error('请填写必填项')
     }
     if (!form.value.details?.length) {
-      return ElMessage.error('请选择商品')
+      return ElMessage.error('请选择器材')
     }
     const invalidQuantityList = form.value.details.filter(it => !it.quantity)
     if (invalidQuantityList?.length) {
@@ -896,7 +896,7 @@ const handleAutoCalc = () => {
 
 const handleDeleteDetail = (row, index) => {
   if (row.id) {
-    proxy.$modal.confirm('确认删除本条商品明细吗？如确认会立即执行！').then(function () {
+    proxy.$modal.confirm('确认删除本条器材条目吗？如确认会立即执行！').then(function () {
       return delShipmentOrderDetail(row.id);
     }).then(() => {
       form.value.details.splice(index, 1)
@@ -950,7 +950,7 @@ const isItemInstanceSelectable = (row) => {
 
 const handleConfirmItemInstance = async () => {
   if (!itemInstanceDialog.selection.length) {
-    ElMessage.error('请选择单品实例')
+    ElMessage.error('请选择器材编码')
     return
   }
   await refreshInventoryOptions()
@@ -966,7 +966,7 @@ const handleConfirmItemInstance = async () => {
       quantity: 1
     }, extraUsage)
     if (!matchedInventory) {
-      ElMessage.error(`单品 ${item.instanceCode} 未匹配到可用库存明细`)
+      ElMessage.error(`器材编码 ${item.instanceCode} 未匹配到可用库存明细`)
       return
     }
     extraUsage[matchedInventory.id] = Number(extraUsage[matchedInventory.id] || 0) + 1
@@ -1043,12 +1043,12 @@ const handleConfirmBox = async () => {
     const box = detailRes.data || {}
     const items = box.items || []
     if (!items.length) {
-      ElMessage.error(`箱体 ${selectedBox.boxCode} 内无可出库单品`)
+      ElMessage.error(`箱体 ${selectedBox.boxCode} 内无可出库器材`)
       return
     }
     for (const item of items) {
       if (form.value.details.some(detail => detail.itemInstanceId === item.id)) {
-        ElMessage.error(`箱体 ${selectedBox.boxCode} 内存在已添加的单品 ${item.instanceCode}`)
+        ElMessage.error(`箱体 ${selectedBox.boxCode} 内存在已添加的器材编码 ${item.instanceCode}`)
         return
       }
       const matchedInventory = matchInventoryDetail({
@@ -1060,7 +1060,7 @@ const handleConfirmBox = async () => {
         quantity: 1
       }, extraUsage)
       if (!matchedInventory) {
-        ElMessage.error(`箱体 ${selectedBox.boxCode} 中单品 ${item.instanceCode} 未匹配到可用库存明细`)
+        ElMessage.error(`箱体 ${selectedBox.boxCode} 中器材编码 ${item.instanceCode} 未匹配到可用库存明细`)
         return
       }
       extraUsage[matchedInventory.id] = Number(extraUsage[matchedInventory.id] || 0) + 1
@@ -1122,3 +1122,4 @@ const handleConfirmBox = async () => {
   line-height: 18px;
 }
 </style>
+

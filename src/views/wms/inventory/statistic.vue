@@ -6,7 +6,7 @@
           <el-radio-group v-model="queryType" size="default" @change="handleSortTypeChange">
             <el-radio-button label="warehouse">仓库</el-radio-button>
             <el-radio-button label="area">库区</el-radio-button>
-            <el-radio-button label="item">商品</el-radio-button>
+            <el-radio-button label="item">器材</el-radio-button>
           </el-radio-group>
         </el-form-item>
         <el-form-item class="col4" label="仓库" prop="warehouseId">
@@ -23,17 +23,17 @@
                        :key="item.id" :label="item.areaName" :value="item.id"/>
           </el-select>
         </el-form-item>
-        <el-form-item class="col4" label="商品名称" prop="itemName">
-          <el-input v-model="queryParams.itemName" clearable placeholder="商品名称"></el-input>
+        <el-form-item class="col4" label="器材名称" prop="itemName">
+          <el-input v-model="queryParams.itemName" clearable placeholder="器材名称"></el-input>
         </el-form-item>
-        <el-form-item class="col4" label="商品编号" prop="itemCode">
-          <el-input v-model="queryParams.itemCode" clearable placeholder="商品编号"></el-input>
+        <el-form-item class="col4" label="器材编码" prop="itemCode">
+          <el-input v-model="queryParams.itemCode" clearable placeholder="器材编码"></el-input>
         </el-form-item>
-        <el-form-item class="col4" label="规格名称" prop="skuName">
-          <el-input v-model="queryParams.skuName" clearable placeholder="规格名称"></el-input>
+        <el-form-item class="col4" label="器材规格名称" prop="skuName">
+          <el-input v-model="queryParams.skuName" clearable placeholder="器材规格名称"></el-input>
         </el-form-item>
-        <el-form-item class="col4" label="规格编号" prop="skuCode">
-          <el-input v-model="queryParams.skuCode" clearable placeholder="规格编号"></el-input>
+        <el-form-item class="col4" label="器材规格编码" prop="skuCode">
+          <el-input v-model="queryParams.skuCode" clearable placeholder="器材规格编码"></el-input>
         </el-form-item>
         <el-form-item class="col4" style="margin-left: 32px">
           <el-button type="primary" icon="Search" @click="handleQuery">搜索</el-button>
@@ -43,8 +43,8 @@
     </el-card>
     <el-card class="mt20">
       <div class="mb8 flex-space-between">
-        <div style="font-size: large">库存统计</div>
-        <el-checkbox v-model="filterable" label="过滤掉库存为0的商品" size="large" @change="handleChangeFilterZero"/>
+        <div style="font-size: large">器材总账</div>
+        <el-checkbox v-model="filterable" label="过滤掉库存为0的器材" size="large" @change="handleChangeFilterZero"/>
       </div>
       <el-table :data="inventoryList" border :span-method="spanMethod"
                 cell-class-name="vertical-top-cell" v-loading="loading" empty-text="暂无库存">
@@ -61,30 +61,30 @@
               </template>
             </el-table-column>
           </template>
-          <el-table-column label="商品信息" :prop="queryType == 'warehouse' ? 'warehouseIdAndItemId' : 'areaIdAndItemId'">
+          <el-table-column label="器材信息" :prop="queryType == 'warehouse' ? 'warehouseIdAndItemId' : 'areaIdAndItemId'">
             <template #default="{ row }">
               <div>{{ row.item.itemName }}</div>
-              <div v-if="row.item.itemCode">商品编号：{{ row.item.itemCode }}</div>
+              <div v-if="row.item.itemCode">器材编码：{{ row.item.itemCode }}</div>
             </template>
           </el-table-column>
-          <el-table-column label="规格信息" :prop="skuId">
+          <el-table-column label="器材规格" :prop="skuId">
             <template #default="{ row }">
               <div>{{ row.itemSku.skuName }}</div>
-              <div v-if="row.itemSku.skuCode">规格编号：{{ row.itemSku.skuCode }}</div>
+              <div v-if="row.itemSku.skuCode">器材规格编码：{{ row.itemSku.skuCode }}</div>
             </template>
           </el-table-column>
         </template>
         <template v-else>
-          <el-table-column label="商品信息" prop="itemId">
+          <el-table-column label="器材信息" prop="itemId">
             <template #default="{ row }">
               <div>{{ row.item.itemName }}</div>
-              <div v-if="row.item.itemCode">商品编号：{{ row.item.itemCode }}</div>
+              <div v-if="row.item.itemCode">器材编码：{{ row.item.itemCode }}</div>
             </template>
           </el-table-column>
-          <el-table-column label="规格信息" prop="skuId">
+          <el-table-column label="器材规格" prop="skuId">
             <template #default="{ row }">
               <div>{{ row.itemSku.skuName }}</div>
-              <div v-if="row.itemSku.skuCode">规格编号：{{ row.itemSku.skuCode }}</div>
+              <div v-if="row.itemSku.skuCode">器材规格编码：{{ row.itemSku.skuCode }}</div>
             </template>
           </el-table-column>
           <el-table-column label="仓库" prop="skuIdAndWarehouseId">
@@ -150,7 +150,7 @@ const queryParams = ref({
   minQuantity: undefined
 })
 
-/** 查询库存列表 */
+/** 查询器材总账列表 */
 const getList = async () => {
   const query = {...queryParams.value}
   if (filterable.value) {
@@ -230,3 +230,4 @@ onMounted(() => {
   vertical-align: top
 }
 </style>
+

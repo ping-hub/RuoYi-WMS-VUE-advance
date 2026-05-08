@@ -1,12 +1,12 @@
-<template>
+﻿<template>
   <div class="app-container">
     <el-card>
       <el-form ref="queryRef" :model="queryParams" :inline="true" label-width="88px">
-        <el-form-item label="单品码" prop="instanceCode">
-          <el-input v-model="queryParams.instanceCode" placeholder="请输入单品码" clearable @keyup.enter="handleQuery" />
+        <el-form-item label="器材编码" prop="instanceCode">
+          <el-input v-model="queryParams.instanceCode" placeholder="请输入器材编码" clearable @keyup.enter="handleQuery" />
         </el-form-item>
-        <el-form-item label="商品" prop="itemId">
-          <el-select v-model="queryParams.itemId" placeholder="请选择商品" clearable filterable style="width: 200px" @change="handleQueryItemChange">
+        <el-form-item label="器材" prop="itemId">
+          <el-select v-model="queryParams.itemId" placeholder="请选择器材" clearable filterable style="width: 200px" @change="handleQueryItemChange">
             <el-option
               v-for="item in itemOptions"
               :key="item.id"
@@ -15,8 +15,8 @@
             />
           </el-select>
         </el-form-item>
-        <el-form-item label="规格" prop="skuId">
-          <el-select v-model="queryParams.skuId" placeholder="请选择规格" clearable filterable style="width: 180px">
+        <el-form-item label="器材规格" prop="skuId">
+          <el-select v-model="queryParams.skuId" placeholder="请选择器材规格" clearable filterable style="width: 180px">
             <el-option
               v-for="item in querySkuOptions"
               :key="item.id"
@@ -25,7 +25,7 @@
             />
           </el-select>
         </el-form-item>
-        <el-form-item label="单品状态" prop="instanceStatus">
+        <el-form-item label="器材状态" prop="instanceStatus">
           <el-select v-model="queryParams.instanceStatus" placeholder="请选择状态" clearable style="width: 160px">
             <el-option v-for="dict in wms_item_instance_status" :key="dict.value" :label="dict.label" :value="dict.value" />
           </el-select>
@@ -92,18 +92,18 @@
 
     <el-card class="mt20">
       <el-row :gutter="10" class="mb8" type="flex" justify="space-between">
-        <el-col :span="8"><span style="font-size: large">单品实例</span></el-col>
+        <el-col :span="8"><span style="font-size: large">器材编码</span></el-col>
         <el-col :span="2">
           <el-button type="primary" plain icon="Plus" @click="handleAdd" v-hasPermi="['wms:itemInstance:edit']">新增</el-button>
         </el-col>
       </el-row>
 
-      <el-table v-loading="loading" :data="itemInstanceList" border empty-text="暂无单品实例" cell-class-name="vertical-top-cell">
-        <el-table-column label="单品码" prop="instanceCode" min-width="180" />
-        <el-table-column label="商品/规格" min-width="220">
+      <el-table v-loading="loading" :data="itemInstanceList" border empty-text="暂无器材编码" cell-class-name="vertical-top-cell">
+        <el-table-column label="器材编码" prop="instanceCode" min-width="180" />
+        <el-table-column label="器材/器材规格" min-width="220">
           <template #default="{ row }">
             <div>{{ row.itemName || '-' }}</div>
-            <div v-if="row.skuName" class="sub-text">规格：{{ row.skuName }}</div>
+            <div v-if="row.skuName" class="sub-text">器材规格：{{ row.skuName }}</div>
             <div v-if="row.productMark" class="sub-text">标识：{{ row.productMark }}</div>
           </template>
         </el-table-column>
@@ -163,7 +163,7 @@
               @click="handleBorrow(row)"
               v-hasPermi="['wms:borrowRecord:edit']"
             >借出</el-button>
-            <el-tooltip v-else :content="row.inBox === 1 ? '单品在箱内，不能直接借出' : '单品已借出，请先归还'" placement="top">
+            <el-tooltip v-else :content="row.inBox === 1 ? '器材编码在箱内，不能直接借出' : '器材编码已借出，请先归还'" placement="top">
               <el-button link type="info" disabled>借出</el-button>
             </el-tooltip>
             <el-button
@@ -194,13 +194,13 @@
       <el-form ref="instanceFormRef" :model="form" :rules="rules" label-width="108px">
         <el-row :gutter="20">
           <el-col :span="12">
-            <el-form-item label="单品码" prop="instanceCode">
+            <el-form-item label="器材编码" prop="instanceCode">
               <el-input v-model="form.instanceCode" placeholder="不填则后端自动生成" />
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="单品状态" prop="instanceStatus">
-              <el-select v-model="form.instanceStatus" placeholder="请选择单品状态" style="width: 100%">
+            <el-form-item label="器材状态" prop="instanceStatus">
+              <el-select v-model="form.instanceStatus" placeholder="请选择器材状态" style="width: 100%">
                 <el-option v-for="dict in wms_item_instance_status" :key="dict.value" :label="dict.label" :value="dict.value" />
               </el-select>
             </el-form-item>
@@ -208,8 +208,8 @@
         </el-row>
         <el-row :gutter="20">
           <el-col :span="12">
-            <el-form-item label="商品" prop="itemId">
-              <el-select v-model="form.itemId" placeholder="请选择商品" filterable style="width: 100%" @change="handleFormItemChange">
+            <el-form-item label="器材" prop="itemId">
+              <el-select v-model="form.itemId" placeholder="请选择器材" filterable style="width: 100%" @change="handleFormItemChange">
                 <el-option
                   v-for="item in itemOptions"
                   :key="item.id"
@@ -220,8 +220,8 @@
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="规格" prop="skuId">
-              <el-select v-model="form.skuId" placeholder="请选择规格" filterable style="width: 100%">
+            <el-form-item label="器材规格" prop="skuId">
+              <el-select v-model="form.skuId" placeholder="请选择器材规格" filterable style="width: 100%">
                 <el-option
                   v-for="item in formSkuOptions"
                   :key="item.id"
@@ -341,14 +341,14 @@
       </template>
     </el-drawer>
 
-    <el-dialog title="单品实例详情" v-model="detailDialog.visible" width="720px" append-to-body>
+    <el-dialog title="器材编码详情" v-model="detailDialog.visible" width="720px" append-to-body>
       <el-descriptions :column="2" border>
-        <el-descriptions-item label="单品码">{{ detailDialog.data.instanceCode || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="单品状态">
+        <el-descriptions-item label="器材编码">{{ detailDialog.data.instanceCode || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="器材状态">
           <dict-tag :options="wms_item_instance_status" :value="detailDialog.data.instanceStatus" />
         </el-descriptions-item>
-        <el-descriptions-item label="商品">{{ detailDialog.data.itemName || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="规格">{{ detailDialog.data.skuName || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="器材">{{ detailDialog.data.itemName || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="器材规格">{{ detailDialog.data.skuName || '-' }}</el-descriptions-item>
         <el-descriptions-item label="在箱状态">{{ detailDialog.data.inBox === 1 ? '在箱' : '不在箱' }}</el-descriptions-item>
         <el-descriptions-item label="借出状态">{{ detailDialog.data.borrowed === 1 ? '已借出' : '未借出' }}</el-descriptions-item>
         <el-descriptions-item label="仓库">{{ detailDialog.data.warehouseName || '-' }}</el-descriptions-item>
@@ -368,9 +368,9 @@
       </el-descriptions>
     </el-dialog>
 
-    <el-dialog title="更新单品状态" v-model="statusDialog.visible" width="420px" append-to-body>
+    <el-dialog title="更新器材状态" v-model="statusDialog.visible" width="420px" append-to-body>
       <el-form ref="statusFormRef" :model="statusDialog.form" label-width="88px">
-        <el-form-item label="单品码">
+        <el-form-item label="器材编码">
           <el-input :model-value="statusDialog.instanceCode" disabled />
         </el-form-item>
         <el-form-item label="目标状态" prop="targetStatus">
@@ -387,9 +387,9 @@
       </template>
     </el-dialog>
 
-    <el-dialog title="更新单品位置" v-model="locationDialog.visible" width="520px" append-to-body>
+    <el-dialog title="更新器材位置" v-model="locationDialog.visible" width="520px" append-to-body>
       <el-form ref="locationFormRef" :model="locationDialog.form" label-width="88px">
-        <el-form-item label="单品码">
+        <el-form-item label="器材编码">
           <el-input :model-value="locationDialog.instanceCode" disabled />
         </el-form-item>
         <el-form-item label="仓库">
@@ -557,10 +557,10 @@ const data = reactive({
   },
   rules: {
     itemId: [
-      { required: true, message: '商品不能为空', trigger: 'change' }
+      { required: true, message: '器材不能为空', trigger: 'change' }
     ],
     skuId: [
-      { required: true, message: '规格不能为空', trigger: 'change' }
+      { required: true, message: '器材规格不能为空', trigger: 'change' }
     ]
   }
 });
@@ -708,7 +708,7 @@ const reset = () => {
 const handleAdd = () => {
   reset();
   dialog.visible = true;
-  dialog.title = '新增单品实例';
+  dialog.title = '新增器材编码';
 };
 
 const handleFormItemChange = async () => {
@@ -737,7 +737,7 @@ const handleUpdate = async (row) => {
   form.value = { ...initFormData(), ...res.data };
   await loadSkuOptions(form.value.itemId, 'form');
   dialog.visible = true;
-  dialog.title = '修改单品实例';
+  dialog.title = '修改器材编码';
 };
 
 const submitForm = () => {
@@ -834,14 +834,14 @@ const submitLocation = async () => {
 };
 
 const handleDelete = async (row) => {
-  await proxy.$modal.confirm('确认删除单品实例【' + row.instanceCode + '】吗？');
+  await proxy.$modal.confirm('确认删除器材编码【' + row.instanceCode + '】吗？');
   try {
     await delItemInstance(row.id);
     proxy.$modal.msgSuccess('删除成功');
     await getList();
   } catch (e) {
     if (e === 409) {
-      return ElMessageBox.alert('单品实例已被业务数据引用，不能删除。', '系统提示');
+      return ElMessageBox.alert('器材编码已被业务数据引用，不能删除。', '系统提示');
     }
     throw e;
   }
@@ -912,3 +912,5 @@ onMounted(async () => {
   vertical-align: top;
 }
 </style>
+
+

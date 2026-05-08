@@ -2,11 +2,11 @@
   <div class="app-container">
     <el-card>
       <el-form ref="queryRef" :model="queryParams" :inline="true" label-width="80px">
-        <el-form-item label="商品编号" prop="itemCode">
-          <el-input v-model="queryParams.itemCode" placeholder="请输入商品编号" clearable @keyup.enter="handleQuery" />
+        <el-form-item label="类型编码" prop="itemCode">
+          <el-input v-model="queryParams.itemCode" placeholder="请输入器材类型编码" clearable @keyup.enter="handleQuery" />
         </el-form-item>
-        <el-form-item label="商品名称" prop="itemName">
-          <el-input v-model="queryParams.itemName" placeholder="请输入商品名称" clearable @keyup.enter="handleQuery" />
+        <el-form-item label="器材名称" prop="itemName">
+          <el-input v-model="queryParams.itemName" placeholder="请输入器材名称" clearable @keyup.enter="handleQuery" />
         </el-form-item>
         <el-form-item label="装备名称" prop="equipmentName">
           <el-input v-model="queryParams.equipmentName" placeholder="请输入装备名称" clearable @keyup.enter="handleQuery" />
@@ -14,13 +14,16 @@
         <el-form-item label="规格型号" prop="modelText">
           <el-input v-model="queryParams.modelText" placeholder="请输入规格型号" clearable @keyup.enter="handleQuery" />
         </el-form-item>
-        <el-form-item label="物品类型" prop="itemType">
-          <el-select v-model="queryParams.itemType" placeholder="请选择物品类型" clearable style="width: 160px">
+        <el-form-item label="装载模式" prop="itemType">
+          <el-select v-model="queryParams.itemType" placeholder="请选择装载模式" clearable style="width: 160px">
             <el-option v-for="dict in wms_item_type" :key="dict.value" :label="dict.label" :value="dict.value" />
           </el-select>
         </el-form-item>
-        <el-form-item label="追踪模式" prop="trackingMode">
-          <el-select v-model="queryParams.trackingMode" placeholder="请选择追踪模式" clearable style="width: 160px">
+        <el-form-item label="器材类型" prop="equipmentType">
+          <el-input v-model="queryParams.equipmentType" placeholder="请输入器材类型" clearable @keyup.enter="handleQuery" />
+        </el-form-item>
+        <el-form-item label="明细模式" prop="defaultTrackingMode">
+          <el-select v-model="queryParams.defaultTrackingMode" placeholder="请选择器材明细生成方式" clearable style="width: 160px">
             <el-option v-for="dict in wms_tracking_mode" :key="dict.value" :label="dict.label" :value="dict.value" />
           </el-select>
         </el-form-item>
@@ -29,10 +32,8 @@
             <el-option v-for="item in allowBoxOptions" :key="item.value" :label="item.label" :value="item.value" />
           </el-select>
         </el-form-item>
-        <el-form-item label="规格等级" prop="specLevel">
-          <el-select v-model="queryParams.specLevel" placeholder="请选择规格等级" clearable style="width: 160px">
-            <el-option v-for="dict in wms_spec_level" :key="dict.value" :label="dict.label" :value="dict.value" />
-          </el-select>
+        <el-form-item label="所属单位" prop="defaultBelongUnit">
+          <el-input v-model="queryParams.defaultBelongUnit" placeholder="请输入默认所属单位" clearable @keyup.enter="handleQuery" />
         </el-form-item>
         <el-form-item label="质量等级" prop="defaultQualityGrade">
           <el-select v-model="queryParams.defaultQualityGrade" placeholder="请选择质量等级" clearable style="width: 160px">
@@ -50,7 +51,7 @@
       <div class="item-layout">
         <div class="category-panel">
           <div class="panel-header">
-            <span class="panel-title">商品分类</span>
+            <span class="panel-title">器材分类</span>
             <el-button type="primary" plain icon="Plus" @click="handleAddType(false)">新增分类</el-button>
           </div>
           <el-tree
@@ -102,34 +103,34 @@
 
         <div class="table-panel">
           <div class="panel-header">
-            <span class="panel-title">商品列表</span>
-            <el-button type="primary" plain icon="Plus" @click="handleAdd" v-hasPermi="['wms:item:edit']">新增商品</el-button>
+            <span class="panel-title">器材管理</span>
+            <el-button type="primary" plain icon="Plus" @click="handleAdd" v-hasPermi="['wms:item:edit']">新增器材</el-button>
           </div>
 
-          <el-table v-loading="loading" :data="itemList" border empty-text="暂无商品">
-            <el-table-column label="商品编号" prop="itemCode" min-width="120" />
-            <el-table-column label="商品名称" prop="itemName" min-width="180" />
+          <el-table v-loading="loading" :data="itemList" border empty-text="暂无器材">
+            <el-table-column label="类型编码" prop="itemCode" min-width="120" />
+            <el-table-column label="器材名称" prop="itemName" min-width="180" />
             <el-table-column label="装备名称" prop="equipmentName" min-width="160" show-overflow-tooltip />
-            <el-table-column label="规格型号" prop="modelText" min-width="160" show-overflow-tooltip />
-            <el-table-column label="商品分类" min-width="140">
+            <el-table-column label="器材类型" prop="equipmentType" min-width="140" show-overflow-tooltip />
+            <el-table-column label="器材分类" min-width="140">
               <template #default="{ row }">
                 {{ getCategoryName(row.itemCategory) }}
               </template>
             </el-table-column>
-            <el-table-column label="商品品牌" min-width="120">
+            <el-table-column label="器材品牌" min-width="120">
               <template #default="{ row }">
                 {{ getBrandName(row.itemBrand) }}
               </template>
             </el-table-column>
             <el-table-column label="单位" prop="unit" width="100" />
-            <el-table-column label="物品类型" width="110">
+            <el-table-column label="装载模式" width="110">
               <template #default="{ row }">
                 <dict-tag :options="wms_item_type" :value="row.itemType" />
               </template>
             </el-table-column>
-            <el-table-column label="追踪模式" width="110">
+            <el-table-column label="明细模式" width="110">
               <template #default="{ row }">
-                <dict-tag :options="wms_tracking_mode" :value="row.trackingMode" />
+                <dict-tag :options="wms_tracking_mode" :value="row.defaultTrackingMode || row.trackingMode" />
               </template>
             </el-table-column>
             <el-table-column label="允许装箱" width="100">
@@ -137,9 +138,10 @@
                 <el-tag :type="row.allowBox === 1 ? 'success' : 'info'">{{ row.allowBox === 1 ? '允许' : '不允许' }}</el-tag>
               </template>
             </el-table-column>
-            <el-table-column label="规格等级" width="110">
+            <el-table-column label="所属单位" prop="defaultBelongUnit" min-width="140" show-overflow-tooltip />
+            <el-table-column label="启用状态" width="100">
               <template #default="{ row }">
-                <dict-tag :options="wms_spec_level" :value="row.specLevel" />
+                <el-tag :type="row.status === '0' ? 'info' : 'success'">{{ row.status === '0' ? '停用' : '启用' }}</el-tag>
               </template>
             </el-table-column>
             <el-table-column label="默认质量等级" width="130">
@@ -173,19 +175,19 @@
         <el-form ref="itemFormRef" :model="form" :rules="rules" label-width="108px">
           <el-row :gutter="20">
             <el-col :span="12">
-              <el-form-item label="商品名称" prop="itemName">
-                <el-input v-model="form.itemName" placeholder="请输入商品名称" />
+              <el-form-item label="器材名称" prop="itemName">
+                <el-input v-model="form.itemName" placeholder="请输入器材名称" />
               </el-form-item>
             </el-col>
             <el-col :span="10">
-              <el-form-item label="商品分类" prop="itemCategory">
+              <el-form-item label="器材分类" prop="itemCategory">
                 <el-tree-select
                   v-model="form.itemCategory"
                   :data="categoryTreeOptions"
                   :props="{ value: 'id', label: 'label', children: 'children' }"
                   value-key="id"
                   check-strictly
-                  placeholder="请选择商品分类"
+                  placeholder="请选择器材分类"
                   style="width: 100%"
                 />
               </el-form-item>
@@ -196,20 +198,20 @@
           </el-row>
           <el-row :gutter="20">
             <el-col :span="12">
-              <el-form-item label="商品编号" prop="itemCode">
-                <el-input v-model="form.itemCode" placeholder="请输入商品编号" />
+              <el-form-item label="类型编码" prop="itemCode">
+                <el-input v-model="form.itemCode" placeholder="请输入器材类型编码" />
               </el-form-item>
             </el-col>
             <el-col :span="12">
-              <el-form-item label="商品单位" prop="unit">
-                <el-input v-model="form.unit" placeholder="请输入商品单位" />
+              <el-form-item label="器材单位" prop="unit">
+                <el-input v-model="form.unit" placeholder="请输入器材单位" />
               </el-form-item>
             </el-col>
           </el-row>
           <el-row :gutter="20">
             <el-col :span="12">
-              <el-form-item label="商品品牌" prop="itemBrand">
-                <el-select v-model="form.itemBrand" clearable filterable style="width: 100%" placeholder="请选择商品品牌">
+              <el-form-item label="器材品牌" prop="itemBrand">
+                <el-select v-model="form.itemBrand" clearable filterable style="width: 100%" placeholder="请选择器材品牌">
                   <el-option
                     v-for="item in wmsStore.itemBrandList"
                     :key="item.id"
@@ -227,17 +229,22 @@
           </el-row>
           <el-row :gutter="20">
             <el-col :span="12">
-              <el-form-item label="物品类型" prop="itemType">
-                <el-select v-model="form.itemType" placeholder="请选择物品类型" style="width: 100%">
+              <el-form-item label="装载模式" prop="itemType">
+                <el-select v-model="form.itemType" placeholder="请选择通装/专装" style="width: 100%">
                   <el-option v-for="dict in wms_item_type" :key="dict.value" :label="dict.label" :value="dict.value" />
                 </el-select>
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item label="器材类型" prop="equipmentType">
+                <el-input v-model="form.equipmentType" placeholder="请输入器材类型" />
               </el-form-item>
             </el-col>
           </el-row>
           <el-row :gutter="20">
             <el-col :span="12">
-              <el-form-item label="追踪模式" prop="trackingMode">
-                <el-select v-model="form.trackingMode" placeholder="请选择追踪模式" style="width: 100%">
+              <el-form-item label="明细模式" prop="defaultTrackingMode">
+                <el-select v-model="form.defaultTrackingMode" placeholder="请选择器材明细生成方式" style="width: 100%">
                   <el-option v-for="dict in wms_tracking_mode" :key="dict.value" :label="dict.label" :value="dict.value" />
                 </el-select>
               </el-form-item>
@@ -253,10 +260,8 @@
           </el-row>
           <el-row :gutter="20">
             <el-col :span="12">
-              <el-form-item label="规格等级" prop="specLevel">
-                <el-select v-model="form.specLevel" placeholder="请选择规格等级" style="width: 100%">
-                  <el-option v-for="dict in wms_spec_level" :key="dict.value" :label="dict.label" :value="dict.value" />
-                </el-select>
+              <el-form-item label="所属单位" prop="defaultBelongUnit">
+                <el-input v-model="form.defaultBelongUnit" placeholder="请输入默认所属单位" />
               </el-form-item>
             </el-col>
             <el-col :span="12">
@@ -269,8 +274,11 @@
           </el-row>
           <el-row :gutter="20">
             <el-col :span="12">
-              <el-form-item label="规格型号文本" prop="modelText">
-                <el-input v-model="form.modelText" placeholder="请输入规格型号文本" />
+              <el-form-item label="启用状态" prop="status">
+                <el-radio-group v-model="form.status">
+                  <el-radio label="1">启用</el-radio>
+                  <el-radio label="0">停用</el-radio>
+                </el-radio-group>
               </el-form-item>
             </el-col>
             <el-col :span="12">
@@ -292,15 +300,15 @@
       <el-card class="mt20">
         <template #header>
           <div class="panel-header">
-            <span class="panel-title">规格信息</span>
+            <span class="panel-title">器材规格</span>
           </div>
         </template>
         <el-form ref="skuFormRef" :model="skuForm" :rules="skuRules" :show-message="false">
-          <el-table :data="skuForm.itemSkuList" border empty-text="暂无规格" cell-class-name="my-cell">
-            <el-table-column label="规格名称" min-width="160">
+          <el-table :data="skuForm.itemSkuList" border empty-text="暂无器材规格" cell-class-name="my-cell">
+            <el-table-column label="器材规格名称" min-width="160">
               <template #default="{ row, $index }">
                 <el-form-item :prop="'itemSkuList.' + $index + '.skuName'" :rules="skuRules.skuName" style="margin-bottom: 0">
-                  <el-input v-model="row.skuName" placeholder="请输入规格名称" />
+                  <el-input v-model="row.skuName" placeholder="请输入器材规格名称" />
                 </el-form-item>
               </template>
             </el-table-column>
@@ -344,6 +352,22 @@
                 </div>
               </template>
             </el-table-column>
+            <el-table-column label="质量等级/状态" width="220">
+              <template #default="{ row }">
+                <div class="flex-center">
+                  <span class="field-label">质等</span>
+                  <el-select v-model="row.defaultQualityGrade" placeholder="质量等级" clearable style="width: 100%">
+                    <el-option v-for="dict in wms_quality_grade" :key="dict.value" :label="dict.label" :value="dict.value" />
+                  </el-select>
+                </div>
+                <div class="flex-center mt5">
+                  <span class="field-label">状态</span>
+                  <el-select v-model="row.status" placeholder="状态" style="width: 100%">
+                    <el-option v-for="item in statusOptions" :key="item.value" :label="item.label" :value="item.value" />
+                  </el-select>
+                </div>
+              </template>
+            </el-table-column>
             <el-table-column label="净重/毛重(kg)" width="220">
               <template #default="{ row }">
                 <div class="flex-center">
@@ -356,9 +380,13 @@
                 </div>
               </template>
             </el-table-column>
-            <el-table-column label="成本价/销售价(元)" width="240">
+            <el-table-column label="体积/成本销售(元)" width="260">
               <template #default="{ row }">
                 <div class="flex-center">
+                  <span class="field-label">体积</span>
+                  <el-input :model-value="formatVolume(row)" disabled />
+                </div>
+                <div class="flex-center mt5">
                   <span class="field-label">成本价</span>
                   <el-input-number v-model="row.costPrice" :controls="false" :min="0" :precision="2" />
                 </div>
@@ -375,7 +403,7 @@
             </el-table-column>
             <template #append>
               <div class="append-btn-wrap">
-                <el-button text type="primary" icon="Plus" @click="onAppendBtnClick">添加商品规格</el-button>
+                <el-button text type="primary" icon="Plus" @click="onAppendBtnClick">添加器材规格</el-button>
               </div>
             </template>
           </el-table>
@@ -405,7 +433,7 @@
           />
         </el-form-item>
         <el-form-item label="分类名称" prop="categoryName">
-          <el-input v-model="categoryForm.categoryName" placeholder="请输入商品分类名称" @keyup.enter="submitCategoryForm" />
+          <el-input v-model="categoryForm.categoryName" placeholder="请输入器材分类名称" @keyup.enter="submitCategoryForm" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -429,10 +457,9 @@ import { useWmsStore } from '@/store/modules/wms';
 
 const route = useRoute();
 const { proxy } = getCurrentInstance();
-const { wms_item_type, wms_tracking_mode, wms_spec_level, wms_quality_grade } = proxy.useDict(
+const { wms_item_type, wms_tracking_mode, wms_quality_grade } = proxy.useDict(
   'wms_item_type',
   'wms_tracking_mode',
-  'wms_spec_level',
   'wms_quality_grade'
 );
 const wmsStore = useWmsStore();
@@ -440,6 +467,11 @@ const wmsStore = useWmsStore();
 const allowBoxOptions = [
   { label: '允许', value: 1 },
   { label: '不允许', value: 0 }
+];
+
+const statusOptions = [
+  { label: '启用', value: '1' },
+  { label: '停用', value: '0' }
 ];
 
 const itemList = ref([]);
@@ -471,8 +503,11 @@ const initFormData = () => ({
   itemType: 'normal',
   trackingMode: 'batch',
   allowBox: 0,
-  specLevel: 'single',
   equipmentName: undefined,
+  equipmentType: undefined,
+  status: '1',
+  defaultTrackingMode: 'batch',
+  defaultBelongUnit: undefined,
   defaultQualityGrade: undefined,
   productMarkRule: undefined,
   modelText: undefined,
@@ -494,6 +529,9 @@ const createEmptySku = () => ({
   barcode: '',
   specModel: '',
   defaultUnitPrice: undefined,
+  defaultQualityGrade: undefined,
+  status: '1',
+  volume: undefined,
   length: undefined,
   width: undefined,
   height: undefined,
@@ -515,16 +553,18 @@ const data = reactive({
     itemCategory: undefined,
     itemType: undefined,
     trackingMode: undefined,
+    defaultTrackingMode: undefined,
     allowBox: undefined,
-    specLevel: undefined,
+    equipmentType: undefined,
+    defaultBelongUnit: undefined,
     defaultQualityGrade: undefined
   },
   rules: {
     itemName: [
-      { required: true, message: '商品名称不能为空', trigger: 'blur' }
+      { required: true, message: '器材名称不能为空', trigger: 'blur' }
     ],
     itemCategory: [
-      { required: true, message: '商品分类不能为空', trigger: 'change' }
+      { required: true, message: '器材分类不能为空', trigger: 'change' }
     ]
   }
 });
@@ -544,7 +584,7 @@ const skuForm = reactive({
 
 const skuRules = {
   skuName: [
-    { required: true, message: '规格名称不能为空', trigger: 'blur' }
+    { required: true, message: '器材规格名称不能为空', trigger: 'blur' }
   ]
 };
 
@@ -598,6 +638,27 @@ const resetSkuList = () => {
   skuForm.itemSkuList = [createEmptySku()];
 };
 
+const formatVolume = (row) => {
+  const length = Number(row.length || 0);
+  const width = Number(row.width || 0);
+  const height = Number(row.height || 0);
+  if (!length || !width || !height) {
+    return '-';
+  }
+  return (length * width * height / 1000000).toFixed(4);
+};
+
+const normalizeSkuList = () => skuForm.itemSkuList.map(item => ({
+  ...item,
+  volume: item.volume ?? (formatVolume(item) === '-' ? undefined : Number(formatVolume(item)))
+}));
+
+const normalizeItemPayload = () => ({
+  ...form.value,
+  trackingMode: form.value.defaultTrackingMode,
+  sku: normalizeSkuList()
+});
+
 const reset = () => {
   form.value = initFormData();
   resetSkuList();
@@ -630,7 +691,7 @@ const handleQueryType = (data) => {
 
 const handleAddType = (clearParent = false) => {
   resetType();
-  categoryDialog.title = '新增商品分类';
+  categoryDialog.title = '新增器材分类';
   categoryDialog.visible = true;
   if (clearParent) {
     categoryForm.value.parentId = undefined;
@@ -646,7 +707,7 @@ const append = (data) => {
 
 const edit = (node, data) => {
   resetType();
-  categoryDialog.title = '修改商品分类';
+  categoryDialog.title = '修改器材分类';
   categoryDialog.visible = true;
   categoryForm.value.id = data.id;
   categoryForm.value.categoryName = data.label;
@@ -686,7 +747,7 @@ const handleNodeDrop = async (draggingNode, dropNode) => {
 const handleAdd = () => {
   reset();
   dialog.visible = true;
-  dialog.title = '新增商品';
+  dialog.title = '新增器材';
 };
 
 const handleUpdate = async (row) => {
@@ -694,11 +755,14 @@ const handleUpdate = async (row) => {
   const res = await getItem(row.id);
   form.value = {
     ...initFormData(),
-    ...res.data
+    ...res.data,
+    defaultTrackingMode: res.data.defaultTrackingMode || res.data.trackingMode || 'batch',
+    equipmentType: res.data.equipmentType || res.data.itemType,
+    status: res.data.status || '1'
   };
   skuForm.itemSkuList = res.data.sku?.length ? res.data.sku.map(item => ({ ...item })) : [createEmptySku()];
   dialog.visible = true;
-  dialog.title = '修改商品';
+  dialog.title = '修改器材';
 };
 
 const onAppendBtnClick = () => {
@@ -707,7 +771,7 @@ const onAppendBtnClick = () => {
 
 const handleDeleteItemSku = async (row, index) => {
   if (skuForm.itemSkuList.length === 1) {
-    proxy.$modal.msgError('至少包含一个商品规格');
+    proxy.$modal.msgError('至少包含一个器材规格');
     return;
   }
   if (!row.id) {
@@ -734,12 +798,12 @@ const handleDeleteItemSku = async (row, index) => {
 
 const validateSkuForm = async () => {
   if (!skuForm.itemSkuList.length) {
-    proxy.$modal.msgError('至少包含一个商品规格');
+    proxy.$modal.msgError('至少包含一个器材规格');
     return false;
   }
   const skuNames = skuForm.itemSkuList.map(item => item.skuName).filter(Boolean);
   if (new Set(skuNames).size !== skuNames.length) {
-    proxy.$modal.msgError('商品规格名称不能重复');
+    proxy.$modal.msgError('器材规格名称不能重复');
     return false;
   }
   let valid = true;
@@ -759,13 +823,13 @@ const submitForm = () => {
       return;
     }
     buttonLoading.value = true;
-    form.value.sku = skuForm.itemSkuList.map(item => ({ ...item }));
+    const payload = normalizeItemPayload();
     try {
       if (form.value.id) {
-        await updateItem(form.value);
+        await updateItem(payload);
         proxy.$modal.msgSuccess('修改成功');
       } else {
-        await addItem(form.value);
+        await addItem(payload);
         proxy.$modal.msgSuccess('新增成功');
       }
       dialog.visible = false;
@@ -810,13 +874,13 @@ const cancelType = () => {
 };
 
 const handleDelete = async (row) => {
-  await proxy.$modal.confirm('确认删除商品【' + row.itemName + '】吗？');
+  await proxy.$modal.confirm('确认删除器材【' + row.itemName + '】吗？');
   try {
     await delItem(row.id);
   } catch (e) {
     if (e === 409) {
       return ElMessageBox.alert(
-        '<div>商品【' + row.itemName + '】已有业务数据关联，不能删除！</div><div>请联系管理员处理。</div>',
+        '<div>器材【' + row.itemName + '】已有业务数据关联，不能删除！</div><div>请联系管理员处理。</div>',
         '系统提示',
         { dangerouslyUseHTMLString: true }
       );
@@ -900,3 +964,5 @@ onMounted(async () => {
   flex-shrink: 0;
 }
 </style>
+
+
