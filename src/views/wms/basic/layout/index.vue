@@ -31,10 +31,10 @@
               <span class="header-sub">{{ treeStats.warehouseCount }} 仓 / {{ treeStats.areaCount }} 区 / {{ treeStats.rackCount }} 架 / {{ treeStats.locationCount }} 位</span>
             </div>
           </template>
-          <el-empty v-if="!treeData.length" description="暂无仓储布局数据" />
+          <el-empty v-if="!displayTreeData.length" description="暂无仓储布局数据" />
           <el-tree
             v-else
-            :data="treeData"
+            :data="displayTreeData"
             node-key="nodeKey"
             default-expand-all
             highlight-current
@@ -76,6 +76,14 @@
             <el-descriptions-item label="尺寸">{{ formatDimensionText(rackGrid.length, rackGrid.width, rackGrid.height) }}</el-descriptions-item>
             <el-descriptions-item label="排序号">{{ rackGrid.orderNum ?? '-' }}</el-descriptions-item>
           </el-descriptions>
+          <el-alert
+            v-if="currentRackId && missingCellCount > 0"
+            class="mb16"
+            type="warning"
+            :closable="false"
+            show-icon
+            :title="`当前货架存在 ${missingCellCount} 个未建货位格子，这属于异常数据，可到货位维护页执行体检或重建。`"
+          />
 
           <div v-loading="gridLoading" class="grid-panel">
             <el-empty v-if="!currentRackId" description="请先在左侧仓储树或上方下拉框中选择货架" />
@@ -96,7 +104,7 @@
               >
                 <span class="grid-cell__title">{{ cell.locationName || `R${cell.rowNo}-C${cell.columnNo}` }}</span>
                 <span class="grid-cell__meta">{{ cell.locationCode || '未建货位' }}</span>
-                <span class="grid-cell__meta">箱体 {{ cell.boxCount || 0 }} / 明细 {{ cell.itemInstanceCount || 0 }}</span>
+                <span class="grid-cell__meta">箱体 {{ cell.boxCount || 0 }} / 直存 {{ cell.directItemCount || 0 }} / 明细 {{ cell.itemInstanceCount || 0 }}</span>
               </button>
             </div>
           </div>
@@ -114,7 +122,9 @@
             <el-descriptions :column="3" border>
               <el-descriptions-item label="货位">{{ locationSummary.locationName || '-' }}</el-descriptions-item>
               <el-descriptions-item label="货位编码">{{ locationSummary.locationCode || '-' }}</el-descriptions-item>
-              <el-descriptions-item label="货位状态">{{ locationSummary.locationStatus || '-' }}</el-descriptions-item>
+              <el-descriptions-item label="货位状态">
+                <dict-tag :options="wms_location_status" :value="locationSummary.locationStatus" />
+              </el-descriptions-item>
               <el-descriptions-item label="仓库">{{ locationSummary.warehouseName || '-' }}</el-descriptions-item>
               <el-descriptions-item label="库区">{{ locationSummary.areaName || '-' }}</el-descriptions-item>
               <el-descriptions-item label="货架">{{ locationSummary.rackName || '-' }}</el-descriptions-item>
@@ -122,9 +132,14 @@
               <el-descriptions-item label="尺寸">{{ formatDimensionText(locationSummary.length, locationSummary.width, locationSummary.height) }}</el-descriptions-item>
               <el-descriptions-item label="容积">{{ locationSummary.volume ?? '-' }}</el-descriptions-item>
               <el-descriptions-item label="最大承重">{{ locationSummary.maxWeight ?? '-' }}</el-descriptions-item>
-              <el-descriptions-item label="占用状态">{{ formatOccupiedText(locationSummary.occupiedFlag) }}</el-descriptions-item>
+              <el-descriptions-item label="占用状态">
+                <el-tag size="small" :type="isLocationOccupied(locationSummary) ? 'warning' : 'success'">
+                  {{ formatOccupiedText(locationSummary) }}
+                </el-tag>
+              </el-descriptions-item>
               <el-descriptions-item label="箱体数">{{ locationSummary.boxCount || 0 }}</el-descriptions-item>
-              <el-descriptions-item label="器材数">{{ locationSummary.itemInstanceCount || 0 }}</el-descriptions-item>
+              <el-descriptions-item label="直存器材数">{{ locationSummary.directItemCount || 0 }}</el-descriptions-item>
+              <el-descriptions-item label="明细器材数">{{ locationSummary.itemInstanceCount || 0 }}</el-descriptions-item>
             </el-descriptions>
 
             <div class="summary-subtitle">货位内器材摘要</div>
@@ -145,6 +160,7 @@ import { computed, getCurrentInstance, onMounted, reactive, ref } from 'vue'
 import { getLocationSummary, getRackGrid, getStorageLayoutTree } from '@/api/wms/storageLayout'
 
 const { proxy } = getCurrentInstance()
+const { wms_location_status } = proxy.useDict('wms_location_status')
 
 const queryParams = reactive({
   warehouseId: undefined,
@@ -175,6 +191,15 @@ const enhanceTreeNodes = (nodes) => {
   }))
 }
 
+const pruneTreeToRack = (nodes) => {
+  return (nodes || [])
+    .filter(item => item.nodeType !== 'location')
+    .map(item => ({
+      ...item,
+      children: item.nodeType === 'rack' ? [] : pruneTreeToRack(item.children)
+    }))
+}
+
 const collectNodes = (nodes, nodeType, result = []) => {
   ;(nodes || []).forEach(item => {
     if (item.nodeType === nodeType) {
@@ -203,6 +228,8 @@ const findFirstNode = (nodes, nodeType) => {
 }
 
 const warehouseOptions = computed(() => collectNodes(treeData.value, 'warehouse'))
+
+const displayTreeData = computed(() => pruneTreeToRack(treeData.value))
 
 const areaOptions = computed(() => {
   if (!queryParams.warehouseId) {
@@ -269,6 +296,8 @@ const normalizedCells = computed(() => {
   return cells
 })
 
+const missingCellCount = computed(() => normalizedCells.value.filter(cell => !cell.locationId).length)
+
 function formatNodeLabel(node) {
   return node.code ? `${node.name} (${node.code})` : node.name
 }
@@ -287,7 +316,7 @@ function getCellVisualType(cell) {
   if (cell.locationStatus && cell.locationStatus !== 'enabled') {
     return 'disabled'
   }
-  if (Number(cell.occupiedFlag) === 1 || Number(cell.itemInstanceCount) > 0 || Number(cell.boxCount) > 0) {
+  if (isLocationOccupied(cell)) {
     return 'occupied'
   }
   return 'empty'
@@ -300,8 +329,15 @@ function formatDimensionText(length, width, height) {
   return `长 ${length ?? '-'} / 宽 ${width ?? '-'} / 高 ${height ?? '-'}`
 }
 
-function formatOccupiedText(flag) {
-  return Number(flag) === 1 ? '已占用' : '空闲'
+function isLocationOccupied(location) {
+  return Number(location?.occupiedFlag) === 1
+    || Number(location?.boxCount) > 0
+    || Number(location?.directItemCount) > 0
+    || Number(location?.itemInstanceCount) > 0
+}
+
+function formatOccupiedText(location) {
+  return isLocationOccupied(location) ? '已占用' : '空闲'
 }
 
 async function loadLayoutTree() {

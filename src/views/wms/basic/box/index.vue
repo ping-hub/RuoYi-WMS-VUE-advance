@@ -74,6 +74,13 @@
             <dict-tag :options="wms_box_status" :value="row.boxStatus" />
           </template>
         </el-table-column>
+        <el-table-column label="尺寸(cm)" min-width="140">
+          <template #default="{ row }">
+            <div>长：{{ row.length ?? '-' }}</div>
+            <div>宽：{{ row.width ?? '-' }}</div>
+            <div>高：{{ row.height ?? '-' }}</div>
+          </template>
+        </el-table-column>
         <el-table-column label="位置" min-width="220">
           <template #default="{ row }">
             <div v-if="row.warehouseName">仓库：{{ row.warehouseName }}</div>
@@ -117,6 +124,15 @@
           <el-select v-model="form.boxStatus" placeholder="请选择箱体状态" style="width: 100%">
             <el-option v-for="dict in wms_box_status" :key="dict.value" :label="dict.label" :value="dict.value" />
           </el-select>
+        </el-form-item>
+        <el-form-item label="长(cm)" prop="length">
+          <el-input-number v-model="form.length" :min="0" :precision="2" style="width: 100%" />
+        </el-form-item>
+        <el-form-item label="宽(cm)" prop="width">
+          <el-input-number v-model="form.width" :min="0" :precision="2" style="width: 100%" />
+        </el-form-item>
+        <el-form-item label="高(cm)" prop="height">
+          <el-input-number v-model="form.height" :min="0" :precision="2" style="width: 100%" />
         </el-form-item>
         <el-form-item label="仓库" prop="warehouseId">
           <el-select v-model="form.warehouseId" placeholder="请选择仓库" filterable style="width: 100%" @change="handleFormWarehouseChange">
@@ -168,6 +184,9 @@
         <el-descriptions-item label="箱体状态">
           <dict-tag :options="wms_box_status" :value="detailDialog.data.boxStatus" />
         </el-descriptions-item>
+        <el-descriptions-item label="长(cm)">{{ detailDialog.data.length ?? '-' }}</el-descriptions-item>
+        <el-descriptions-item label="宽(cm)">{{ detailDialog.data.width ?? '-' }}</el-descriptions-item>
+        <el-descriptions-item label="高(cm)">{{ detailDialog.data.height ?? '-' }}</el-descriptions-item>
         <el-descriptions-item label="仓库">{{ detailDialog.data.warehouseName || '-' }}</el-descriptions-item>
         <el-descriptions-item label="库区">{{ detailDialog.data.areaName || '-' }}</el-descriptions-item>
         <el-descriptions-item label="货架">{{ detailDialog.data.rackName || '-' }}</el-descriptions-item>
@@ -195,8 +214,8 @@
         </el-table-column>
         <el-table-column label="质量/单位" min-width="180">
           <template #default="{ row }">
-            <div>{{ row.qualityGrade || '-' }}</div>
-            <div class="sub-text">{{ row.belongUnit || '-' }}</div>
+            <div>{{ displayQualityGrade(row) }}</div>
+            <div class="sub-text">{{ displayBelongUnit(row) }}</div>
           </template>
         </el-table-column>
         <el-table-column label="批号/日期" min-width="180">
@@ -352,7 +371,7 @@ import LocationSelect from '@/views/components/LocationSelect.vue';
 const router = useRouter();
 const route = useRoute();
 const { proxy } = getCurrentInstance();
-const { wms_box_status, wms_item_instance_status } = proxy.useDict('wms_box_status', 'wms_item_instance_status');
+const { wms_box_status, wms_item_instance_status, wms_quality_grade } = proxy.useDict('wms_box_status', 'wms_item_instance_status', 'wms_quality_grade');
 const wmsStore = useWmsStore();
 
 const loading = ref(true);
@@ -406,6 +425,9 @@ const initFormData = () => ({
   boxCode: undefined,
   boxName: undefined,
   boxStatus: 'idle',
+  length: undefined,
+  width: undefined,
+  height: undefined,
   warehouseId: undefined,
   areaId: undefined,
   rackId: undefined,
@@ -436,6 +458,11 @@ const data = reactive({
 const { form, queryParams, rules } = toRefs(data);
 
 const itemInstanceStatusOptions = computed(() => wms_item_instance_status.value);
+const displayQualityGrade = (row = {}) => {
+  const value = row.qualityGrade ?? row?.item?.defaultQualityGrade ?? row?.itemSku?.defaultQualityGrade ?? row?.itemSku?.item?.defaultQualityGrade;
+  return proxy.selectDictLabel(wms_quality_grade.value, value) || value || '-';
+};
+const displayBelongUnit = (row = {}) => row.belongUnit ?? row?.item?.defaultBelongUnit ?? row?.itemSku?.item?.defaultBelongUnit ?? '-';
 
 const applyRouteQuery = () => {
   if (route.query.boxCode) {

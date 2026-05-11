@@ -112,12 +112,24 @@
                     <div>{{ row?.itemSku?.skuName }}</div>
                   </template>
                 </el-table-column>
-                <el-table-column label="器材编码" prop="equipmentCode" min-width="120" />
-                <el-table-column label="规格型号" prop="specModel" min-width="140" />
-                <el-table-column label="产品标识" prop="productMark" min-width="140" />
+                <el-table-column label="器材编码" min-width="120">
+                  <template #default="{ row }">
+                    <div>{{ row.equipmentCode || row?.itemSku?.item?.itemCode || '-' }}</div>
+                  </template>
+                </el-table-column>
+                <el-table-column label="规格型号" min-width="140">
+                  <template #default="{ row }">
+                    <div>{{ row.specModel || row?.itemSku?.specModel || row?.itemSku?.item?.modelText || '-' }}</div>
+                  </template>
+                </el-table-column>
+                <el-table-column label="产品标识" min-width="140">
+                  <template #default="{ row }">
+                    <div>{{ row.productMark || '-' }}</div>
+                  </template>
+                </el-table-column>
                 <el-table-column label="质量等级" min-width="120">
                   <template #default="{ row }">
-                    <dict-tag :options="wms_quality_grade" :value="row.qualityGrade" />
+                    <dict-tag :options="wms_quality_grade" :value="row.qualityGrade ?? row?.inventoryDetail?.qualityGrade ?? row?.itemSku?.defaultQualityGrade ?? row?.itemSku?.item?.defaultQualityGrade" />
                   </template>
                 </el-table-column>
                 <el-table-column label="器材编码" min-width="160">
@@ -282,11 +294,15 @@
 import {listShipmentOrder, delShipmentOrder, getShipmentOrder} from "@/api/wms/shipmentOrder";
 import {listByShipmentOrderId} from "@/api/wms/shipmentOrderDetail";
 import {getCurrentInstance, reactive, ref, toRefs} from "vue";
+import { useRoute, useRouter } from "vue-router";
 import {useWmsStore} from "../../../../store/modules/wms";
 import {ElMessageBox} from "element-plus";
 import shipmentPanel from "@/components/PrintTemplate/shipment-panel";
+import { resolveRoutePath } from "@/utils/routeResolver";
 
 const { proxy } = getCurrentInstance();
+const route = useRoute();
+const router = useRouter();
 const { wms_shipment_status, wms_shipment_type, wms_dispatch_mode, wms_quality_grade } = proxy.useDict(
   "wms_shipment_status",
   "wms_shipment_type",
@@ -355,8 +371,13 @@ function resetQuery() {
 }
 
 /** 新增按钮操作 */
+const resolveShipmentOrderEditPath = () => resolveRoutePath(router, {
+  preferredPaths: ["/shipmentOrderEdit"],
+  titleKeywords: ["出库"]
+}) || "/shipmentOrderEdit";
+
 function handleAdd() {
-  proxy.$router.push({ path: "/shipmentOrderEdit" });
+  router.push({ path: resolveShipmentOrderEditPath(), query: { returnFullPath: route.fullPath } });
 }
 
 /** 删除按钮操作 */
@@ -385,7 +406,7 @@ function handleDelete(row) {
 }
 
 function handleUpdate(row) {
-  proxy.$router.push({ path: "/shipmentOrderEdit",  query: { id: row.id } });
+  router.push({ path: resolveShipmentOrderEditPath(), query: { id: row.id, returnFullPath: route.fullPath } });
 }
 
 function handleGoDetail(row) {
@@ -423,7 +444,7 @@ async function handlePrint(row) {
         equipmentCode: detail.equipmentCode,
         specModel: detail.specModel,
         productMark: detail.productMark,
-        qualityGrade: proxy.selectDictLabel(wms_quality_grade.value, detail.qualityGrade),
+        qualityGrade: proxy.selectDictLabel(wms_quality_grade.value, detail.qualityGrade ?? detail.inventoryDetail?.qualityGrade ?? detail.itemSku?.defaultQualityGrade ?? detail.itemSku?.item?.defaultQualityGrade),
         unitPrice: detail.unitPrice,
         batchNo: detail.batchNo,
         productionDate: proxy.parseTime(detail.productionDate, '{y}-{m}-{d}'),
@@ -518,4 +539,3 @@ getList();
   vertical-align: top
 }
 </style>
-

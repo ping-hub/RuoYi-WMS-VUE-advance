@@ -50,11 +50,16 @@
 
     <el-card class="mt20">
       <el-row :gutter="10" class="mb8" type="flex" justify="space-between">
-        <el-col :span="6"><span style="font-size: large">货位管理</span></el-col>
-        <el-col :span="2">
-          <el-button type="primary" plain icon="Plus" @click="handleAdd" v-hasPermi="['wms:location:edit']">新增</el-button>
+        <el-col :span="14">
+          <div class="page-title">货位维护</div>
+          <div class="sub-text">货位由货架自动生成，当前页面用于查看、维护和异常修正；结构字段仅展示，不支持手工改档。</div>
+        </el-col>
+        <el-col :span="10" class="toolbar-actions">
+          <el-button type="primary" plain icon="RefreshRight" :disabled="!queryParams.rackId" :loading="rackActionLoading" @click="handleRebuildByRack" v-hasPermi="['wms:location:edit']">按货架重建</el-button>
+          <el-button plain icon="Search" :disabled="!queryParams.rackId" :loading="healthCheckLoading" @click="handleHealthCheckByRack" v-hasPermi="['wms:location:list']">按货架体检</el-button>
         </el-col>
       </el-row>
+      <el-alert class="mb16" type="info" :closable="false" show-icon title="联调提示：如需执行重建或体检，请先通过上方筛选条件选中具体货架。" />
 
       <el-table v-loading="loading" :data="locationList" border empty-text="暂无货位">
         <el-table-column label="编码" prop="locationCode" min-width="150" />
@@ -79,18 +84,11 @@
         </el-table-column>
         <el-table-column label="行号" prop="rowNo" width="80" align="center" />
         <el-table-column label="列号" prop="columnNo" width="80" align="center" />
-        <el-table-column label="尺寸(cm)" min-width="180">
-          <template #default="{ row }">
-            <div>长：{{ row.length || '-' }}</div>
-            <div class="sub-text">宽：{{ row.width || '-' }} / 高：{{ row.height || '-' }}</div>
-          </template>
-        </el-table-column>
-        <el-table-column label="容积/承重" min-width="180">
-          <template #default="{ row }">
-            <div>容积：{{ row.volume || '-' }}</div>
-            <div class="sub-text">最大承重：{{ row.maxWeight || '-' }}</div>
-          </template>
-        </el-table-column>
+        <el-table-column label="长(cm)" prop="length" width="90" align="center" />
+        <el-table-column label="宽(cm)" prop="width" width="90" align="center" />
+        <el-table-column label="高(cm)" prop="height" width="90" align="center" />
+        <el-table-column label="容积" prop="volume" width="110" align="center" />
+        <el-table-column label="最大承重" prop="maxWeight" width="110" align="center" />
         <el-table-column label="占用状态" width="100" align="center">
           <template #default="{ row }">
             <el-tag size="small" :type="Number(row.occupiedFlag) === 1 ? 'warning' : 'success'">
@@ -100,11 +98,10 @@
         </el-table-column>
         <el-table-column label="排序号" prop="sortNo" width="90" align="center" />
         <el-table-column label="备注" prop="remark" min-width="180" show-overflow-tooltip />
-        <el-table-column label="操作" align="right" width="240">
+        <el-table-column label="操作" align="right" width="160">
           <template #default="{ row }">
             <el-button link type="primary" @click="handleViewStock(row)" v-hasPermi="['wms:location:list']">货位对象</el-button>
             <el-button link type="primary" icon="Edit" @click="handleUpdate(row)" v-hasPermi="['wms:location:edit']">修改</el-button>
-            <el-button link type="primary" icon="Delete" @click="handleDelete(row)" v-hasPermi="['wms:location:edit']">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -119,40 +116,16 @@
     </el-card>
 
     <el-drawer :title="title" v-model="open" append-to-body size="40%" :close-on-click-modal="false">
-      <div class="form-tip">带 * 为必填项</div>
+      <div class="form-tip">当前仅支持维护型修改；仓库、库区、货架、行列、编码名称等结构字段仅供查看。</div>
+      <el-descriptions :column="2" border class="mb16">
+        <el-descriptions-item label="货位编码">{{ form.locationCode || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="货位名称">{{ form.locationName || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="所属仓库">{{ getWarehouseName(form.warehouseId) }}</el-descriptions-item>
+        <el-descriptions-item label="所属库区">{{ getAreaName(form.areaId) }}</el-descriptions-item>
+        <el-descriptions-item label="所属货架">{{ getRackDisplayText() }}</el-descriptions-item>
+        <el-descriptions-item label="格子坐标">{{ `第 ${form.rowNo || '-'} 行 / 第 ${form.columnNo || '-'} 列` }}</el-descriptions-item>
+      </el-descriptions>
       <el-form ref="locationRef" :model="form" :rules="rules" label-width="110px">
-        <el-form-item prop="locationCode">
-          <template #label>
-            <FormLabelHelp label="货位编码" purpose="用于唯一标识货位，在布局格子图和单据位置选择中使用。" example="A01-02-03" />
-          </template>
-          <el-input v-model="form.locationCode" placeholder="请输入货位编码" />
-        </el-form-item>
-        <el-form-item label="货位名称" prop="locationName">
-          <el-input v-model="form.locationName" placeholder="请输入货位名称" />
-        </el-form-item>
-        <el-form-item label="所属仓库" prop="warehouseId">
-          <el-select v-model="form.warehouseId" placeholder="请选择仓库" filterable style="width: 100%" @change="handleFormWarehouseChange">
-            <el-option
-              v-for="item in wmsStore.warehouseList"
-              :key="item.id"
-              :label="item.warehouseName"
-              :value="item.id"
-            />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="所属库区" prop="areaId">
-          <el-select v-model="form.areaId" placeholder="请选择库区" filterable style="width: 100%" @change="handleFormAreaChange">
-            <el-option
-              v-for="item in formAreaOptions"
-              :key="item.id"
-              :label="item.areaName"
-              :value="item.id"
-            />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="所属货架" prop="rackId">
-          <RackSelect v-model="form.rackId" :warehouse-id="form.warehouseId" :area-id="form.areaId" />
-        </el-form-item>
         <el-form-item label="货位状态" prop="locationStatus">
           <el-select v-model="form.locationStatus" placeholder="请选择货位状态" style="width: 100%">
             <el-option v-for="dict in wms_location_status" :key="dict.value" :label="dict.label" :value="dict.value" />
@@ -165,18 +138,6 @@
           <el-select v-model="form.locationType" placeholder="请选择货位类型" style="width: 100%">
             <el-option v-for="dict in wms_location_type" :key="dict.value" :label="dict.label" :value="dict.value" />
           </el-select>
-        </el-form-item>
-        <el-form-item prop="rowNo">
-          <template #label>
-            <FormLabelHelp label="行号" purpose="用于在货架格子图中确定货位所在行。" example="2" />
-          </template>
-          <el-input-number v-model="form.rowNo" :min="1" :precision="0" style="width: 100%" />
-        </el-form-item>
-        <el-form-item prop="columnNo">
-          <template #label>
-            <FormLabelHelp label="列号" purpose="用于在货架格子图中确定货位所在列。" example="5" />
-          </template>
-          <el-input-number v-model="form.columnNo" :min="1" :precision="0" style="width: 100%" />
         </el-form-item>
         <el-form-item prop="length">
           <template #label>
@@ -262,8 +223,8 @@
         </el-table-column>
         <el-table-column label="产品标识/所在单位" min-width="220">
           <template #default="{ row }">
-            <div>{{ row.productMark || '-' }}</div>
-            <div class="sub-text">{{ row.belongUnit || '-' }}</div>
+            <div>{{ displayProductMark(row) }}</div>
+            <div class="sub-text">{{ displayBelongUnit(row) }}</div>
           </template>
         </el-table-column>
         <el-table-column label="操作" width="140" align="right">
@@ -295,13 +256,51 @@
         </el-table-column>
       </el-table>
     </el-drawer>
+
+    <el-dialog v-model="resultDialog.visible" :title="resultDialog.title" width="720px" append-to-body>
+      <el-descriptions v-if="resultDialog.data" :column="2" border>
+        <el-descriptions-item label="货架编码">{{ resultDialog.data.rackCode || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="货架名称">{{ resultDialog.data.rackName || '-' }}</el-descriptions-item>
+        <template v-if="resultDialog.type === 'rebuild'">
+          <el-descriptions-item label="应有货位数">{{ resultDialog.data.expectedLocationCount ?? 0 }}</el-descriptions-item>
+          <el-descriptions-item label="已存在数">{{ resultDialog.data.existingLocationCount ?? 0 }}</el-descriptions-item>
+          <el-descriptions-item label="新生成数">{{ resultDialog.data.createdLocationCount ?? 0 }}</el-descriptions-item>
+          <el-descriptions-item label="被阻止数">{{ resultDialog.data.blockedLocationCount ?? 0 }}</el-descriptions-item>
+        </template>
+        <template v-else>
+          <el-descriptions-item label="应有货位数">{{ resultDialog.data.expectedLocationCount ?? 0 }}</el-descriptions-item>
+          <el-descriptions-item label="实际货位数">{{ resultDialog.data.actualLocationCount ?? 0 }}</el-descriptions-item>
+          <el-descriptions-item label="缺失数">{{ resultDialog.data.missingLocationCount ?? 0 }}</el-descriptions-item>
+          <el-descriptions-item label="重复格子数">{{ resultDialog.data.duplicateGridCount ?? 0 }}</el-descriptions-item>
+          <el-descriptions-item label="重复编码数">{{ resultDialog.data.duplicateCodeCount ?? 0 }}</el-descriptions-item>
+          <el-descriptions-item label="越界数">{{ resultDialog.data.outOfRangeCount ?? 0 }}</el-descriptions-item>
+        </template>
+      </el-descriptions>
+
+      <div class="detail-header mt20">
+        <span class="detail-title">结果说明</span>
+      </div>
+      <el-empty v-if="!resultDialog.data?.messages?.length" description="后端未返回额外说明" />
+      <el-alert
+        v-for="(message, index) in resultDialog.data?.messages || []"
+        :key="`${resultDialog.type}-${index}`"
+        :title="message"
+        type="warning"
+        :closable="false"
+        class="mb12"
+        show-icon
+      />
+      <template #footer>
+        <el-button type="primary" @click="resultDialog.visible = false">我知道了</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup name="Location">
 import { computed, getCurrentInstance, onMounted, reactive, ref, toRefs } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { addLocation, delLocation, getLocation, getLocationStock, listLocation, updateLocation } from '@/api/wms/location';
+import { getLocation, getLocationStock, healthCheckByRack, listLocation, rebuildByRack, updateLocation } from '@/api/wms/location';
 import { useWmsStore } from '@/store/modules/wms';
 import RackSelect from '@/views/components/RackSelect.vue';
 import FormLabelHelp from '@/views/components/FormLabelHelp.vue'
@@ -316,11 +315,19 @@ const locationList = ref([]);
 const open = ref(false);
 const loading = ref(true);
 const buttonLoading = ref(false);
+const rackActionLoading = ref(false);
+const healthCheckLoading = ref(false);
 const total = ref(0);
 const title = ref('');
 const ids = ref([]);
 const stockDialog = reactive({
   visible: false,
+  data: {}
+});
+const resultDialog = reactive({
+  visible: false,
+  title: '',
+  type: 'rebuild',
   data: {}
 });
 
@@ -338,17 +345,11 @@ const data = reactive({
     locationType: undefined
   },
   rules: {
-    locationName: [
-      { required: true, message: '货位名称不能为空', trigger: 'blur' }
+    locationStatus: [
+      { required: true, message: '货位状态不能为空', trigger: 'change' }
     ],
-    warehouseId: [
-      { required: true, message: '所属仓库不能为空', trigger: 'change' }
-    ],
-    areaId: [
-      { required: true, message: '所属库区不能为空', trigger: 'change' }
-    ],
-    rackId: [
-      { required: true, message: '所属货架不能为空', trigger: 'change' }
+    locationType: [
+      { required: true, message: '货位类型不能为空', trigger: 'change' }
     ]
   }
 });
@@ -362,12 +363,8 @@ const areaOptions = computed(() => {
   return wmsStore.areaList.filter(item => item.warehouseId === queryParams.value.warehouseId);
 });
 
-const formAreaOptions = computed(() => {
-  if (!form.value.warehouseId) {
-    return [];
-  }
-  return wmsStore.areaList.filter(item => item.warehouseId === form.value.warehouseId);
-});
+const displayProductMark = (row = {}) => row.productMark ?? row.itemInstance?.productMark ?? '-';
+const displayBelongUnit = (row = {}) => row.belongUnit ?? row.item?.defaultBelongUnit ?? row.itemSku?.item?.defaultBelongUnit ?? '-';
 
 function reset() {
   form.value = {
@@ -393,6 +390,38 @@ function reset() {
   proxy.resetForm('locationRef');
 }
 
+function getWarehouseName(warehouseId) {
+  return wmsStore.warehouseList.find(item => item.id === warehouseId)?.warehouseName || '-';
+}
+
+function getAreaName(areaId) {
+  return wmsStore.areaList.find(item => item.id === areaId)?.areaName || '-';
+}
+
+function getRackDisplayText() {
+  if (!form.value.rackId) {
+    return '-';
+  }
+  const rackCode = form.value.rackCode ? ` / ${form.value.rackCode}` : '';
+  return `${form.value.rackName || '未命名货架'}${rackCode}`;
+}
+
+function buildLocationUpdatePayload() {
+  return {
+    id: form.value.id,
+    locationStatus: form.value.locationStatus,
+    locationType: form.value.locationType,
+    length: form.value.length,
+    width: form.value.width,
+    height: form.value.height,
+    volume: form.value.volume,
+    maxWeight: form.value.maxWeight,
+    occupiedFlag: form.value.occupiedFlag,
+    sortNo: form.value.sortNo,
+    remark: form.value.remark
+  };
+}
+
 async function getList() {
   loading.value = true;
   try {
@@ -413,15 +442,6 @@ function handleQueryAreaChange() {
   queryParams.value.rackId = undefined;
 }
 
-function handleFormWarehouseChange() {
-  form.value.areaId = undefined;
-  form.value.rackId = undefined;
-}
-
-function handleFormAreaChange() {
-  form.value.rackId = undefined;
-}
-
 function handleQuery() {
   queryParams.value.pageNum = 1;
   getList();
@@ -432,41 +452,29 @@ function resetQuery() {
   handleQuery();
 }
 
-function handleAdd() {
-  reset();
-  open.value = true;
-  title.value = '添加货位';
-}
-
 async function handleUpdate(row) {
   reset();
   const id = row.id || ids.value[0];
   const res = await getLocation(id);
   form.value = { ...res.data };
   open.value = true;
-  title.value = '修改货位';
+  title.value = '维护货位';
 }
 
-function submitForm() {
-  proxy.$refs.locationRef.validate(async valid => {
-    if (!valid) {
-      return;
-    }
-    buttonLoading.value = true;
-    try {
-      if (form.value.id) {
-        await updateLocation(form.value);
-        proxy.$modal.msgSuccess('修改成功');
-      } else {
-        await addLocation(form.value);
-        proxy.$modal.msgSuccess('新增成功');
-      }
-      open.value = false;
-      await getList();
-    } finally {
-      buttonLoading.value = false;
-    }
-  });
+async function submitForm() {
+  const valid = await proxy.$refs.locationRef.validate().catch(() => false);
+  if (!valid) {
+    return;
+  }
+  buttonLoading.value = true;
+  try {
+    await updateLocation(buildLocationUpdatePayload());
+    proxy.$modal.msgSuccess('维护修改成功');
+    open.value = false;
+    await getList();
+  } finally {
+    buttonLoading.value = false;
+  }
 }
 
 function cancel() {
@@ -474,12 +482,46 @@ function cancel() {
   reset();
 }
 
-async function handleDelete(row) {
-  const id = row.id || ids.value[0];
-  await proxy.$modal.confirm('确认删除货位【' + row.locationName + '】吗？');
-  await delLocation(id);
-  proxy.$modal.msgSuccess('删除成功');
-  await getList();
+function showResultDialog(type, data) {
+  resultDialog.type = type;
+  resultDialog.title = type === 'rebuild' ? '按货架重建结果' : '按货架体检结果';
+  resultDialog.data = data || {};
+  resultDialog.visible = true;
+}
+
+async function handleRebuildByRack() {
+  if (!queryParams.value.rackId) {
+    proxy.$modal.msgError('请先选择要重建的货架');
+    return;
+  }
+  try {
+    await proxy.$modal.confirm('确认按当前筛选货架执行重建吗？缺失货位会自动补建，后端返回的结果说明将完整展示。');
+  } catch {
+    return;
+  }
+  rackActionLoading.value = true;
+  try {
+    const res = await rebuildByRack(queryParams.value.rackId);
+    showResultDialog('rebuild', res.data);
+    proxy.$modal.msgSuccess('货架重建完成');
+    await getList();
+  } finally {
+    rackActionLoading.value = false;
+  }
+}
+
+async function handleHealthCheckByRack() {
+  if (!queryParams.value.rackId) {
+    proxy.$modal.msgError('请先选择要体检的货架');
+    return;
+  }
+  healthCheckLoading.value = true;
+  try {
+    const res = await healthCheckByRack(queryParams.value.rackId);
+    showResultDialog('health', res.data);
+  } finally {
+    healthCheckLoading.value = false;
+  }
 }
 
 async function handleViewStock(row) {
@@ -509,6 +551,9 @@ onMounted(async () => {
     wmsStore.getWarehouseList(),
     wmsStore.getAreaList()
   ]);
+  if (route.query.rackId) {
+    queryParams.value.rackId = Number(route.query.rackId);
+  }
   await getList();
   if (route.query.locationId) {
     await handleViewStock({ id: Number(route.query.locationId) });
@@ -523,8 +568,21 @@ onMounted(async () => {
   font-size: 12px;
 }
 
+.page-title {
+  font-size: large;
+  margin-bottom: 4px;
+}
+
 .form-tip {
   margin-bottom: 12px;
+}
+
+.toolbar-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .detail-header {
@@ -541,5 +599,9 @@ onMounted(async () => {
 
 .mb16 {
   margin-bottom: 16px;
+}
+
+.mb12 {
+  margin-bottom: 12px;
 }
 </style>

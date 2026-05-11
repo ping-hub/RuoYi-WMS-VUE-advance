@@ -72,7 +72,11 @@
         <el-table-column label="器材编码" prop="equipmentCode" min-width="140" show-overflow-tooltip />
         <el-table-column label="器材名称" prop="itemName" min-width="160" show-overflow-tooltip />
         <el-table-column label="规格型号" prop="specModel" min-width="160" show-overflow-tooltip />
-        <el-table-column label="产品标识" prop="productMark" min-width="160" show-overflow-tooltip />
+        <el-table-column label="产品标识" min-width="160" show-overflow-tooltip>
+          <template #default="{ row }">
+            <span>{{ displayProductMark(row) }}</span>
+          </template>
+        </el-table-column>
         <el-table-column label="装备名称" prop="equipmentName" min-width="160" show-overflow-tooltip />
         <el-table-column label="质量等级" min-width="120">
           <template #default="{ row }">
@@ -95,7 +99,11 @@
             <span>{{ formatMoney(row.lineAmount) }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="所在单位" prop="belongUnit" min-width="160" show-overflow-tooltip />
+        <el-table-column label="所在单位" min-width="160" show-overflow-tooltip>
+          <template #default="{ row }">
+            <span>{{ displayBelongUnit(row) }}</span>
+          </template>
+        </el-table-column>
         <el-table-column label="操作" fixed="right" width="140" align="center">
           <template #default="{ row }">
             <el-button link type="primary" @click="handleGoDetail(row)" v-hasPermi="['wms:inventoryDetail:all']">库存明细</el-button>
@@ -117,6 +125,7 @@
 import { computed, getCurrentInstance, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { listLedger } from '@/api/wms/ledger'
+import { resolveRoutePath } from '@/utils/routeResolver'
 
 const defaultTime = reactive([new Date(0, 0, 0, 0, 0, 0), new Date(0, 0, 0, 23, 59, 59)])
 const { proxy } = getCurrentInstance()
@@ -126,6 +135,11 @@ const { wms_quality_grade } = proxy.useDict('wms_quality_grade')
 const loading = ref(false)
 const total = ref(0)
 const ledgerList = ref([])
+
+const resolveInventoryDetailPath = () => {
+  return resolveRoutePath(router, { exactTitles: ['库存明细'] }) || '/index'
+}
+
 const queryParams = ref({
   pageNum: 1,
   pageSize: 10,
@@ -206,18 +220,22 @@ const handleGoDetail = (row) => {
     equipmentCode: row.equipmentCode || undefined,
     itemName: row.itemName || undefined,
     specModel: row.specModel || undefined,
-    productMark: row.productMark || undefined,
+    productMark: resolveProductMarkValue(row) || undefined,
     equipmentName: row.equipmentName || undefined,
     qualityGrade: row.qualityGrade || undefined,
-    belongUnit: row.belongUnit || undefined,
+    belongUnit: resolveBelongUnitValue(row) || undefined,
     createStartTime: queryParams.value.createTimeRange?.[0],
     createEndTime: queryParams.value.createTimeRange?.[1],
     queryType: 'item'
   }
-  router.push({ path: '/inventoryDetail', query })
+  router.push({ path: resolveInventoryDetailPath(), query })
 }
 
 const displayQualityGrade = (value) => proxy.selectDictLabel(wms_quality_grade.value, value) || value || '-'
+const resolveProductMarkValue = (row = {}) => row.productMark ?? row.inventoryDetail?.productMark ?? row.itemInstance?.productMark
+const resolveBelongUnitValue = (row = {}) => row.belongUnit ?? row.item?.defaultBelongUnit ?? row.itemSku?.item?.defaultBelongUnit
+const displayProductMark = (row = {}) => resolveProductMarkValue(row) ?? '-'
+const displayBelongUnit = (row = {}) => resolveBelongUnitValue(row) ?? '-'
 const formatMoney = (value) => (value || value === 0) ? Number(value).toFixed(2) : '-'
 
 getList()

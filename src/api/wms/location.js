@@ -30,6 +30,20 @@ export function getLocationStock(id) {
   });
 }
 
+export function rebuildByRack(rackId) {
+  return request({
+    url: '/wms/location/rebuildByRack/' + rackId,
+    method: 'post'
+  });
+}
+
+export function healthCheckByRack(rackId) {
+  return request({
+    url: '/wms/location/healthCheckByRack/' + rackId,
+    method: 'get'
+  });
+}
+
 export function addLocation(data) {
   return request({
     url: '/wms/location',

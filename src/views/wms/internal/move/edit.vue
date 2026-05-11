@@ -155,7 +155,7 @@
           <el-table-column label="产品标识/质量等级" min-width="180">
             <template #default="{ row }">
               <div>{{ row.productMark || '-' }}</div>
-              <div class="sub-text">{{ proxy.selectDictLabel(wms_quality_grade, row.qualityGrade) || row.qualityGrade || '-' }}</div>
+              <div class="sub-text">{{ displayQualityGrade(row) }}</div>
             </template>
           </el-table-column>
           <el-table-column label="单价/总价" min-width="150">
@@ -252,6 +252,11 @@ const inventorySelectRef = ref(null)
 const selectedInventory = ref([])
 const rackNameMap = ref(new Map())
 const locationNameMap = ref(new Map())
+
+const displayQualityGrade = (row = {}) => {
+  const value = row.qualityGrade ?? row.itemSku?.defaultQualityGrade ?? row.itemSku?.item?.defaultQualityGrade
+  return proxy.selectDictLabel(wms_quality_grade, value) || value || '-'
+}
 
 const initFormData = {
   id: undefined,

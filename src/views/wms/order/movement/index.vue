@@ -89,12 +89,24 @@
                     <div>{{ row?.itemSku?.skuName }}</div>
                   </template>
                 </el-table-column>
-                <el-table-column label="器材编码" prop="equipmentCode" min-width="120" />
-                <el-table-column label="规格型号" prop="specModel" min-width="140" />
-                <el-table-column label="产品标识" prop="productMark" min-width="140" />
+                <el-table-column label="器材编码" min-width="120">
+                  <template #default="{ row }">
+                    <div>{{ row.equipmentCode || row?.itemSku?.item?.itemCode || '-' }}</div>
+                  </template>
+                </el-table-column>
+                <el-table-column label="规格型号" min-width="140">
+                  <template #default="{ row }">
+                    <div>{{ row.specModel || row?.itemSku?.specModel || row?.itemSku?.item?.modelText || '-' }}</div>
+                  </template>
+                </el-table-column>
+                <el-table-column label="产品标识" min-width="140">
+                  <template #default="{ row }">
+                    <div>{{ row.productMark || '-' }}</div>
+                  </template>
+                </el-table-column>
                 <el-table-column label="质量等级" min-width="120">
                   <template #default="{ row }">
-                    <dict-tag :options="wms_quality_grade" :value="row.qualityGrade" />
+                    <dict-tag :options="wms_quality_grade" :value="row.qualityGrade ?? row?.itemSku?.defaultQualityGrade ?? row?.itemSku?.item?.defaultQualityGrade" />
                   </template>
                 </el-table-column>
                 <el-table-column label="源位置" min-width="220">
@@ -258,15 +270,16 @@
 </template>
 
 <script setup name="MovementOrder">
-import {listMovementOrder, delMovementOrder} from "@/api/wms/movementOrder";
-import {listByMovementOrderId} from "@/api/wms/movementOrderDetail";
+import {listMovementOrder, delMovementOrder, getMovementOrder} from "@/api/wms/movementOrder";
 import {getCurrentInstance, reactive, ref, toRefs} from "vue";
-import { useRouter } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import {useWmsStore} from "../../../../store/modules/wms";
 import {ElMessageBox} from "element-plus";
 import WarehouseCascader from "@/views/components/WarehouseCascader.vue";
+import { resolveRoutePath } from "@/utils/routeResolver";
 
 const { proxy } = getCurrentInstance();
+const route = useRoute();
 const router = useRouter();
 const wmsStore = useWmsStore();
 const { wms_movement_status, wms_movement_type, wms_dispatch_mode, wms_basis_type, wms_quality_grade } = proxy.useDict(
@@ -343,8 +356,13 @@ function resetQuery() {
 }
 
 /** 新增按钮操作 */
+const resolveMovementOrderEditPath = () => resolveRoutePath(router, {
+  preferredPaths: ["/movementOrderEdit"],
+  titleKeywords: ["调拨"]
+}) || "/movementOrderEdit";
+
 function handleAdd() {
-  proxy.$router.push({ path: "/movementOrderEdit" });
+  router.push({ path: resolveMovementOrderEditPath(), query: { returnFullPath: route.fullPath } });
 }
 
 /** 删除按钮操作 */
@@ -373,7 +391,7 @@ function handleDelete(row) {
 }
 
 function handleUpdate(row) {
-  proxy.$router.push({ path: "/movementOrderEdit",  query: { id: row.id } });
+  router.push({ path: resolveMovementOrderEditPath(), query: { id: row.id, returnFullPath: route.fullPath } });
 }
 
 function handleGoItem(row) {
@@ -426,20 +444,21 @@ function handleExpandExchange(value, expandedRows) {
 
 function loadMovementOrderDetail(row) {
   const index = movementOrderList.value.findIndex(it => it.id === row.id)
+  if (index === -1) {
+    return
+  }
   detailLoading.value[index] = true
-  listByMovementOrderId(row.id).then(res => {
-    if (res.data?.length) {
-      const details = res.data.map(it => {
-        return {
-          ...it,
-          sourceWarehouseName: wmsStore.warehouseMap.get(it.sourceWarehouseId)?.warehouseName,
-          sourceAreaName: wmsStore.areaMap.get(it.sourceAreaId)?.areaName,
-          targetWarehouseName: wmsStore.warehouseMap.get(it.targetWarehouseId)?.warehouseName,
-          targetAreaName: wmsStore.areaMap.get(it.targetAreaId)?.areaName
-        }
-      })
-      movementOrderList.value[index].details = details
-    }
+  getMovementOrder(row.id).then(res => {
+    const rawDetails = res.data?.details || []
+    movementOrderList.value[index].details = rawDetails.map(it => {
+      return {
+        ...it,
+        sourceWarehouseName: wmsStore.warehouseMap.get(it.sourceWarehouseId)?.warehouseName,
+        sourceAreaName: wmsStore.areaMap.get(it.sourceAreaId)?.areaName,
+        targetWarehouseName: wmsStore.warehouseMap.get(it.targetWarehouseId)?.warehouseName,
+        targetAreaName: wmsStore.areaMap.get(it.targetAreaId)?.areaName
+      }
+    })
   }).finally(() => {
     detailLoading.value[index] = false
   })

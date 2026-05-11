@@ -158,13 +158,21 @@
             </template>
           </el-table-column>
         </template>
-        <el-table-column label="产品标识" prop="productMark" min-width="150" show-overflow-tooltip />
-        <el-table-column label="质量等级" min-width="120">
+        <el-table-column label="产品标识" min-width="150" show-overflow-tooltip>
           <template #default="{ row }">
-            <span>{{ displayQualityGrade(row.qualityGrade) }}</span>
+            <span>{{ displayProductMark(row) }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="所在单位" prop="belongUnit" min-width="140" show-overflow-tooltip />
+        <el-table-column label="质量等级" min-width="120">
+          <template #default="{ row }">
+            <span>{{ displayQualityGrade(row) }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="所在单位" min-width="140" show-overflow-tooltip>
+          <template #default="{ row }">
+            <span>{{ displayBelongUnit(row) }}</span>
+          </template>
+        </el-table-column>
         <el-table-column label="入库日期" align="left" prop="createTime" width="160">
           <template #default="{ row }">
             <div>{{ parseTime(row.createTime, '{y}-{m}-{d} {h}:{i}') || '-' }}</div>
@@ -186,12 +194,16 @@
             <span>{{ formatMoney(row.lineAmount || row.amount) }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="批号" align="left" prop="batchNo" min-width="120" />
+        <el-table-column label="批号" align="left" min-width="120">
+          <template #default="{ row }">
+            <span>{{ displayBatchNo(row) }}</span>
+          </template>
+        </el-table-column>
         <el-table-column label="生产日期/过期日期" align="left" width="200">
           <template #default="{ row }">
-            <div v-if="row.productionDate">生产日期：{{ parseTime(row.productionDate, '{y}-{m}-{d}') }}</div>
-            <div v-if="row.expirationDate">过期日期：{{ parseTime(row.expirationDate, '{y}-{m}-{d}') }}</div>
-            <div v-if="!row.productionDate && !row.expirationDate">-</div>
+            <div v-if="resolveDateValue(row, 'productionDate')">生产日期：{{ parseTime(resolveDateValue(row, 'productionDate'), '{y}-{m}-{d}') }}</div>
+            <div v-if="resolveDateValue(row, 'expirationDate')">过期日期：{{ parseTime(resolveDateValue(row, 'expirationDate'), '{y}-{m}-{d}') }}</div>
+            <div v-if="!resolveDateValue(row, 'productionDate') && !resolveDateValue(row, 'expirationDate')">-</div>
           </template>
         </el-table-column>
         <el-table-column label="关联单据" min-width="160">
@@ -225,6 +237,7 @@ import { useWmsStore } from '@/store/modules/wms'
 import { listInventoryDetail } from '@/api/wms/inventoryDetail'
 import { getRowspanMethod } from '@/utils/getRowSpanMethod'
 import { parseTime } from '../../../utils/ruoyi'
+import { resolveRoutePath } from '@/utils/routeResolver'
 
 const defaultTime = reactive([new Date(0, 0, 0, 0, 0, 0), new Date(0, 0, 0, 23, 59, 59)])
 const { proxy } = getCurrentInstance()
@@ -239,6 +252,22 @@ const total = ref(0)
 const fromLedger = computed(() => route.query.fromLedger === '1')
 const rowSpanArray = ref(['warehouseId', 'areaId', 'areaIdAndItemId', 'areaIdAndSkuId'])
 const spanMethod = computed(() => getRowspanMethod(inventoryDetailList.value, rowSpanArray.value))
+const resolveInventoryHistoryPath = () => {
+  return resolveRoutePath(router, { exactTitles: ['库存流水'] }) || '/index'
+}
+const resolveOrderEditPath = (type) => {
+  const routeResolverMap = {
+    1: { preferredPaths: ['/receiptOrderEdit'], titleKeywords: ['入库'] },
+    2: { preferredPaths: ['/movementOrderEdit'], titleKeywords: ['调拨'] },
+    3: { preferredPaths: ['/checkOrderEdit'], titleKeywords: ['盘点'] }
+  }
+  const fallbackPathMap = {
+    1: '/receiptOrderEdit',
+    2: '/movementOrderEdit',
+    3: '/checkOrderEdit'
+  }
+  return resolveRoutePath(router, routeResolverMap[type] || {}) || fallbackPathMap[type]
+}
 const queryParams = ref({
   pageNum: 1,
   pageSize: 10,
@@ -358,30 +387,25 @@ const handleGoOrder = (row) => {
     proxy.$modal.msgWarning('当前记录缺少关联单据ID')
     return
   }
-  const orderPathMap = {
-    1: '/receiptOrderEdit',
-    2: '/movementOrderEdit',
-    3: '/checkOrderEdit'
-  }
-  const path = orderPathMap[row.type]
+  const path = resolveOrderEditPath(row.type)
   if (!path) {
     proxy.$modal.msgWarning('暂不支持当前单据类型跳转')
     return
   }
-  router.push({ path, query: { id: orderId } })
+  router.push({ path, query: { id: orderId, mode: 'view', returnFullPath: route.fullPath } })
 }
 
 const handleGoHistory = (row) => {
   router.push({
-    path: '/inventoryHistory',
+    path: resolveInventoryHistoryPath(),
     query: {
       orderNo: row.orderNo || undefined,
       equipmentCode: row.equipmentCode || undefined,
       itemName: row.itemName || row.item?.itemName || undefined,
       specModel: row.specModel || undefined,
-      productMark: row.productMark || undefined,
+      productMark: resolveProductMarkValue(row) || undefined,
       qualityGrade: row.qualityGrade || undefined,
-      belongUnit: row.belongUnit || undefined
+      belongUnit: resolveBelongUnitValue(row) || undefined
     }
   })
 }
@@ -399,7 +423,17 @@ const orderTypeText = (type) => {
   return map[type] || '未知单据'
 }
 
-const displayQualityGrade = (value) => proxy.selectDictLabel(wms_quality_grade.value, value) || value || '-'
+const displayQualityGrade = (row = {}) => {
+  const value = row.qualityGrade ?? row.item?.defaultQualityGrade ?? row.itemSku?.defaultQualityGrade ?? row.itemSku?.item?.defaultQualityGrade
+  return proxy.selectDictLabel(wms_quality_grade.value, value) || value || '-'
+}
+const resolveProductMarkValue = (row = {}) => row.productMark ?? row.inventoryDetail?.productMark ?? row.itemInstance?.productMark
+const resolveBelongUnitValue = (row = {}) => row.belongUnit ?? row.item?.defaultBelongUnit ?? row.itemSku?.item?.defaultBelongUnit
+const resolveBatchNoValue = (row = {}) => row.batchNo ?? row.inventoryDetail?.batchNo ?? row.itemInstance?.batchNo
+const displayProductMark = (row = {}) => resolveProductMarkValue(row) ?? '-'
+const displayBelongUnit = (row = {}) => resolveBelongUnitValue(row) ?? '-'
+const displayBatchNo = (row = {}) => resolveBatchNoValue(row) ?? '-'
+const resolveDateValue = (row = {}, field) => row[field] ?? row.inventoryDetail?.[field] ?? row.itemInstance?.[field]
 const formatMoney = (value) => (value || value === 0) ? Number(value).toFixed(2) : '-'
 
 const initFromRoute = () => {

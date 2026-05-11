@@ -1,8 +1,9 @@
 <template>
   <div>
-    <div class="receipt-order-edit-wrapper app-container" style="margin-bottom: 60px" v-loading="loading">
+    <div class="receipt-order-edit-wrapper app-container" :class="{ 'is-view-mode': isViewMode }" style="margin-bottom: 60px" v-loading="loading">
+      <el-alert v-if="isViewMode" class="mb10" type="info" :closable="false" title="当前为联查查看模式，已禁用编辑、作废和完成入库操作。" />
       <el-card header="入库单基本信息">
-        <el-form label-width="108px" :model="form" ref="receiptForm" :rules="rules">
+        <el-form label-width="108px" :model="form" ref="receiptForm" :rules="rules" :disabled="isViewMode">
           <el-row :gutter="24">
             <el-col :span="11">
               <el-form-item label="入库单号" prop="receiptOrderNo">
@@ -130,7 +131,7 @@
                 <el-form-item label="金额" prop="payableAmount">
                   <el-input-number v-model="form.payableAmount" :precision="2" :min="0"></el-input-number>
                 </el-form-item>
-                <el-button link type="primary" @click="handleAutoCalc" class="ml20" style="line-height: 32px">自动计算</el-button>
+                <el-button v-if="!isViewMode" link type="primary" @click="handleAutoCalc" class="ml20" style="line-height: 32px">自动计算</el-button>
               </div>
             </el-col>
             <el-col :span="6">
@@ -156,7 +157,7 @@
               content="请先选择仓库！"
             >
               <template #reference>
-                <el-button type="primary" plain="plain" size="default" @click="showAddItem" icon="Plus" :disabled="!form.warehouseId">添加器材</el-button>
+                <el-button type="primary" plain="plain" size="default" @click="showAddItem" icon="Plus" :disabled="!form.warehouseId || isViewMode">添加器材</el-button>
               </template>
             </el-popover>
           </div>
@@ -186,12 +187,12 @@
             </el-table-column>
             <el-table-column label="产品标识" width="180">
               <template #default="{ row }">
-                <el-input v-model="row.productMark" placeholder="请输入产品标识" />
+                <el-input v-model="row.productMark" placeholder="请输入产品标识" :disabled="isViewMode" />
               </template>
             </el-table-column>
             <el-table-column label="质量等级" width="160">
               <template #default="{ row }">
-                <el-select v-model="row.qualityGrade" placeholder="请选择质量等级" clearable style="width: 100%">
+                <el-select v-model="row.qualityGrade" placeholder="请选择质量等级" clearable style="width: 100%" :disabled="isViewMode">
                   <el-option v-for="item in wms_quality_grade" :key="item.value" :label="item.label" :value="item.value" />
                 </el-select>
               </template>
@@ -208,7 +209,7 @@
                   <el-select
                     v-model="row.areaId"
                     placeholder="库区"
-                    :disabled="!form.warehouseId || !!form.areaId"
+                    :disabled="isViewMode || !form.warehouseId || !!form.areaId"
                     filterable
                     style="width: 110px"
                     @change="handleRowAreaChange(row)"
@@ -220,13 +221,14 @@
                       :value="item.id"
                     />
                   </el-select>
-                  <RackSelect v-model="row.rackId" :warehouse-id="form.warehouseId" :area-id="row.areaId || form.areaId" placeholder="货架" />
+                  <RackSelect v-model="row.rackId" :warehouse-id="form.warehouseId" :area-id="row.areaId || form.areaId" placeholder="货架" :disabled="isViewMode" />
                   <LocationSelect
                     v-model="row.locationId"
                     :warehouse-id="form.warehouseId"
                     :area-id="row.areaId || form.areaId"
                     :rack-id="row.rackId"
                     placeholder="货位"
+                    :disabled="isViewMode"
                   />
                 </div>
               </template>
@@ -238,6 +240,7 @@
                   placeholder="数量"
                   :min="1"
                   :precision="0"
+                  :disabled="isViewMode"
                   @change="handleChangeQuantity"
                 ></el-input-number>
               </template>
@@ -251,7 +254,7 @@
                   inline-prompt
                   active-text="是"
                   inactive-text="否"
-                  :disabled="(row.itemSku.item.defaultTrackingMode || row.itemSku.item.trackingMode) === 'instance'"
+                  :disabled="isViewMode || (row.itemSku.item.defaultTrackingMode || row.itemSku.item.trackingMode) === 'instance'"
                 />
               </template>
             </el-table-column>
@@ -264,7 +267,7 @@
                   inline-prompt
                   active-text="是"
                   inactive-text="否"
-                  :disabled="row.itemSku?.item?.allowBox !== 1"
+                  :disabled="isViewMode || row.itemSku?.item?.allowBox !== 1"
                 />
               </template>
             </el-table-column>
@@ -281,6 +284,7 @@
                   :precision="2"
                   :min="0"
                   :max="2147483647"
+                  :disabled="isViewMode"
                   @change="handleDetailChange(scope.row)"
                 ></el-input-number>
               </template>
@@ -292,7 +296,7 @@
             </el-table-column>
             <el-table-column label="批号" prop="batchNo" width="150">
               <template #default="scope">
-                <el-input v-model="scope.row.batchNo"></el-input>
+                <el-input v-model="scope.row.batchNo" :disabled="isViewMode"></el-input>
               </template>
             </el-table-column>
             <el-table-column label="生产日期/过期日期" width="250">
@@ -304,6 +308,7 @@
                     type="date"
                     format="YYYY-MM-DD"
                     value-format="YYYY-MM-DD HH:mm:ss"
+                    :disabled="isViewMode"
                     style="width: 150px!important;"
                   />
                 </div>
@@ -314,6 +319,7 @@
                     type="date"
                     format="YYYY-MM-DD"
                     value-format="YYYY-MM-DD HH:mm:ss"
+                    :disabled="isViewMode"
                     style="width: 150px!important;"
                   />
                 </div>
@@ -321,12 +327,12 @@
             </el-table-column>
             <el-table-column label="备注" width="180">
               <template #default="{ row }">
-                <el-input v-model="row.remark" placeholder="请输入备注" />
+                <el-input v-model="row.remark" placeholder="请输入备注" :disabled="isViewMode" />
               </template>
             </el-table-column>
             <el-table-column label="操作" width="100" align="right" fixed="right">
               <template #default="scope">
-                <el-button icon="Delete" type="danger" plain size="small" @click="handleDeleteDetail(scope.row, scope.$index)" link>删除</el-button>
+                <el-button v-if="!isViewMode" icon="Delete" type="danger" plain size="small" @click="handleDeleteDetail(scope.row, scope.$index)" link>删除</el-button>
               </template>
             </el-table-column>
           </el-table>
@@ -342,13 +348,13 @@
     </div>
     <div class="footer-global">
       <div class="btn-box">
-        <div>
+        <div v-if="!isViewMode">
           <el-button @click="doWarehousing" type="primary" class="ml10">完成入库</el-button>
           <el-button @click="updateToInvalid" type="danger" v-if="form.id">作废</el-button>
         </div>
         <div>
-          <el-button @click="save" type="primary">暂存</el-button>
-          <el-button @click="cancel" class="mr10">取消</el-button>
+          <el-button v-if="!isViewMode" @click="save" type="primary">暂存</el-button>
+          <el-button @click="cancel" class="mr10">{{ isViewMode ? '关闭' : '取消' }}</el-button>
         </div>
       </div>
     </div>
@@ -369,6 +375,8 @@ import { delReceiptOrderDetail } from '@/api/wms/receiptOrderDetail'
 import { listReceiptTargets } from '@/api/wms/storageLayout'
 
 const {proxy} = getCurrentInstance();
+const route = useRoute();
+const isViewMode = computed(() => route.query.mode === 'view');
 const { wms_receipt_type, wms_tracking_mode, wms_quality_grade, wms_dispatch_mode } = proxy.useDict(
   "wms_receipt_type",
   "wms_tracking_mode",
@@ -431,12 +439,19 @@ const data = reactive({
 const { form, rules} = toRefs(data);
 
 const cancel = async () => {
+  if (isViewMode.value) {
+    close()
+    return
+  }
   await proxy?.$modal.confirm('确认取消编辑入库单吗？');
   close()
 }
 const close = () => {
-  const obj = {path: "/receiptOrder"};
-  proxy?.$tab.closeOpenPage(obj);
+  if (route.query.returnFullPath) {
+    proxy?.$tab.closeOpenPage(route.query.returnFullPath);
+    return
+  }
+  proxy?.$tab.closePage();
 }
 const skuSelectShow = ref(false)
 
@@ -746,7 +761,6 @@ const doWarehousing = async () => {
   })
 }
 
-const route = useRoute();
 onMounted(() => {
   const id = route.query && route.query.id;
   if (id) {
@@ -856,4 +870,5 @@ const goSaasTip = () => {
   color: var(--el-text-color-secondary);
   font-size: 12px;
 }
+
 </style>

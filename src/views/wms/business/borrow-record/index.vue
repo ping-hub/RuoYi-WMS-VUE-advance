@@ -362,7 +362,7 @@
         <el-descriptions-item label="收货人">{{ detailDialog.data.toPerson || '-' }}</el-descriptions-item>
         <el-descriptions-item label="单据日期">{{ detailDialog.data.docDate ? parseTime(detailDialog.data.docDate, '{y}-{m}-{d}') : '-' }}</el-descriptions-item>
         <el-descriptions-item label="计划归还">{{ detailDialog.data.planReturnDate ? parseTime(detailDialog.data.planReturnDate, '{y}-{m}-{d}') : '-' }}</el-descriptions-item>
-        <el-descriptions-item label="质量等级">{{ proxy.selectDictLabel(wms_quality_grade, detailDialog.data.qualityGrade) || detailDialog.data.qualityGrade || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="质量等级">{{ displayQualityGrade(detailDialog.data) }}</el-descriptions-item>
         <el-descriptions-item label="超期状态">
           <el-tag v-if="detailDialog.data.overdueFlag === 1" type="danger">超期{{ detailDialog.data.overdueDays || 0 }}天</el-tag>
           <el-tag v-else type="success">正常</el-tag>
@@ -410,6 +410,11 @@ const queryRef = ref();
 const borrowFormRef = ref();
 const returnFormRef = ref();
 const instanceOptions = ref([]);
+
+const displayQualityGrade = (row = {}) => {
+  const value = row.qualityGrade ?? row.item?.defaultQualityGrade ?? row.itemSku?.defaultQualityGrade ?? row.itemSku?.item?.defaultQualityGrade
+  return proxy.selectDictLabel(wms_quality_grade, value) || value || '-'
+};
 
 const queryParams = reactive({
   pageNum: 1,

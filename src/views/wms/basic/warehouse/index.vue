@@ -17,7 +17,7 @@
 
     <el-row :gutter="16" class="mt20">
       <el-col :xl="15" :lg="14" :md="24" :sm="24" :xs="24">
-        <el-card>
+        <el-card class="warehouse-main-card">
           <el-row :gutter="10" class="mb8" type="flex" justify="space-between">
             <el-col :span="10">
               <div class="page-title">仓库管理</div>
@@ -65,7 +65,14 @@
             <el-descriptions-item label="当前仓库">{{ currentWarehouse?.warehouseName || '未选择仓库' }}</el-descriptions-item>
             <el-descriptions-item label="仓库编号">{{ currentWarehouse?.warehouseCode || '-' }}</el-descriptions-item>
           </el-descriptions>
-          <el-table v-loading="areaLoading" :data="areaPreviewList" border empty-text="当前仓库暂无库区">
+          <el-table
+            v-loading="areaLoading"
+            :data="areaPreviewList"
+            border
+            max-height="360"
+            class="area-preview-table"
+            empty-text="当前仓库暂无库区"
+          >
             <el-table-column label="库区名称" prop="areaName" min-width="120" />
             <el-table-column label="库区编号" prop="areaCode" min-width="120" />
           </el-table>
@@ -109,6 +116,7 @@ import { listWarehouse, getWarehouse, delWarehouse, addWarehouse, updateWarehous
 import { listArea } from '@/api/wms/area'
 import { useWmsStore } from '@/store/modules/wms'
 import FormLabelHelp from '@/views/components/FormLabelHelp.vue'
+import { resolveRoutePath } from '@/utils/routeResolver'
 
 const { proxy } = getCurrentInstance()
 const router = useRouter()
@@ -252,7 +260,12 @@ async function handleDelete(row) {
 }
 
 function goAreaPage() {
-  router.push('/wms/basic/area/index')
+  const areaRoute = resolveRoutePath(router, { exactTitles: ['库区管理'] })
+  if (!areaRoute) {
+    proxy.$modal.msgError('未找到库区管理路由，请确认菜单配置是否已同步')
+    return
+  }
+  router.push(areaRoute)
 }
 
 watch(currentWarehouseId, () => {
@@ -289,6 +302,20 @@ onMounted(async () => {
 
 .preview-card {
   height: 100%;
+}
+
+.area-preview-table {
+  width: 100%;
+}
+
+.warehouse-main-card :deep(.pagination-container) {
+  height: auto;
+  min-height: 56px;
+}
+
+.warehouse-main-card :deep(.pagination-container .el-pagination) {
+  position: static;
+  justify-content: flex-end;
 }
 
 .card-header {

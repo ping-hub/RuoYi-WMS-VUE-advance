@@ -112,12 +112,24 @@
                     <div>{{ row?.itemSku?.skuName }}</div>
                   </template>
                 </el-table-column>
-                <el-table-column label="器材编码" prop="equipmentCode" min-width="120" />
-                <el-table-column label="规格型号" prop="specModel" min-width="140" />
-                <el-table-column label="产品标识" prop="productMark" min-width="140" />
+                <el-table-column label="器材编码" min-width="120">
+                  <template #default="{ row }">
+                    <div>{{ row.equipmentCode || row?.itemSku?.item?.itemCode || '-' }}</div>
+                  </template>
+                </el-table-column>
+                <el-table-column label="规格型号" min-width="140">
+                  <template #default="{ row }">
+                    <div>{{ row.specModel || row?.itemSku?.specModel || row?.itemSku?.item?.modelText || '-' }}</div>
+                  </template>
+                </el-table-column>
+                <el-table-column label="产品标识" min-width="140">
+                  <template #default="{ row }">
+                    <div>{{ row.productMark || '-' }}</div>
+                  </template>
+                </el-table-column>
                 <el-table-column label="质量等级" min-width="120">
                   <template #default="{ row }">
-                    <dict-tag :options="wms_quality_grade" :value="row.qualityGrade" />
+                    <dict-tag :options="wms_quality_grade" :value="row.qualityGrade ?? row?.itemSku?.defaultQualityGrade ?? row?.itemSku?.item?.defaultQualityGrade" />
                   </template>
                 </el-table-column>
                 <el-table-column label="明细模式" width="120">
@@ -199,7 +211,7 @@
             <div>{{ useWmsStore().merchantMap.get(row.merchantId)?.merchantName }}</div>
           </template>
         </el-table-column>
-        <el-table-column label="仓库/库区" align="left" width="200">
+        <el-table-column label="仓库/库区" align="left" width="120">
           <template #default="{ row }">
             <div>仓库：{{ useWmsStore().warehouseMap.get(row.warehouseId)?.warehouseName }}</div>
             <div v-if="row.areaId">库区：{{ useWmsStore().areaMap.get(row.areaId)?.areaName }}</div>
@@ -213,12 +225,12 @@
             <div v-if="row.receiptDate">入库日期：{{ parseTime(row.receiptDate, '{y}-{m}-{d}') }}</div>
           </template>
         </el-table-column>
-        <el-table-column label="入库状态" align="center" prop="receiptOrderStatus" width="120">
+        <el-table-column label="入库状态" align="center" prop="receiptOrderStatus" width="80">
           <template #default="{ row }">
             <dict-tag :options="wms_receipt_status" :value="row.receiptOrderStatus" />
           </template>
         </el-table-column>
-        <el-table-column label="数量/金额(元)" align="left">
+        <el-table-column label="数量/金额(元)" align="left" width="120">
           <template #default="{ row }">
             <div class="flex-space-between">
               <span>数量：</span>
@@ -300,11 +312,15 @@
 <script setup name="ReceiptOrder">
 import { listReceiptOrder, delReceiptOrder } from "@/api/wms/receiptOrder";
 import {getCurrentInstance, reactive, ref, toRefs} from "vue";
+import { useRoute, useRouter } from "vue-router";
 import {useWmsStore} from "../../../../store/modules/wms";
 import {listByReceiptOrderId} from "@/api/wms/receiptOrderDetail";
 import {ElMessageBox} from "element-plus";
+import { resolveRoutePath } from "@/utils/routeResolver";
 
 const { proxy } = getCurrentInstance();
+const route = useRoute();
+const router = useRouter();
 const { wms_receipt_status, wms_receipt_type, wms_tracking_mode, wms_dispatch_mode, wms_quality_grade } = proxy.useDict(
   "wms_receipt_status",
   "wms_receipt_type",
@@ -374,8 +390,13 @@ function resetQuery() {
 }
 
 /** 新增按钮操作 */
+const resolveReceiptOrderEditPath = () => resolveRoutePath(router, {
+  preferredPaths: ["/receiptOrderEdit"],
+  titleKeywords: ["入库"]
+}) || "/receiptOrderEdit";
+
 function handleAdd() {
-  proxy.$router.push({ path: "/receiptOrderEdit" });
+  router.push({ path: resolveReceiptOrderEditPath(), query: { returnFullPath: route.fullPath } });
 }
 
 /** 删除按钮操作 */
@@ -404,7 +425,7 @@ function handleDelete(row) {
 }
 
 function handleUpdate(row) {
-  proxy.$router.push({ path: "/receiptOrderEdit",  query: { id: row.id } });
+  router.push({ path: resolveReceiptOrderEditPath(), query: { id: row.id, returnFullPath: route.fullPath } });
 }
 
 function handleGoDetail(row) {

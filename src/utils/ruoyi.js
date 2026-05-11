@@ -73,6 +73,9 @@ export function selectDictLabel(datas, value) {
   if (value === undefined) {
     return "";
   }
+  if (!datas) {
+    return value;
+  }
   var actions = [];
   Object.keys(datas).some((key) => {
     if (datas[key].value == ('' + value)) {
@@ -90,6 +93,9 @@ export function selectDictLabel(datas, value) {
 export function selectDictLabels(datas, value, separator) {
   if (value === undefined || value.length ===0) {
     return "";
+  }
+  if (!datas) {
+    return Array.isArray(value) ? value.join(separator === undefined ? "," : separator) : value;
   }
   if (Array.isArray(value)) {
     value = value.join(",");

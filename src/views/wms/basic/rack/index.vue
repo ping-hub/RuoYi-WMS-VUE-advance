@@ -70,12 +70,9 @@
         </el-table-column>
         <el-table-column label="行数" prop="rowCount" width="80" align="center" />
         <el-table-column label="列数" prop="columnCount" width="80" align="center" />
-        <el-table-column label="尺寸(cm)" min-width="180">
-          <template #default="{ row }">
-            <div>长：{{ row.length || '-' }}</div>
-            <div class="sub-text">宽：{{ row.width || '-' }} / 高：{{ row.height || '-' }}</div>
-          </template>
-        </el-table-column>
+        <el-table-column label="长(cm)" prop="length" width="90" align="center" />
+        <el-table-column label="宽(cm)" prop="width" width="90" align="center" />
+        <el-table-column label="高(cm)" prop="height" width="90" align="center" />
         <el-table-column label="排序号" prop="orderNum" width="90" align="center" />
         <el-table-column label="备注" prop="remark" min-width="180" show-overflow-tooltip />
         <el-table-column label="操作" align="right" width="160">
@@ -96,7 +93,7 @@
     </el-card>
 
     <el-drawer :title="title" v-model="open" append-to-body size="40%" :close-on-click-modal="false">
-      <div class="form-tip">带 * 为必填项</div>
+      <div class="form-tip">带 * 为必填项，货架保存成功后将自动生成或同步货位。</div>
       <el-form ref="rackRef" :model="form" :rules="rules" label-width="110px">
         <el-form-item prop="rackCode">
           <template #label>
@@ -208,6 +205,39 @@ const buttonLoading = ref(false);
 const total = ref(0);
 const title = ref('');
 const ids = ref([]);
+const originalPlan = ref();
+
+const fieldLabelMap = {
+  rowCount: '行数',
+  columnCount: '列数',
+  length: '长',
+  width: '宽',
+  height: '高'
+};
+
+function validatePositiveInteger(rule, value, callback) {
+  if (value === undefined || value === null || value === '') {
+    callback(new Error(`${fieldLabelMap[rule.field] || '该字段'}不能为空`));
+    return;
+  }
+  if (!Number.isInteger(value) || value <= 0) {
+    callback(new Error(`${fieldLabelMap[rule.field] || '该字段'}必须为正整数`));
+    return;
+  }
+  callback();
+}
+
+function validatePositiveNumber(rule, value, callback) {
+  if (value === undefined || value === null || value === '') {
+    callback();
+    return;
+  }
+  if (Number(value) <= 0) {
+    callback(new Error(`${fieldLabelMap[rule.field] || '该字段'}必须大于 0`));
+    return;
+  }
+  callback();
+}
 
 const data = reactive({
   form: {},
@@ -230,6 +260,21 @@ const data = reactive({
     ],
     areaId: [
       { required: true, message: '所属库区不能为空', trigger: 'change' }
+    ],
+    rowCount: [
+      { validator: validatePositiveInteger, trigger: 'change' }
+    ],
+    columnCount: [
+      { validator: validatePositiveInteger, trigger: 'change' }
+    ],
+    length: [
+      { validator: validatePositiveNumber, trigger: 'change' }
+    ],
+    width: [
+      { validator: validatePositiveNumber, trigger: 'change' }
+    ],
+    height: [
+      { validator: validatePositiveNumber, trigger: 'change' }
     ]
   }
 });
@@ -267,6 +312,7 @@ function reset() {
     orderNum: 0,
     remark: undefined
   };
+  originalPlan.value = undefined;
   proxy.resetForm('rackRef');
 }
 
@@ -306,30 +352,76 @@ async function handleUpdate(row) {
   const id = row.id || ids.value[0];
   const res = await getRack(id);
   form.value = { ...res.data };
+  originalPlan.value = {
+    rowCount: res.data.rowCount,
+    columnCount: res.data.columnCount,
+    rackCode: res.data.rackCode,
+    rackName: res.data.rackName,
+    length: res.data.length,
+    width: res.data.width,
+    height: res.data.height
+  };
   open.value = true;
   title.value = '修改货架';
 }
 
-function submitForm() {
-  proxy.$refs.rackRef.validate(async valid => {
-    if (!valid) {
-      return;
+function hasPlanChanged() {
+  if (!form.value.id || !originalPlan.value) {
+    return false;
+  }
+  return form.value.rowCount !== originalPlan.value.rowCount || form.value.columnCount !== originalPlan.value.columnCount;
+}
+
+function hasPlanShrink() {
+  if (!form.value.id || !originalPlan.value) {
+    return false;
+  }
+  return form.value.rowCount < originalPlan.value.rowCount || form.value.columnCount < originalPlan.value.columnCount;
+}
+
+function buildSubmitTip() {
+  if (!form.value.id) {
+    return '货架保存成功后将自动生成对应货位，确认新增该货架吗？';
+  }
+  if (hasPlanShrink()) {
+    return '当前修改包含行列缩减，可能影响现有货位；若被裁掉货位存在库存、箱体或单品占用，后端会直接阻止保存。确认继续提交吗？';
+  }
+  if (hasPlanChanged()) {
+    return '当前修改包含行列变化，新增范围会自动补建货位；请确认货架规划调整无误后再保存。';
+  }
+  return '保存后会同步货架默认信息到继承型货位，确认继续吗？';
+}
+
+async function submitForm() {
+  const valid = await proxy.$refs.rackRef.validate().catch(() => false);
+  if (!valid) {
+    return;
+  }
+  try {
+    await proxy.$modal.confirm(buildSubmitTip());
+  } catch {
+    return;
+  }
+  buttonLoading.value = true;
+  try {
+    if (form.value.id) {
+      await updateRack(form.value);
+      proxy.$modal.msgSuccess('修改成功');
+    } else {
+      await addRack(form.value);
+      proxy.$modal.msgSuccess('新增成功，货位已按规划自动生成');
     }
-    buttonLoading.value = true;
-    try {
-      if (form.value.id) {
-        await updateRack(form.value);
-        proxy.$modal.msgSuccess('修改成功');
-      } else {
-        await addRack(form.value);
-        proxy.$modal.msgSuccess('新增成功');
-      }
-      open.value = false;
-      await getList();
-    } finally {
-      buttonLoading.value = false;
+    open.value = false;
+    await getList();
+  } catch (error) {
+    if (form.value.id && hasPlanChanged() && error?.message) {
+      await ElMessageBox.alert(error.message, '货架保存失败', {
+        type: 'error'
+      }).catch(() => {});
     }
-  });
+  } finally {
+    buttonLoading.value = false;
+  }
 }
 
 function cancel() {

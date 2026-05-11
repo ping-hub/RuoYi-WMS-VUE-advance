@@ -1,8 +1,9 @@
 <template>
   <div>
-    <div class="receipt-order-edit-wrapper app-container" style="margin-bottom: 60px" v-loading="loading">
+    <div class="receipt-order-edit-wrapper app-container" :class="{ 'is-view-mode': isViewMode }" style="margin-bottom: 60px" v-loading="loading">
+      <el-alert v-if="isViewMode" class="mb10" type="info" :closable="false" title="当前为联查查看模式，已禁用编辑、作废和完成调拨操作。" />
       <el-card header="调拨单基本信息">
-        <el-form label-width="108px" :model="form" ref="movementForm" :rules="rules">
+        <el-form label-width="108px" :model="form" ref="movementForm" :rules="rules" :disabled="isViewMode">
           <el-row :gutter="24">
             <el-col :span="11">
               <el-form-item label="调拨单号" prop="movementOrderNo">
@@ -231,7 +232,7 @@
             >
               <template #reference>
                 <el-button type="primary" plain="plain" size="default" @click="showAddItem" icon="Plus"
-                           :disabled="!form.sourceWarehouseId || !form.targetWarehouseId">添加器材
+                           :disabled="!form.sourceWarehouseId || !form.targetWarehouseId || isViewMode">添加器材
                 </el-button>
               </template>
             </el-popover>
@@ -269,7 +270,7 @@
             <el-table-column label="目标位置" min-width="260">
               <template #default="{ row }">
                 <div class="target-place-edit">
-                  <el-select v-model="row.targetAreaId" placeholder="目标库区" filterable :disabled="!!form.targetAreaId" style="width: 110px">
+                  <el-select v-model="row.targetAreaId" placeholder="目标库区" filterable :disabled="isViewMode || !!form.targetAreaId" style="width: 110px">
                     <el-option
                       v-for="item in useWmsStore().areaList.filter(it => it.warehouseId === form.targetWarehouseId)"
                       :key="item.id"
@@ -277,30 +278,31 @@
                       :value="item.id"
                     />
                   </el-select>
-                  <RackSelect v-model="row.targetRackId" :warehouse-id="form.targetWarehouseId" :area-id="row.targetAreaId || form.targetAreaId" />
+                  <RackSelect v-model="row.targetRackId" :warehouse-id="form.targetWarehouseId" :area-id="row.targetAreaId || form.targetAreaId" :disabled="isViewMode" />
                   <LocationSelect
                     v-model="row.targetLocationId"
                     :warehouse-id="form.targetWarehouseId"
                     :area-id="row.targetAreaId || form.targetAreaId"
                     :rack-id="row.targetRackId"
+                    :disabled="isViewMode"
                   />
                 </div>
               </template>
             </el-table-column>
             <el-table-column label="产品标识" width="180">
               <template #default="{ row }">
-                <el-input v-model="row.productMark" :placeholder="form.movementType === 'special' ? '专装请录入产品标识' : '可选录入产品标识'" />
+                <el-input v-model="row.productMark" :placeholder="form.movementType === 'special' ? '专装请录入产品标识' : '可选录入产品标识'" :disabled="isViewMode" />
               </template>
             </el-table-column>
             <el-table-column v-if="form.movementType === 'special'" label="物品码/箱码" min-width="240">
               <template #default="{ row }">
-                <el-input v-model="row.instanceCode" placeholder="请输入物品码" @blur="handleSpecialCodeBlur(row, 'item')" />
-                <el-input class="mt5" v-model="row.boxCode" placeholder="请输入箱码" @blur="handleSpecialCodeBlur(row, 'box')" />
+                <el-input v-model="row.instanceCode" placeholder="请输入物品码" :disabled="isViewMode" @blur="handleSpecialCodeBlur(row, 'item')" />
+                <el-input class="mt5" v-model="row.boxCode" placeholder="请输入箱码" :disabled="isViewMode" @blur="handleSpecialCodeBlur(row, 'box')" />
               </template>
             </el-table-column>
             <el-table-column label="质量等级" width="160">
               <template #default="{ row }">
-                <el-select v-model="row.qualityGrade" placeholder="请选择质量等级" clearable style="width: 100%">
+                <el-select v-model="row.qualityGrade" placeholder="请选择质量等级" clearable style="width: 100%" :disabled="isViewMode">
                   <el-option v-for="item in wms_quality_grade" :key="item.value" :label="item.label" :value="item.value" />
                 </el-select>
               </template>
@@ -323,7 +325,7 @@
             </el-table-column>
             <el-table-column label="单价" prop="unitPrice" width="160">
               <template #default="{ row }">
-                <el-input-number v-model="row.unitPrice" :precision="2" :min="0" :controls="false" @change="handleDetailChange(row)" />
+                <el-input-number v-model="row.unitPrice" :precision="2" :min="0" :controls="false" :disabled="isViewMode" @change="handleDetailChange(row)" />
               </template>
             </el-table-column>
             <el-table-column label="总价" prop="lineAmount" width="160">
@@ -339,18 +341,19 @@
                   :min="1"
                   :precision="0"
                   :max="scope.row.remainQuantity"
+                  :disabled="isViewMode"
                   @change="handleChangeQuantity"
                 ></el-input-number>
               </template>
             </el-table-column>
             <el-table-column label="备注" width="180">
               <template #default="{ row }">
-                <el-input v-model="row.remark" placeholder="请输入备注" />
+                <el-input v-model="row.remark" placeholder="请输入备注" :disabled="isViewMode" />
               </template>
             </el-table-column>
             <el-table-column label="操作" width="100" align="right" fixed="right">
               <template #default="scope">
-                <el-button icon="Delete" type="danger" plain size="small"
+                <el-button v-if="!isViewMode" icon="Delete" type="danger" plain size="small"
                            @click="handleDeleteDetail(scope.row, scope.$index)" link>删除
                 </el-button>
               </template>
@@ -373,13 +376,13 @@
     </div>
     <div class="footer-global">
       <div class="btn-box">
-        <div>
+        <div v-if="!isViewMode">
           <el-button @click="doMovement" type="primary" class="ml10">完成调拨</el-button>
           <el-button @click="updateToInvalid" type="danger" v-if="form.id">作废</el-button>
         </div>
         <div>
-          <el-button @click="save" type="primary">暂存</el-button>
-          <el-button @click="cancel" class="mr10">取消</el-button>
+          <el-button v-if="!isViewMode" @click="save" type="primary">暂存</el-button>
+          <el-button @click="cancel" class="mr10">{{ isViewMode ? '关闭' : '取消' }}</el-button>
         </div>
       </div>
     </div>
@@ -402,6 +405,8 @@ import LocationSelect from "@/views/components/LocationSelect.vue";
 import FormLabelHelp from '@/views/components/FormLabelHelp.vue'
 
 const {proxy} = getCurrentInstance();
+const route = useRoute();
+const isViewMode = computed(() => route.query.mode === 'view');
 const {wms_movement_type, wms_dispatch_mode, wms_basis_type, wms_quality_grade} = proxy.useDict(
   "wms_movement_type",
   "wms_dispatch_mode",
@@ -462,12 +467,19 @@ const data = reactive({
 });
 const {form, rules} = toRefs(data);
 const cancel = async () => {
+  if (isViewMode.value) {
+    close()
+    return
+  }
   await proxy?.$modal.confirm('确认取消编辑调拨单吗？');
   close()
 }
 const close = () => {
-  const obj = {path: "/movementOrder"};
-  proxy?.$tab.closeOpenPage(obj);
+  if (route.query.returnFullPath) {
+    proxy?.$tab.closeOpenPage(route.query.returnFullPath);
+    return
+  }
+  proxy?.$tab.closePage();
 }
 const inventorySelectShow = ref(false)
 
@@ -824,7 +836,6 @@ const doMovement = async () => {
   })
 }
 
-const route = useRoute();
 onMounted(() => {
   const id = route.query && route.query.id;
   if (id) {
@@ -971,6 +982,7 @@ const goSaasTip = () => {
 .form-tip {
   margin: 0 0 12px;
 }
+
 </style>
 
 

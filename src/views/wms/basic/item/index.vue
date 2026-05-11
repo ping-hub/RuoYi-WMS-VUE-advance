@@ -114,7 +114,7 @@
             <el-table-column label="器材类型" prop="equipmentType" min-width="140" show-overflow-tooltip />
             <el-table-column label="器材分类" min-width="140">
               <template #default="{ row }">
-                {{ getCategoryName(row.itemCategory) }}
+                {{ getCategoryName(resolveCategoryId(row)) }}
               </template>
             </el-table-column>
             <el-table-column label="器材品牌" min-width="120">
@@ -602,6 +602,14 @@ const categoryTreeWithRoot = computed(() => {
   ];
 });
 
+const resolveCategoryId = (source = {}) => {
+  const categoryId = source.itemCategory ?? source.categoryId ?? source.itemCategoryId ?? source.category?.id;
+  if (categoryId === undefined || categoryId === null || categoryId === '') {
+    return undefined;
+  }
+  return Number(categoryId);
+};
+
 const getCategoryName = (categoryId) => {
   if (!categoryId) {
     return '';
@@ -655,6 +663,7 @@ const normalizeSkuList = () => skuForm.itemSkuList.map(item => ({
 
 const normalizeItemPayload = () => ({
   ...form.value,
+  itemCategory: resolveCategoryId(form.value),
   trackingMode: form.value.defaultTrackingMode,
   sku: normalizeSkuList()
 });
@@ -756,6 +765,7 @@ const handleUpdate = async (row) => {
   form.value = {
     ...initFormData(),
     ...res.data,
+    itemCategory: resolveCategoryId(res.data),
     defaultTrackingMode: res.data.defaultTrackingMode || res.data.trackingMode || 'batch',
     equipmentType: res.data.equipmentType || res.data.itemType,
     status: res.data.status || '1'
@@ -964,5 +974,4 @@ onMounted(async () => {
   flex-shrink: 0;
 }
 </style>
-
 

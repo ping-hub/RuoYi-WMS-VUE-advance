@@ -37,9 +37,9 @@
             </el-descriptions-item>
             <el-descriptions-item label="器材">{{ itemTrace.itemInstance.itemName || '-' }}</el-descriptions-item>
             <el-descriptions-item label="器材规格">{{ itemTrace.itemInstance.skuName || '-' }}</el-descriptions-item>
-            <el-descriptions-item label="产品标识">{{ itemTrace.itemInstance.productMark || '-' }}</el-descriptions-item>
-            <el-descriptions-item label="质量等级">{{ itemTrace.itemInstance.qualityGrade || '-' }}</el-descriptions-item>
-            <el-descriptions-item label="所在单位">{{ itemTrace.itemInstance.belongUnit || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="产品标识">{{ displayProductMark(itemTrace.itemInstance) }}</el-descriptions-item>
+            <el-descriptions-item label="质量等级">{{ displayQualityGrade(itemTrace.itemInstance) }}</el-descriptions-item>
+            <el-descriptions-item label="所在单位">{{ displayBelongUnit(itemTrace.itemInstance) }}</el-descriptions-item>
             <el-descriptions-item label="来源单号">{{ itemTrace.itemInstance.sourceOrderNo || '-' }}</el-descriptions-item>
             <el-descriptions-item label="当前位置" :span="2">{{ getItemLocation(itemTrace.itemInstance) }}</el-descriptions-item>
             <el-descriptions-item label="在箱状态">{{ itemTrace.itemInstance.inBox === 1 ? '在箱' : '不在箱' }}</el-descriptions-item>
@@ -86,8 +86,8 @@
           <el-descriptions-item label="借用时间">{{ itemTrace.currentBorrowRecord.borrowTime ? parseTime(itemTrace.currentBorrowRecord.borrowTime, '{y}-{m}-{d} {h}:{i}:{s}') : '-' }}</el-descriptions-item>
           <el-descriptions-item label="发货单位">{{ itemTrace.currentBorrowRecord.fromUnit || '-' }}</el-descriptions-item>
           <el-descriptions-item label="收货单位">{{ itemTrace.currentBorrowRecord.toUnit || '-' }}</el-descriptions-item>
-          <el-descriptions-item label="产品标识">{{ itemTrace.currentBorrowRecord.productMark || '-' }}</el-descriptions-item>
-          <el-descriptions-item label="质量等级">{{ itemTrace.currentBorrowRecord.qualityGrade || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="产品标识">{{ displayProductMark(itemTrace.currentBorrowRecord) }}</el-descriptions-item>
+          <el-descriptions-item label="质量等级">{{ displayQualityGrade(itemTrace.currentBorrowRecord) }}</el-descriptions-item>
           <el-descriptions-item label="原位置" :span="2">{{ getBorrowLocation(itemTrace.currentBorrowRecord) }}</el-descriptions-item>
           <el-descriptions-item label="借用备注" :span="2">{{ itemTrace.currentBorrowRecord.borrowRemark || '-' }}</el-descriptions-item>
         </el-descriptions>
@@ -110,7 +110,7 @@
           <el-table-column label="单位/标识" min-width="220">
             <template #default="{ row }">
               <div>{{ row.fromUnit || '-' }} -> {{ row.toUnit || '-' }}</div>
-              <div class="sub-text">产品标识：{{ row.productMark || '-' }}</div>
+              <div class="sub-text">产品标识：{{ displayProductMark(row) }}</div>
             </template>
           </el-table-column>
           <el-table-column label="借用时间" min-width="180">
@@ -157,18 +157,22 @@
           </el-table-column>
           <el-table-column label="产品标识/质量等级" min-width="180">
             <template #default="{ row }">
-              <div>{{ row.productMark || '-' }}</div>
-              <div class="sub-text">{{ row.qualityGrade || '-' }}</div>
+              <div>{{ displayProductMark(row) }}</div>
+              <div class="sub-text">{{ displayQualityGrade(row) }}</div>
             </template>
           </el-table-column>
           <el-table-column label="物品码" prop="instanceCode" min-width="160" />
           <el-table-column label="箱码" prop="boxCode" min-width="140" />
           <el-table-column label="数量" prop="quantity" width="80" align="right" />
-          <el-table-column label="批号" prop="batchNo" min-width="120" />
+          <el-table-column label="批号" min-width="120">
+            <template #default="{ row }">
+              {{ displayBatchNo(row) }}
+            </template>
+          </el-table-column>
           <el-table-column label="生产/过期" min-width="220">
             <template #default="{ row }">
-              <div v-if="row.productionDate">生产：{{ parseTime(row.productionDate, '{y}-{m}-{d}') }}</div>
-              <div v-if="row.expirationDate">过期：{{ parseTime(row.expirationDate, '{y}-{m}-{d}') }}</div>
+              <div v-if="resolveDateValue(row, 'productionDate')">生产：{{ parseTime(resolveDateValue(row, 'productionDate'), '{y}-{m}-{d}') }}</div>
+              <div v-if="resolveDateValue(row, 'expirationDate')">过期：{{ parseTime(resolveDateValue(row, 'expirationDate'), '{y}-{m}-{d}') }}</div>
             </template>
           </el-table-column>
           <el-table-column label="操作" width="150" align="right">
@@ -190,8 +194,8 @@
           <el-table-column label="调拨单ID" prop="movementOrderId" width="120" />
           <el-table-column label="产品标识/质量等级" min-width="180">
             <template #default="{ row }">
-              <div>{{ row.productMark || '-' }}</div>
-              <div class="sub-text">{{ row.qualityGrade || '-' }}</div>
+              <div>{{ displayProductMark(row) }}</div>
+              <div class="sub-text">{{ displayQualityGrade(row) }}</div>
             </template>
           </el-table-column>
           <el-table-column label="源位置/目标位置" min-width="260">
@@ -303,8 +307,8 @@
           </el-table-column>
           <el-table-column label="产品标识/所在单位" min-width="220">
             <template #default="{ row }">
-              <div>{{ row.productMark || '-' }}</div>
-              <div class="sub-text">{{ row.belongUnit || '-' }}</div>
+              <div>{{ displayProductMark(row) }}</div>
+              <div class="sub-text">{{ displayBelongUnit(row) }}</div>
             </template>
           </el-table-column>
           <el-table-column label="状态" width="100">
@@ -335,13 +339,17 @@
           </el-table-column>
           <el-table-column label="产品标识/质量等级" min-width="180">
             <template #default="{ row }">
-              <div>{{ row.productMark || '-' }}</div>
-              <div class="sub-text">{{ row.qualityGrade || '-' }}</div>
+              <div>{{ displayProductMark(row) }}</div>
+              <div class="sub-text">{{ displayQualityGrade(row) }}</div>
             </template>
           </el-table-column>
           <el-table-column label="箱码" prop="boxCode" min-width="140" />
           <el-table-column label="数量" prop="quantity" width="80" align="right" />
-          <el-table-column label="批号" prop="batchNo" min-width="120" />
+          <el-table-column label="批号" min-width="120">
+            <template #default="{ row }">
+              {{ displayBatchNo(row) }}
+            </template>
+          </el-table-column>
           <el-table-column label="操作" width="120" align="right">
             <template #default="{ row }">
               <el-button link type="primary" @click="goShipmentOrder(row.shipmentOrderId)">查看单据</el-button>
@@ -362,8 +370,8 @@
           <el-table-column label="数量" prop="quantity" width="80" align="right" />
           <el-table-column label="产品标识/质量等级" min-width="180">
             <template #default="{ row }">
-              <div>{{ row.productMark || '-' }}</div>
-              <div class="sub-text">{{ row.qualityGrade || '-' }}</div>
+              <div>{{ displayProductMark(row) }}</div>
+              <div class="sub-text">{{ displayQualityGrade(row) }}</div>
             </template>
           </el-table-column>
           <el-table-column label="源位置/目标位置" min-width="260">
@@ -418,6 +426,7 @@
 import { getCurrentInstance, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { getBoxTrace, getItemTrace } from '@/api/wms/trace';
+import { resolveRoutePath } from '@/utils/routeResolver';
 import { useWmsStore } from '@/store/modules/wms';
 
 const props = defineProps({
@@ -431,10 +440,11 @@ const route = useRoute();
 const router = useRouter();
 const { proxy } = getCurrentInstance();
 const wmsStore = useWmsStore();
-const { wms_item_instance_status, wms_box_status, wms_borrow_status } = proxy.useDict(
+const { wms_item_instance_status, wms_box_status, wms_borrow_status, wms_quality_grade } = proxy.useDict(
   'wms_item_instance_status',
   'wms_box_status',
-  'wms_borrow_status'
+  'wms_borrow_status',
+  'wms_quality_grade'
 );
 
 const isItemMode = props.mode === 'item';
@@ -542,6 +552,15 @@ const formatInventoryLocation = (row) => {
   return parts.length ? parts.join(' / ') : '-';
 };
 
+const displayQualityGrade = (row = {}) => {
+  const value = row.qualityGrade ?? row.defaultQualityGrade ?? row.item?.defaultQualityGrade ?? row.itemSku?.defaultQualityGrade ?? row.itemSku?.item?.defaultQualityGrade;
+  return proxy.selectDictLabel(wms_quality_grade.value, value) || value || '-';
+};
+const displayProductMark = (row = {}) => row.productMark ?? row.inventoryDetail?.productMark ?? row.itemInstance?.productMark ?? '-';
+const displayBelongUnit = (row = {}) => row.belongUnit ?? row.item?.defaultBelongUnit ?? row.itemSku?.item?.defaultBelongUnit ?? '-';
+const displayBatchNo = (row = {}) => row.batchNo ?? row.inventoryDetail?.batchNo ?? row.itemInstance?.batchNo ?? '-';
+const resolveDateValue = (row = {}, field) => row[field] ?? row.inventoryDetail?.[field] ?? row.itemInstance?.[field];
+
 const handleQuery = async () => {
   if (!code.value) {
     proxy.$modal.msgError(isItemMode ? '请输入物品码' : '请输入箱码');
@@ -616,14 +635,16 @@ const goShipmentOrder = (id) => {
   if (!id) {
     return;
   }
-  router.push({ path: '/shipmentOrderEdit', query: { id } });
+  const path = resolveRoutePath(router, { preferredPaths: ['/shipmentOrderEdit'], titleKeywords: ['出库'] }) || '/shipmentOrderEdit';
+  router.push({ path, query: { id, mode: 'view', returnFullPath: route.fullPath } });
 };
 
 const goMovementOrder = (id) => {
   if (!id) {
     return;
   }
-  router.push({ path: '/movementOrderEdit', query: { id } });
+  const path = resolveRoutePath(router, { preferredPaths: ['/movementOrderEdit'], titleKeywords: ['调拨'] }) || '/movementOrderEdit';
+  router.push({ path, query: { id, mode: 'view', returnFullPath: route.fullPath } });
 };
 
 watch(

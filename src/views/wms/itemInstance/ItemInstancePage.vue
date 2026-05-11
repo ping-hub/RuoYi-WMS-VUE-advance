@@ -114,8 +114,8 @@
         </el-table-column>
         <el-table-column label="质量/单位" min-width="180">
           <template #default="{ row }">
-            <div>{{ row.qualityGrade || '-' }}</div>
-            <div class="sub-text">{{ row.belongUnit || '-' }}</div>
+            <div>{{ displayQualityGrade(row) }}</div>
+            <div class="sub-text">{{ displayBelongUnit(row) }}</div>
           </template>
         </el-table-column>
         <el-table-column label="位置" min-width="220">
@@ -358,8 +358,8 @@
         <el-descriptions-item label="来源类型">{{ formatSourceType(detailDialog.data.sourceType) }}</el-descriptions-item>
         <el-descriptions-item label="来源单号">{{ detailDialog.data.sourceOrderNo || '-' }}</el-descriptions-item>
         <el-descriptions-item label="产品标识">{{ detailDialog.data.productMark || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="质量等级">{{ detailDialog.data.qualityGrade || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="所在单位">{{ detailDialog.data.belongUnit || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="质量等级">{{ displayQualityGrade(detailDialog.data) }}</el-descriptions-item>
+        <el-descriptions-item label="所在单位">{{ displayBelongUnit(detailDialog.data) }}</el-descriptions-item>
         <el-descriptions-item label="来源明细ID">{{ detailDialog.data.receiptOrderDetailId || '-' }}</el-descriptions-item>
         <el-descriptions-item label="批号">{{ detailDialog.data.batchNo || '-' }}</el-descriptions-item>
         <el-descriptions-item label="生产日期">{{ detailDialog.data.productionDate ? parseTime(detailDialog.data.productionDate, '{y}-{m}-{d}') : '-' }}</el-descriptions-item>
@@ -461,7 +461,7 @@ import LocationSelect from '@/views/components/LocationSelect.vue';
 const router = useRouter();
 const { proxy } = getCurrentInstance();
 const route = useRoute();
-const { wms_item_instance_status } = proxy.useDict('wms_item_instance_status');
+const { wms_item_instance_status, wms_quality_grade } = proxy.useDict('wms_item_instance_status', 'wms_quality_grade');
 const wmsStore = useWmsStore();
 
 const yesNoOptions = [
@@ -594,6 +594,12 @@ const formatSourceType = (value) => {
   }
   return value || '-';
 };
+
+const displayQualityGrade = (row = {}) => {
+  const value = row.qualityGrade ?? row.defaultQualityGrade ?? row.item?.defaultQualityGrade ?? row.itemSku?.defaultQualityGrade ?? row.itemSku?.item?.defaultQualityGrade;
+  return proxy.selectDictLabel(wms_quality_grade.value, value) || value || '-';
+};
+const displayBelongUnit = (row = {}) => row.belongUnit ?? row.item?.defaultBelongUnit ?? row.itemSku?.item?.defaultBelongUnit ?? '-';
 
 const loadItemOptions = async () => {
   const res = await listItem({});
@@ -912,5 +918,3 @@ onMounted(async () => {
   vertical-align: top;
 }
 </style>
-
-

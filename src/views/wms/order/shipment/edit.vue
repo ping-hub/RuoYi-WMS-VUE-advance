@@ -1,8 +1,9 @@
 ﻿<template>
   <div>
-    <div class="receipt-order-edit-wrapper app-container" style="margin-bottom: 60px" v-loading="loading">
+    <div class="receipt-order-edit-wrapper app-container" :class="{ 'is-view-mode': isViewMode }" style="margin-bottom: 60px" v-loading="loading">
+      <el-alert v-if="isViewMode" class="mb10" type="info" :closable="false" title="当前为联查查看模式，已禁用编辑、作废和完成出库操作。" />
       <el-card header="出库单基本信息">
-        <el-form label-width="108px" :model="form" ref="shipmentForm" :rules="rules">
+        <el-form label-width="108px" :model="form" ref="shipmentForm" :rules="rules" :disabled="isViewMode">
           <el-row :gutter="24">
             <el-col :span="11">
               <el-form-item label="出库单号" prop="shipmentOrderNo">
@@ -126,7 +127,7 @@
                 <el-form-item label="金额" prop="receivableAmount">
                   <el-input-number v-model="form.receivableAmount" :precision="2" :min="0"></el-input-number>
                 </el-form-item>
-                <el-button link type="primary" @click="handleAutoCalc" class="ml20" style="line-height: 32px">自动计算
+                <el-button v-if="!isViewMode" link type="primary" @click="handleAutoCalc" class="ml20" style="line-height: 32px">自动计算
                 </el-button>
               </div>
             </el-col>
@@ -146,13 +147,13 @@
               <el-tag type="info">支持库存出库 / 器材编码出库 / 整箱出库</el-tag>
             </div>
             <div class="add-actions">
-              <el-button type="primary" plain size="default" @click="showAddInventory" icon="Plus" :disabled="!form.warehouseId">
+              <el-button type="primary" plain size="default" @click="showAddInventory" icon="Plus" :disabled="!form.warehouseId || isViewMode">
                 按库存添加
               </el-button>
-              <el-button type="primary" plain size="default" @click="showAddItemInstance" icon="Tickets" :disabled="!form.warehouseId">
+              <el-button type="primary" plain size="default" @click="showAddItemInstance" icon="Tickets" :disabled="!form.warehouseId || isViewMode">
                 按器材编码添加
               </el-button>
-              <el-button type="primary" plain size="default" @click="showAddBox" icon="Box" :disabled="!form.warehouseId">
+              <el-button type="primary" plain size="default" @click="showAddBox" icon="Box" :disabled="!form.warehouseId || isViewMode">
                 按整箱添加
               </el-button>
             </div>
@@ -195,14 +196,12 @@
             </el-table-column>
             <el-table-column label="产品标识" width="180">
               <template #default="{ row }">
-                <el-input v-model="row.productMark" placeholder="请输入产品标识" :disabled="row.detailSourceType !== 'inventory'" />
+                <span>{{ row.productMark || '-' }}</span>
               </template>
             </el-table-column>
             <el-table-column label="质量等级" width="160">
               <template #default="{ row }">
-                <el-select v-model="row.qualityGrade" placeholder="请选择质量等级" clearable style="width: 100%" :disabled="row.detailSourceType !== 'inventory'">
-                  <el-option v-for="item in wms_quality_grade" :key="item.value" :label="item.label" :value="item.value" />
-                </el-select>
+                <dict-tag :options="wms_quality_grade" :value="row.qualityGrade ?? row?.inventoryDetail?.qualityGrade ?? row?.itemSku?.defaultQualityGrade ?? row?.itemSku?.item?.defaultQualityGrade" />
               </template>
             </el-table-column>
             <el-table-column label="库区" prop="areaName" width="200"/>
@@ -233,7 +232,6 @@
                     :max="scope.row.remainQuantity"
                     :disabled="true"
                   ></el-input-number>
-                  <div class="table-tip">追踪出库固定为 1</div>
                 </div>
                 <el-input-number
                   v-else
@@ -242,6 +240,7 @@
                   :min="1"
                   :precision="0"
                   :max="scope.row.remainQuantity"
+                  :disabled="isViewMode"
                   @change="handleChangeQuantity"
                 ></el-input-number>
               </template>
@@ -254,6 +253,7 @@
                   :precision="2"
                   :min="0"
                   :max="2147483647"
+                  :disabled="isViewMode"
                   @change="handleDetailChange(scope.row)"
                 ></el-input-number>
               </template>
@@ -265,12 +265,12 @@
             </el-table-column>
             <el-table-column label="备注" width="180">
               <template #default="{ row }">
-                <el-input v-model="row.remark" placeholder="请输入备注" />
+                <el-input v-model="row.remark" placeholder="请输入备注" :disabled="isViewMode" />
               </template>
             </el-table-column>
             <el-table-column label="操作" width="100" align="right" fixed="right">
               <template #default="scope">
-                <el-button icon="Delete" type="danger" plain size="small"
+                <el-button v-if="!isViewMode" icon="Delete" type="danger" plain size="small"
                            @click="handleDeleteDetail(scope.row, scope.$index)" link>删除
                 </el-button>
               </template>
@@ -371,13 +371,13 @@
     </div>
     <div class="footer-global">
       <div class="btn-box">
-        <div>
+        <div v-if="!isViewMode">
           <el-button @click="doShipment" type="primary" class="ml10">完成出库</el-button>
           <el-button @click="updateToInvalid" type="danger" v-if="form.id">作废</el-button>
         </div>
         <div>
-          <el-button @click="save" type="primary">暂存</el-button>
-          <el-button @click="cancel" class="mr10">取消</el-button>
+          <el-button v-if="!isViewMode" @click="save" type="primary">暂存</el-button>
+          <el-button @click="cancel" class="mr10">{{ isViewMode ? '关闭' : '取消' }}</el-button>
         </div>
       </div>
     </div>
@@ -398,6 +398,8 @@ import {listItemInstance} from "@/api/wms/itemInstance";
 import {getBox, listBox} from "@/api/wms/box";
 
 const {proxy} = getCurrentInstance();
+const route = useRoute();
+const isViewMode = computed(() => route.query.mode === 'view');
 const {wms_shipment_type, wms_item_instance_status, wms_box_status, wms_quality_grade, wms_dispatch_mode} = proxy.useDict(
   "wms_shipment_type",
   "wms_item_instance_status",
@@ -481,12 +483,19 @@ const data = reactive({
 });
 const {form, rules} = toRefs(data);
 const cancel = async () => {
+  if (isViewMode.value) {
+    close()
+    return
+  }
   await proxy?.$modal.confirm('确认取消编辑出库单吗？');
   close()
 }
 const close = () => {
-  const obj = {path: "/shipmentOrder"};
-  proxy?.$tab.closeOpenPage(obj);
+  if (route.query.returnFullPath) {
+    proxy?.$tab.closeOpenPage(route.query.returnFullPath);
+    return
+  }
+  proxy?.$tab.closePage();
 }
 const inventorySelectShow = ref(false)
 
@@ -499,12 +508,14 @@ const calcLineAmount = (quantity, unitPrice) => {
 const syncShipmentDetail = (detail) => {
   const unitPrice = detail.unitPrice ?? detail.itemSku?.defaultUnitPrice
   const lineAmount = detail.lineAmount ?? detail.amount ?? calcLineAmount(detail.quantity, unitPrice)
+  const detailSourceType = detail.detailSourceType ?? (detail.itemInstanceId ? (detail.boxId ? 'box' : 'itemInstance') : 'inventory')
   return {
     ...detail,
     equipmentCode: detail.equipmentCode ?? detail.itemSku?.item?.itemCode ?? detail.itemCode,
     specModel: detail.specModel ?? detail.itemSku?.specModel,
-    productMark: detail.productMark,
-    qualityGrade: detail.qualityGrade ?? detail.itemSku?.item?.defaultQualityGrade,
+    productMark: detail.productMark ?? detail.inventoryDetail?.productMark,
+    qualityGrade: detail.qualityGrade ?? detail.inventoryDetail?.qualityGrade ?? detail.itemSku?.item?.defaultQualityGrade,
+    detailSourceType,
     unitPrice,
     lineAmount,
     amount: lineAmount
@@ -818,7 +829,6 @@ const doShipment = async () => {
   })
 }
 
-const route = useRoute();
 onMounted(() => {
   const id = route.query && route.query.id;
   if (id) {
@@ -1084,8 +1094,8 @@ const handleConfirmBox = async () => {
         detailSourceType: 'box',
         equipmentCode: matchedInventory.equipmentCode ?? item.itemCode,
         specModel: matchedInventory.specModel ?? item.specModel,
-        productMark: item.productMark,
-        qualityGrade: item.qualityGrade,
+        productMark: item.productMark ?? matchedInventory.productMark,
+        qualityGrade: item.qualityGrade ?? matchedInventory.qualityGrade,
         unitPrice: matchedInventory.unitPrice ?? item.defaultUnitPrice
       }))
     }

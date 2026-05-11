@@ -94,13 +94,21 @@
             <div class="sub-text">规格型号：{{ row.specModel || row.itemSku?.specModel || '-' }}</div>
           </template>
         </el-table-column>
-        <el-table-column label="产品标识" prop="productMark" min-width="150" show-overflow-tooltip />
-        <el-table-column label="质量等级" min-width="120">
+        <el-table-column label="产品标识" min-width="150" show-overflow-tooltip>
           <template #default="{ row }">
-            <span>{{ displayQualityGrade(row.qualityGrade) }}</span>
+            <span>{{ displayProductMark(row) }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="所在单位" prop="belongUnit" min-width="140" show-overflow-tooltip />
+        <el-table-column label="质量等级" min-width="120">
+          <template #default="{ row }">
+            <span>{{ displayQualityGrade(row) }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="所在单位" min-width="140" show-overflow-tooltip>
+          <template #default="{ row }">
+            <span>{{ displayBelongUnit(row) }}</span>
+          </template>
+        </el-table-column>
         <el-table-column label="操作类型" align="center" width="100">
           <template #default="{ row }">
             <dict-tag :options="wms_inventory_history_type" :value="row.orderType" />
@@ -128,12 +136,16 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="批号" prop="batchNo" min-width="120" />
+        <el-table-column label="批号" min-width="120">
+          <template #default="{ row }">
+            <span>{{ displayBatchNo(row) }}</span>
+          </template>
+        </el-table-column>
         <el-table-column label="生产日期/过期日期" min-width="200">
           <template #default="{ row }">
-            <div v-if="row.productionDate">生产日期：{{ parseTime(row.productionDate, '{y}-{m}-{d}') }}</div>
-            <div v-if="row.expirationDate">过期日期：{{ parseTime(row.expirationDate, '{y}-{m}-{d}') }}</div>
-            <div v-if="!row.productionDate && !row.expirationDate">-</div>
+            <div v-if="resolveDateValue(row, 'productionDate')">生产日期：{{ parseTime(resolveDateValue(row, 'productionDate'), '{y}-{m}-{d}') }}</div>
+            <div v-if="resolveDateValue(row, 'expirationDate')">过期日期：{{ parseTime(resolveDateValue(row, 'expirationDate'), '{y}-{m}-{d}') }}</div>
+            <div v-if="!resolveDateValue(row, 'productionDate') && !resolveDateValue(row, 'expirationDate')">-</div>
           </template>
         </el-table-column>
         <el-table-column label="备注" prop="remark" min-width="140" show-overflow-tooltip />
@@ -166,6 +178,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { listInventoryHistory } from '@/api/wms/inventoryHistory'
 import { useWmsStore } from '@/store/modules/wms'
 import { parseTime } from '@/utils/ruoyi'
+import { resolveRoutePath } from '@/utils/routeResolver'
 import WarehouseCascader from '@/views/components/WarehouseCascader.vue'
 
 const defaultTime = reactive([new Date(0, 0, 0, 0, 0, 0), new Date(0, 0, 0, 23, 59, 59)])
@@ -268,21 +281,34 @@ const handleExport = () => {
 }
 
 const handleGoOrder = (row) => {
-  const orderPathMap = {
+  const orderRouteResolverMap = {
+    1: { preferredPaths: ['/receiptOrderEdit'], titleKeywords: ['入库'] },
+    2: { preferredPaths: ['/shipmentOrderEdit'], titleKeywords: ['出库'] },
+    3: { preferredPaths: ['/movementOrderEdit'], titleKeywords: ['调拨'] },
+    4: { preferredPaths: ['/checkOrderEdit'], titleKeywords: ['盘点'] }
+  }
+  const fallbackPathMap = {
     1: '/receiptOrderEdit',
     2: '/shipmentOrderEdit',
     3: '/movementOrderEdit',
     4: '/checkOrderEdit'
   }
-  const path = orderPathMap[row.orderType]
+  const path = resolveRoutePath(router, orderRouteResolverMap[row.orderType] || {}) || fallbackPathMap[row.orderType]
   if (!path || !row.orderId) {
     proxy.$modal.msgWarning('当前记录缺少可跳转的单据信息')
     return
   }
-  router.push({ path, query: { id: row.orderId } })
+  router.push({ path, query: { id: row.orderId, mode: 'view', returnFullPath: route.fullPath } })
 }
 
-const displayQualityGrade = (value) => proxy.selectDictLabel(wms_quality_grade.value, value) || value || '-'
+const displayQualityGrade = (row = {}) => {
+  const value = row.qualityGrade ?? row.item?.defaultQualityGrade ?? row.itemSku?.defaultQualityGrade ?? row.itemSku?.item?.defaultQualityGrade
+  return proxy.selectDictLabel(wms_quality_grade.value, value) || value || '-'
+}
+const displayProductMark = (row = {}) => row.productMark ?? row.inventoryDetail?.productMark ?? row.itemInstance?.productMark ?? '-'
+const displayBelongUnit = (row = {}) => row.belongUnit ?? row.item?.defaultBelongUnit ?? row.itemSku?.item?.defaultBelongUnit ?? '-'
+const displayBatchNo = (row = {}) => row.batchNo ?? row.inventoryDetail?.batchNo ?? row.itemInstance?.batchNo ?? '-'
+const resolveDateValue = (row = {}, field) => row[field] ?? row.inventoryDetail?.[field] ?? row.itemInstance?.[field]
 const formatMoney = (value) => (value || value === 0) ? Number(value).toFixed(2) : '-'
 
 const initFromRoute = () => {
@@ -318,4 +344,3 @@ getList()
   font-size: 12px;
 }
 </style>
-

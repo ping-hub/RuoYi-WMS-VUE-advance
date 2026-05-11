@@ -1,5 +1,5 @@
 <template>
-  <div v-if="!checking" style="display: flex;justify-content: center;align-items: center;height: 80vh">
+  <div v-if="!checking && !isViewMode" style="display: flex;justify-content: center;align-items: center;height: 80vh">
     <el-card header="选择盘点范围开始盘点" >
       <el-form>
         <el-form-item label="仓库" prop="warehouseId">
@@ -25,9 +25,10 @@
     </el-card>
   </div>
   <div v-else v-loading="loading">
-    <div class="receipt-order-edit-wrapper app-container" style="margin-bottom: 60px">
+    <div class="receipt-order-edit-wrapper app-container" :class="{ 'is-view-mode': isViewMode }" style="margin-bottom: 60px">
+      <el-alert v-if="isViewMode" class="mb10" type="info" :closable="false" title="当前为联查查看模式，已禁用编辑、作废和完成盘点操作。" />
       <el-card header="盘点单基本信息">
-        <el-form label-width="108px" :model="form" ref="checkForm" :rules="rules">
+        <el-form label-width="108px" :model="form" ref="checkForm" :rules="rules" :disabled="isViewMode">
           <el-row :gutter="24">
             <el-col :span="11">
               <el-form-item label="盘点单号" prop="checkOrderNo">
@@ -113,7 +114,7 @@
               <el-tag type="info">支持按仓库、库区、货架发起盘点，盘点后可继续联查器材与追踪信息</el-tag>
             </div>
                   <el-button type="primary" plain="plain" size="default" @click="showSkuSelect" icon="Plus"
-                             :disabled="!form.warehouseId">新增库存
+                             :disabled="!form.warehouseId || isViewMode">新增库存
                   </el-button>
           </div>
           <el-table :data="form.details" border empty-text="暂无盘点明细">
@@ -144,19 +145,19 @@
               <template #default="{ row }">
                 <div>器材编码：{{ row.equipmentCode || row.itemSku?.item?.itemCode || '-' }}</div>
                 <div>产品标识：{{ row.productMark || '-' }}</div>
-                <div>质量等级：{{ row.qualityGrade || '-' }}</div>
+                <div>质量等级：{{ displayQualityGrade(row) }}</div>
               </template>
             </el-table-column>
             <el-table-column label="货位信息" min-width="220">
               <template #default="{ row }">
                 <template v-if="row.newInventoryDetail">
                   <div class="target-place-edit">
-                    <el-select v-model="row.areaId" placeholder="库区" :disabled="form.areaId" filterable style="width: 100px">
+                    <el-select v-model="row.areaId" placeholder="库区" :disabled="isViewMode || form.areaId" filterable style="width: 100px">
                       <el-option v-for="item in useWmsStore().areaList.filter(it => it.warehouseId === form.warehouseId)"
                                  :key="item.id" :label="item.areaName" :value="item.id"/>
                     </el-select>
-                    <RackSelect v-model="row.rackId" :warehouse-id="form.warehouseId" :area-id="row.areaId || form.areaId" />
-                    <LocationSelect v-model="row.locationId" :warehouse-id="form.warehouseId" :area-id="row.areaId || form.areaId" :rack-id="row.rackId" />
+                    <RackSelect v-model="row.rackId" :warehouse-id="form.warehouseId" :area-id="row.areaId || form.areaId" :disabled="isViewMode" />
+                    <LocationSelect v-model="row.locationId" :warehouse-id="form.warehouseId" :area-id="row.areaId || form.areaId" :rack-id="row.rackId" :disabled="isViewMode" />
                   </div>
                 </template>
                 <template v-else>
@@ -168,7 +169,7 @@
             <el-table-column label="批号" prop="batchNo">
               <template #default="{ row }">
                 <template v-if="row.newInventoryDetail">
-                  <el-input v-model="row.batchNo"></el-input>
+                  <el-input v-model="row.batchNo" :disabled="isViewMode"></el-input>
                 </template>
                 <template v-else>
                   <div>{{ row.batchNo }}</div>
@@ -185,6 +186,7 @@
                       type="date"
                       format="YYYY-MM-DD"
                       value-format="YYYY-MM-DD HH:mm:ss"
+                      :disabled="isViewMode"
                       style="width: 150px!important;"
                     />
                   </div>
@@ -195,6 +197,7 @@
                       type="date"
                       format="YYYY-MM-DD"
                       value-format="YYYY-MM-DD HH:mm:ss"
+                      :disabled="isViewMode"
                       style="width: 150px!important;"
                     />
                   </div>
@@ -213,6 +216,7 @@
                     type="date"
                     format="YYYY-MM-DD"
                     value-format="YYYY-MM-DD HH:mm:ss"
+                    :disabled="isViewMode"
                     style="width: 150px!important;"
                   />
                 </template>
@@ -237,6 +241,7 @@
                   v-model="scope.row.checkQuantity"
                   placeholder="实际库存"
                   :min="0"
+                  :disabled="isViewMode"
                   @change="handleChangeQuantity"
                 ></el-input-number>
               </template>
@@ -252,7 +257,7 @@
                   @click="handleGoInstances(scope.row)"
                   link
                 >实例</el-button>
-                <el-button icon="Delete" type="danger" plain size="small" v-if="scope.row.newInventoryDetail"
+                <el-button icon="Delete" type="danger" plain size="small" v-if="scope.row.newInventoryDetail && !isViewMode"
                            @click="handleDeleteDetail(scope.row, scope.$index)" link>删除
                 </el-button>
               </template>
@@ -270,13 +275,13 @@
     </div>
     <div class="footer-global" v-if="checking">
       <div class="btn-box">
-        <div>
+        <div v-if="!isViewMode">
           <el-button @click="doCheck" type="primary" class="ml10">完成盘点</el-button>
           <el-button @click="updateToInvalid" type="danger" v-if="form.id">作废</el-button>
         </div>
         <div>
-          <el-button @click="save" type="primary">暂存</el-button>
-          <el-button @click="cancel" class="mr10">取消</el-button>
+          <el-button v-if="!isViewMode" @click="save" type="primary">暂存</el-button>
+          <el-button @click="cancel" class="mr10">{{ isViewMode ? '关闭' : '取消' }}</el-button>
         </div>
       </div>
     </div>
@@ -298,7 +303,9 @@ import LocationSelect from "@/views/components/LocationSelect.vue";
 
 const {proxy} = getCurrentInstance();
 const router = useRouter();
-const {wms_shipment_type} = proxy.useDict("wms_shipment_type");
+const route = useRoute();
+const isViewMode = computed(() => route.query.mode === 'view');
+const {wms_shipment_type, wms_quality_grade} = proxy.useDict("wms_shipment_type", "wms_quality_grade");
 const checkGreaterThanZero = ref(false)
 const loading = ref(false)
 const initFormData = {
@@ -331,18 +338,30 @@ const data = reactive({
 });
 const {form, rules} = toRefs(data);
 const cancel = async () => {
+  if (isViewMode.value) {
+    close()
+    return
+  }
   await proxy?.$modal.confirm('确认取消编辑盘点单吗？');
   close()
 }
 const close = () => {
-  const obj = {path: "/checkOrder"};
-  proxy?.$tab.closeOpenPage(obj);
+  if (route.query.returnFullPath) {
+    proxy?.$tab.closeOpenPage(route.query.returnFullPath);
+    return
+  }
+  proxy?.$tab.closePage();
 }
 const inventorySelectShow = ref(false)
 const skuSelectShow = ref(false)
 const currentSkuSelectIndex = ref(null)
 // 盘点中标识
 const checking = ref(false)
+
+const displayQualityGrade = (row = {}) => {
+  const value = row.qualityGrade ?? row?.itemSku?.defaultQualityGrade ?? row?.itemSku?.item?.defaultQualityGrade
+  return proxy.selectDictLabel(wms_quality_grade.value, value) || value || '-'
+}
 
 // 选择器材 start
 const startCheck = () => {
@@ -560,7 +579,6 @@ const doCheck = async () => {
   })
 }
 
-const route = useRoute();
 onMounted(() => {
   const id = route.query && route.query.id;
   if (id) {
@@ -649,5 +667,6 @@ const handleGoInstances = (row) => {
   color: #409EFF; /* 鼠标移上去时文字颜色变为蓝色 */
   text-decoration: underline; /* 鼠标移上去时带有下划线 */
 }
+
 </style>
 

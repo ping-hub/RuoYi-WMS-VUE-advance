@@ -154,10 +154,14 @@
 <script setup name="CheckOrder">
 import {listCheckOrder, delCheckOrder} from "@/api/wms/checkOrder";
 import {getCurrentInstance, reactive, ref, toRefs} from "vue";
+import { useRoute, useRouter } from "vue-router";
 import {useWmsStore} from "../../../../store/modules/wms";
 import {ElMessageBox} from "element-plus";
 import CheckOrderDetail from "@/views/wms/order/check/CheckOrderDetail.vue";
+import { resolveRoutePath } from "@/utils/routeResolver";
 const { proxy } = getCurrentInstance();
+const route = useRoute();
+const router = useRouter();
 const {wms_check_status} = proxy.useDict("wms_check_status");
 const checkOrderList = ref([]);
 const open = ref(false);
@@ -209,8 +213,13 @@ function resetQuery() {
 }
 
 /** 新增按钮操作 */
+const resolveCheckOrderEditPath = () => resolveRoutePath(router, {
+  preferredPaths: ["/checkOrderEdit"],
+  titleKeywords: ["盘点"]
+}) || "/checkOrderEdit";
+
 function handleAdd() {
-  proxy.$router.push({ path: "/checkOrderEdit" });
+  router.push({ path: resolveCheckOrderEditPath(), query: { returnFullPath: route.fullPath } });
 }
 
 /** 删除按钮操作 */
@@ -239,7 +248,7 @@ function handleDelete(row) {
 }
 
 function handleUpdate(row) {
-  proxy.$router.push({ path: "/checkOrderEdit",  query: { id: row.id } });
+  router.push({ path: resolveCheckOrderEditPath(), query: { id: row.id, returnFullPath: route.fullPath } });
 }
 
 function handleGoDetail(row) {
@@ -262,4 +271,3 @@ getList();
   vertical-align: top
 }
 </style>
-
