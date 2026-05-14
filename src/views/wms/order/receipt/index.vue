@@ -90,118 +90,15 @@
         </el-col>
       </el-row>
 
-      <el-table v-loading="loading" :data="receiptOrderList" border class="mt20"
-                @expand-change="handleExpandExchange"
-                :row-key="getRowKey"
-                :expand-row-keys="expandedRowKeys"
-                empty-text="暂无入库单"
-                cell-class-name="vertical-top-cell"
-      >
-        <el-table-column type="expand">
-          <template #default="props">
-            <div style="padding: 0 50px 20px 50px">
-              <h3>入库明细</h3>
-              <el-table :data="props.row.details" v-loading="detailLoading[props.$index]" empty-text="暂无入库明细">
-                <el-table-column label="器材名称">
-                  <template #default="{ row }">
-                    <div>{{ row?.itemSku?.item?.itemName }}</div>
-                  </template>
-                </el-table-column>
-                <el-table-column label="器材规格">
-                  <template #default="{ row }">
-                    <div>{{ row?.itemSku?.skuName }}</div>
-                  </template>
-                </el-table-column>
-                <el-table-column label="器材编码" min-width="120">
-                  <template #default="{ row }">
-                    <div>{{ row.equipmentCode || row?.itemSku?.item?.itemCode || '-' }}</div>
-                  </template>
-                </el-table-column>
-                <el-table-column label="规格型号" min-width="140">
-                  <template #default="{ row }">
-                    <div>{{ row.specModel || row?.itemSku?.specModel || row?.itemSku?.item?.modelText || '-' }}</div>
-                  </template>
-                </el-table-column>
-                <el-table-column label="产品标识" min-width="140">
-                  <template #default="{ row }">
-                    <div>{{ row.productMark || '-' }}</div>
-                  </template>
-                </el-table-column>
-                <el-table-column label="质量等级" min-width="120">
-                  <template #default="{ row }">
-                    <dict-tag :options="wms_quality_grade" :value="row.qualityGrade ?? row?.itemSku?.defaultQualityGrade ?? row?.itemSku?.item?.defaultQualityGrade" />
-                  </template>
-                </el-table-column>
-                <el-table-column label="明细模式" width="120">
-                  <template #default="{ row }">
-                    <dict-tag :options="wms_tracking_mode" :value="row?.itemSku?.item?.defaultTrackingMode || row?.itemSku?.item?.trackingMode" />
-                  </template>
-                </el-table-column>
-                <el-table-column label="货位信息" min-width="180">
-                  <template #default="{ row }">
-                    <div>库区：{{ row.areaName || '-' }}</div>
-                    <div class="sub-text">货架：{{ row.rackId || '-' }} / 货位：{{ row.locationId || '-' }}</div>
-                  </template>
-                </el-table-column>
-                <el-table-column label="数量" prop="quantity" align="right">
-                  <template #default="{ row }">
-                    <el-statistic :value="Number(row.quantity)" :precision="0"/>
-                  </template>
-                </el-table-column>
-                <el-table-column label="单价(元)" align="right">
-                  <template #default="{ row }">
-                    <el-statistic :precision="2" :value="row.unitPrice ?? '-'"/>
-                  </template>
-                </el-table-column>
-                <el-table-column label="总价(元)" align="right">
-                  <template #default="{ row }">
-                    <el-statistic :precision="2" :value="row.lineAmount ?? row.amount ?? '-'"/>
-                  </template>
-                </el-table-column>
-                <el-table-column label="批号" prop="batchNo" />
-                <el-table-column label="生产日期" prop="productionDate">
-                  <template #default="{ row }">
-                    <div>{{ parseTime(row.productionDate, '{y}-{m}-{d}') }}</div>
-                  </template>
-                </el-table-column>
-                <el-table-column label="过期日期" prop="expirationDate">
-                  <template #default="{ row }">
-                    <div>{{ parseTime(row.expirationDate, '{y}-{m}-{d}') }}</div>
-                  </template>
-                </el-table-column>
-                <el-table-column label="生成器材明细" width="120" align="center">
-                  <template #default="{ row }">
-                    {{ row.generateItemInstance === 1 ? '是' : '否' }}
-                  </template>
-                </el-table-column>
-                <el-table-column label="已生成数" width="100" align="right">
-                  <template #default="{ row }">
-                    {{ row.generatedInstanceQuantity || 0 }}
-                  </template>
-                </el-table-column>
-                <el-table-column label="明细" width="100" align="right">
-                  <template #default="{ row }">
-                    <el-button
-                      v-if="row.generatedInstanceQuantity > 0"
-                      link
-                      type="primary"
-                      @click="handleGoInstances(props.row, row)"
-                    >查看明细</el-button>
-                  </template>
-                </el-table-column>
-                <el-table-column label="备注" prop="remark" min-width="140" show-overflow-tooltip />
-              </el-table>
-            </div>
-          </template>
-        </el-table-column>
-        <el-table-column label="单号/订单号" align="left">
+      <el-table v-loading="loading" :data="receiptOrderList" border class="mt20" empty-text="暂无入库单">
+        <el-table-column label="单号/订单号" align="left" width="150">
           <template #default="{ row }">
             <div>单号：{{ row.receiptOrderNo }}</div>
             <div v-if="row.orderNo">订单号：{{ row.orderNo }}</div>
             <div v-if="row.basisNo">调拨根据：{{ row.basisNo }}</div>
           </template>
         </el-table-column>
-        <el-table-column label="入库类型" align="left" prop="receiptOrderType">
+        <el-table-column label="入库类型" width="90"  align="left" prop="receiptOrderType">
           <template #default="{ row }">
             <dict-tag :options="wms_receipt_type" :value="row.receiptOrderType" />
           </template>
@@ -211,13 +108,13 @@
             <div>{{ useWmsStore().merchantMap.get(row.merchantId)?.merchantName }}</div>
           </template>
         </el-table-column>
-        <el-table-column label="仓库/库区" align="left" width="120">
+        <el-table-column label="仓库/库区" align="left" width="130">
           <template #default="{ row }">
             <div>仓库：{{ useWmsStore().warehouseMap.get(row.warehouseId)?.warehouseName }}</div>
             <div v-if="row.areaId">库区：{{ useWmsStore().areaMap.get(row.areaId)?.areaName }}</div>
           </template>
         </el-table-column>
-        <el-table-column label="单据信息" align="left" min-width="220">
+        <el-table-column label="单据信息" align="left" min-width="150">
           <template #default="{ row }">
             <div v-if="row.receiveUnit">收物单位：{{ row.receiveUnit }}</div>
             <div v-if="row.noticeOrg">通知机关：{{ row.noticeOrg }}</div>
@@ -230,7 +127,7 @@
             <dict-tag :options="wms_receipt_status" :value="row.receiptOrderStatus" />
           </template>
         </el-table-column>
-        <el-table-column label="数量/金额(元)" align="left" width="120">
+        <el-table-column label="数量/金额(元)" align="left" width="110">
           <template #default="{ row }">
             <div class="flex-space-between">
               <span>数量：</span>
@@ -242,13 +139,13 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="创建/操作" align="left">
+        <el-table-column label="创建/操作" align="left" width="110">
           <template #default="{ row }">
             <div>创建：{{ row.createBy }}</div>
             <div v-if="row.updateBy">操作：{{ row.updateBy }}</div>
           </template>
         </el-table-column>
-        <el-table-column label="创建时间/操作时间" align="left" width="200">
+        <el-table-column label="创建时间/操作时间" align="left" width="145">
           <template #default="{ row }">
             <div>创建：{{ parseTime(row.createTime, '{mm}-{dd} {hh}:{ii}') }}</div>
             <div>操作：{{ parseTime(row.updateTime, '{mm}-{dd} {hh}:{ii}') }}</div>
@@ -257,41 +154,32 @@
         <el-table-column label="备注" prop="remark" />
         <el-table-column label="操作" align="right" class-name="small-padding fixed-width" width="120">
           <template #default="scope">
-            <div>
-              <el-popover
-                placement="left"
-                title="提示"
-                :width="300"
-                trigger="hover"
-                :disabled="scope.row.receiptOrderStatus === 0"
-                :content="'入库单【' + scope.row.receiptOrderNo + '】已' + (scope.row.receiptOrderStatus === 1 ? '入库' : '作废') + '，无法修改！' "
-              >
-                <template #reference>
-                  <el-button link type="primary" @click="handleUpdate(scope.row)" v-hasPermi="['wms:receipt:all']" :disabled="[-1, 1].includes(scope.row.receiptOrderStatus)">修改</el-button>
-                </template>
-              </el-popover>
-              <el-button link type="primary" @click="handleGoDetail(scope.row)" v-hasPermi="['wms:receipt:all']">{{ expandedRowKeys.includes(scope.row.id) ? '收起' : '查看' }}</el-button>
-            </div>
-            <div class="mt10">
-              <el-popover
-                placement="left"
-                title="提示"
-                :width="300"
-                trigger="hover"
-                :disabled="[-1, 0].includes(scope.row.receiptOrderStatus)"
-                :content="'入库单【' + scope.row.receiptOrderNo + '】已入库，无法删除！' "
-              >
-                <template #reference>
-                  <el-button link type="danger" @click="handleDelete(scope.row)" v-hasPermi="['wms:receipt:all']" :disabled="scope.row.receiptOrderStatus === 1">删除</el-button>
-                </template>
-              </el-popover>
-              <el-button
-                v-if="scope.row.receiptOrderStatus === 1"
-                link
-                type="primary"
-                @click="handleGoInstances(scope.row)"
-              >明细</el-button>
-            </div>
+            <el-popover
+              placement="left"
+              title="提示"
+              :width="300"
+              trigger="hover"
+              :disabled="scope.row.receiptOrderStatus === 0"
+              :content="'入库单【' + scope.row.receiptOrderNo + '】已' + (scope.row.receiptOrderStatus === 1 ? '入库' : '作废') + '，无法修改！' "
+            >
+              <template #reference>
+                <el-button link type="primary" @click="handleUpdate(scope.row)" v-hasPermi="['wms:receipt:all']" :disabled="[-1, 1].includes(scope.row.receiptOrderStatus)">修改</el-button>
+              </template>
+            </el-popover>
+            <el-button link type="primary" @click="handleView(scope.row)" v-hasPermi="['wms:receipt:all']">查看</el-button>
+            <el-popover
+              placement="left"
+              title="提示"
+              :width="300"
+              trigger="hover"
+              :disabled="[-1, 0].includes(scope.row.receiptOrderStatus)"
+              :content="'入库单【' + scope.row.receiptOrderNo + '】已入库，无法删除！' "
+            >
+              <template #reference>
+                <el-button link type="danger" @click="handleDelete(scope.row)" v-hasPermi="['wms:receipt:all']" :disabled="scope.row.receiptOrderStatus === 1">删除</el-button>
+              </template>
+            </el-popover>
+            <el-button link type="primary" @click="handlePrint(scope.row)" v-hasPermi="['wms:receipt:all']">打印</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -310,35 +198,26 @@
 </template>
 
 <script setup name="ReceiptOrder">
-import { listReceiptOrder, delReceiptOrder } from "@/api/wms/receiptOrder";
+import { listReceiptOrder, delReceiptOrder, getReceiptOrder } from "@/api/wms/receiptOrder";
 import {getCurrentInstance, reactive, ref, toRefs} from "vue";
 import { useRoute, useRouter } from "vue-router";
 import {useWmsStore} from "../../../../store/modules/wms";
-import {listByReceiptOrderId} from "@/api/wms/receiptOrderDetail";
 import {ElMessageBox} from "element-plus";
 import { resolveRoutePath } from "@/utils/routeResolver";
+import receiptPanel from "@/components/PrintTemplate/receipt-panel";
 
 const { proxy } = getCurrentInstance();
 const route = useRoute();
 const router = useRouter();
-const { wms_receipt_status, wms_receipt_type, wms_tracking_mode, wms_dispatch_mode, wms_quality_grade } = proxy.useDict(
+const { wms_receipt_status, wms_receipt_type, wms_dispatch_mode, wms_quality_grade } = proxy.useDict(
   "wms_receipt_status",
   "wms_receipt_type",
-  "wms_tracking_mode",
   "wms_dispatch_mode",
   "wms_quality_grade"
 );
 const receiptOrderList = ref([]);
-const open = ref(false);
-const buttonLoading = ref(false);
 const loading = ref(true);
-const ids = ref([]);
 const total = ref(0);
-const title = ref("");
-// 当前展开集合
-const expandedRowKeys = ref([])
-// 器材明细 table 的 loading 状态集合
-const detailLoading = ref([])
 const data = reactive({
   queryParams: {
     pageNum: 1,
@@ -369,10 +248,6 @@ function getList() {
   listReceiptOrder(query).then(response => {
     receiptOrderList.value = response.rows;
     total.value = response.total;
-    for (let i = 0; i < total; i++) {
-      detailLoading.value.push(false)
-    }
-    expandedRowKeys.value = []
     loading.value = false;
   });
 }
@@ -401,7 +276,7 @@ function handleAdd() {
 
 /** 删除按钮操作 */
 function handleDelete(row) {
-  const _ids = row.id || ids.value;
+  const _ids = row.id;
   proxy.$modal.confirm('确认删除入库单【' + row.receiptOrderNo + '】吗？').then(function() {
     loading.value = true;
     return delReceiptOrder(_ids);
@@ -428,65 +303,66 @@ function handleUpdate(row) {
   router.push({ path: resolveReceiptOrderEditPath(), query: { id: row.id, returnFullPath: route.fullPath } });
 }
 
-function handleGoDetail(row) {
-  const index = expandedRowKeys.value.indexOf(row.id)
-  if (index !== -1) {
-    // 收起
-    expandedRowKeys.value.splice(index, 1)
-  } else {
-    // 展开
-    expandedRowKeys.value.push(row.id)
-    loadReceiptOrderDetail(row)
-  }
+function handleView(row) {
+  router.push({ path: resolveReceiptOrderEditPath(), query: { id: row.id, mode: 'view', returnFullPath: route.fullPath } });
 }
 
-function handleGoInstances(orderRow, detailRow) {
-  const query = {
-    sourceOrderId: orderRow.id
+async function handlePrint(row) {
+  const res = await getReceiptOrder(row.id)
+  const receiptOrder = res.data
+  let table = []
+  if (receiptOrder.details?.length) {
+    table = receiptOrder.details.map(detail => ({
+      itemName: detail.itemSku?.item?.itemName,
+      skuName: detail.itemSku?.skuName,
+      areaName: useWmsStore().areaMap.get(detail.areaId)?.areaName,
+      quantity: Number(detail.quantity || 0).toFixed(0),
+      equipmentCode: detail.equipmentCode,
+      specModel: detail.specModel,
+      productMark: detail.productMark,
+      qualityGrade: proxy.selectDictLabel(wms_quality_grade.value, detail.qualityGrade ?? detail.itemSku?.item?.defaultQualityGrade),
+      unitPrice: detail.unitPrice,
+      productionDate: proxy.parseTime(detail.productionDate, '{y}-{m}-{d}'),
+      expirationDate: proxy.parseTime(detail.expirationDate, '{y}-{m}-{d}'),
+      amount: detail.lineAmount ?? detail.amount
+    }))
   }
-  if (detailRow?.id) {
-    query.receiptOrderDetailId = detailRow.id
+  const printData = {
+    receiptOrderNo: receiptOrder.receiptOrderNo,
+    receiptOrderType: proxy.selectDictLabel(wms_receipt_type.value, receiptOrder.receiptOrderType),
+    receiptOrderStatus: proxy.selectDictLabel(wms_receipt_status.value, receiptOrder.receiptOrderStatus),
+    merchantName: useWmsStore().merchantMap.get(receiptOrder.merchantId)?.merchantName,
+    supplierName: useWmsStore().merchantMap.get(receiptOrder.merchantId)?.merchantName,
+    orderNo: receiptOrder.orderNo,
+    basisNo: receiptOrder.basisNo,
+    dispatchMode: proxy.selectDictLabel(wms_dispatch_mode.value, receiptOrder.dispatchMode),
+    noticeOrg: receiptOrder.noticeOrg,
+    receiveUnit: receiptOrder.receiveUnit,
+    purchaseDate: proxy.parseTime(receiptOrder.purchaseDate, '{y}-{m}-{d}'),
+    receiptDate: proxy.parseTime(receiptOrder.receiptDate, '{y}-{m}-{d}'),
+    purchaserName: receiptOrder.purchaserName,
+    acceptorName: receiptOrder.acceptorName,
+    keeperName: receiptOrder.keeperName,
+    warehouseName: useWmsStore().warehouseMap.get(receiptOrder.warehouseId)?.warehouseName,
+    warehouse: useWmsStore().warehouseMap.get(receiptOrder.warehouseId)?.warehouseName,
+    areaName: useWmsStore().areaMap.get(receiptOrder.areaId)?.areaName,
+    area: useWmsStore().areaMap.get(receiptOrder.areaId)?.areaName,
+    totalQuantity: Number(receiptOrder.totalQuantity || 0).toFixed(0),
+    payableAmount: ((receiptOrder.payableAmount || receiptOrder.payableAmount === 0) ? (receiptOrder.payableAmount + '元') : ''),
+    createBy: receiptOrder.createBy,
+    createTime: proxy.parseTime(receiptOrder.createTime, '{mm}-{dd} {hh}:{ii}'),
+    updateBy: receiptOrder.updateBy,
+    updateTime: proxy.parseTime(receiptOrder.updateTime, '{mm}-{dd} {hh}:{ii}'),
+    remark: receiptOrder.remark,
+    table
   }
-  proxy.$router.push({ path: '/wms-item-instance/index', query });
-}
-
-function handleExpandExchange(value, expandedRows) {
-  if (!ifExpand(expandedRows)) {
-    return
-  }
-  expandedRowKeys.value = expandedRows.map(it => it.id)
-  loadReceiptOrderDetail(value)
-}
-
-function loadReceiptOrderDetail(row) {
-  const index = receiptOrderList.value.findIndex(it => it.id === row.id)
-  detailLoading.value[index] = true
-  listByReceiptOrderId(row.id).then(res => {
-    if (res.data?.length) {
-      const details = res.data.map(it => {
-        return {
-          ...it,
-          warehouseName: useWmsStore().warehouseMap.get(it.warehouseId)?.warehouseName,
-          areaName: useWmsStore().areaMap.get(it.areaId)?.areaName
-        }
-      })
-      receiptOrderList.value[index].details = details
+  let printTemplate = new proxy.$hiprint.PrintTemplate({template: receiptPanel})
+  printTemplate.print(printData, {}, {
+    styleHandler: () => {
+      let css = '<link href="https://cyl-press.oss-cn-shenzhen.aliyuncs.com/print-lock.css" media="print" rel="stylesheet">';
+      return css
     }
-  }).finally(() => {
-    detailLoading.value[index] = false
   })
-}
-
-function ifExpand(expandedRows) {
-  if (expandedRows.length < expandedRowKeys.value.length) {
-    expandedRowKeys.value = expandedRows.map(it => it.id)
-    return false;
-  }
-  return true
-}
-
-function getRowKey(row) {
-  return row.id
 }
 getList();
 </script>

@@ -136,7 +136,6 @@
                     <el-statistic :value="Number(row.quantity)" :precision="0"/>
                   </template>
                 </el-table-column>
-                <el-table-column label="批号" prop="batchNo" />
                 <el-table-column label="生产日期" prop="inventoryDetail.productionDate">
                   <template #default="{ row }">
                     <div v-if="row.productionDate">{{ parseTime(row.productionDate, '{y}-{m}-{d}') }}</div>

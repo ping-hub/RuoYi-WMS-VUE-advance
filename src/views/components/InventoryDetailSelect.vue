@@ -2,11 +2,11 @@
   <el-drawer :model-value="show" title="选择库存" @close="handleCancelClick" :size="size" :close-on-click-modal="false"
              append-to-body>
     <el-form :inline="true" label-width="108px">
-      <el-form-item label="商品名称">
-        <el-input v-model="query.itemName" clearable placeholder="商品名称"></el-input>
+      <el-form-item label="器材名称">
+        <el-input v-model="query.itemName" clearable placeholder="器材名称"></el-input>
       </el-form-item>
-      <el-form-item label="商品编号">
-        <el-input class="w200" v-model="query.itemCode" clearable placeholder="商品编号"></el-input>
+      <el-form-item label="器材编号">
+        <el-input class="w200" v-model="query.itemCode" clearable placeholder="器材编号"></el-input>
       </el-form-item>
       <el-form-item label="库区">
         <el-select v-model="query.areaId" placeholder="请选择库区" :disabled="selectAreaDisable"
@@ -26,9 +26,6 @@
       </el-form-item>
       <el-form-item label="规格编号">
         <el-input class="w200" v-model="query.barcode" clearable placeholder="规格编号"></el-input>
-      </el-form-item>
-      <el-form-item label="批号">
-        <el-input class="w200" v-model="query.batchNo" clearable placeholder="批号"></el-input>
       </el-form-item>
       <el-form-item label="入库日期" prop="createTimeRange">
         <el-date-picker
@@ -60,21 +57,13 @@
               v-loading="loading" ref="inventorySelectFormRef" cell-class-name="my-cell" class="mt20">
       <el-table-column type="selection" width="55" :reserve-selection="true" :selectable="judgeSelectable"/>
       <el-table-column label="库区" prop="areaName"/>
-      <el-table-column label="商品信息" prop="itemId">
+      <el-table-column label="器材信息" prop="itemId">
         <template #default="{ row }">
           <div>{{ row.item.itemName }}</div>
           <div v-if="row.item.itemCode">编号：{{ row.item.itemCode }}</div>
           <div v-if="row.item.itemBrand">品牌：{{ useWmsStore().itemBrandMap.get(row.item.itemBrand).brandName }}</div>
         </template>
       </el-table-column>
-      <el-table-column label="规格信息">
-        <template #default="{ row }">
-          <div>{{ row.itemSku.skuName }}</div>
-          <div v-if="row.itemSku.skuCode">编号：{{ row.itemSku.skuCode }}</div>
-          <div v-if="row.itemSku.barcode">条码：{{ row.itemSku.barcode }}</div>
-        </template>
-      </el-table-column>
-      <el-table-column label="批号" align="left" prop="batchNo"/>
       <el-table-column label="生产日期/过期日期" align="left" width="180">
         <template #default="{ row }">
           <div v-if="row.productionDate">生产日期：{{ parseTime(row.productionDate, '{y}-{m}-{d}') }}</div>
@@ -138,7 +127,6 @@ const query = reactive({
   warehouseId: null,
   rackId: null,
   locationId: null,
-  batchNo: '',
   daysToExpires: null
 });
 const selectInventoryVoCheck = ref([])

@@ -1,15 +1,15 @@
 <template>
-  <el-drawer :model-value="show" title="商品选择" @close="handleCancelClick" :size="size" :close-on-click-modal="false" append-to-body>
+  <el-drawer :model-value="show" title="器材选择" @close="handleCancelClick" :size="size" :close-on-click-modal="false" append-to-body>
         <el-form :inline="true" label-width="68px">
           <el-row :gutter="20">
             <el-col :span="8">
-              <el-form-item label="商品名称">
-                <el-input v-model="query.itemName" clearable placeholder="商品名称"></el-input>
+              <el-form-item label="器材名称">
+                <el-input v-model="query.itemName" clearable placeholder="器材名称"></el-input>
               </el-form-item>
             </el-col>
             <el-col :span="8">
-              <el-form-item label="商品编号">
-                <el-input class="w200" v-model="query.itemCode" clearable placeholder="商品编号"></el-input>
+              <el-form-item label="器材编号">
+                <el-input class="w200" v-model="query.itemCode" clearable placeholder="器材编号"></el-input>
               </el-form-item>
             </el-col>
             <el-col :span="8">
@@ -29,20 +29,13 @@
             </el-col>
           </el-row>
         </el-form>
-            <el-table :data="list" @selection-change="handleSelectionChange" border :row-key="getRowKey" empty-text="暂无商品" v-loading="loading" ref="skuSelectFormRef" cell-class-name="my-cell">
+            <el-table :data="list" @selection-change="handleSelectionChange" border :row-key="getRowKey" empty-text="暂无器材" v-loading="loading" ref="skuSelectFormRef" cell-class-name="my-cell">
               <el-table-column type="selection" width="55" :reserve-selection="true" v-if="!singleSelect"/>
-              <el-table-column label="商品信息" prop="itemId">
+              <el-table-column label="器材信息" prop="itemId">
                 <template #default="{ row }">
                   <div>{{ row.item.itemName }}</div>
                   <div v-if="row.item.itemCode">编号：{{ row.item.itemCode }}</div>
                   <div v-if="row.item.itemBrand">品牌：{{ useWmsStore().itemBrandMap.get(row.item.itemBrand).brandName }}</div>
-                </template>
-              </el-table-column>
-              <el-table-column label="规格信息">
-                <template #default="{ row }">
-                  <div>{{ row.skuName }}</div>
-                  <div v-if="row.skuCode">编号：{{ row.skuCode }}</div>
-                  <div v-if="row.barcode">条码：{{ row.barcode }}</div>
                 </template>
               </el-table-column>
               <el-table-column label="价格(元)" width="160" align="left">
@@ -87,7 +80,7 @@
     <template v-slot:footer>
       <div style="width: 100%;display: flex;justify-content: space-between">
         <span>
-          <el-button @click="goCreateItem" icon="Plus">创建商品</el-button>
+          <el-button @click="goCreateItem" icon="Plus">创建器材</el-button>
           <el-button @click="loadAll" icon="Refresh">刷新</el-button>
         </span>
         <span>
@@ -115,8 +108,7 @@ const deptOptions = ref([]);
 const query = reactive({
   itemName: '',
   itemCode: '',
-  skuName: '',
-  barcode: ''
+  skuName: ''
 });
 const selectItemSkuVoCheck = ref([])
 const skuSelectFormRef = ref(null)

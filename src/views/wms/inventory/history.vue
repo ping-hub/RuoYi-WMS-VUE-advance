@@ -136,11 +136,6 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="批号" min-width="120">
-          <template #default="{ row }">
-            <span>{{ displayBatchNo(row) }}</span>
-          </template>
-        </el-table-column>
         <el-table-column label="生产日期/过期日期" min-width="200">
           <template #default="{ row }">
             <div v-if="resolveDateValue(row, 'productionDate')">生产日期：{{ parseTime(resolveDateValue(row, 'productionDate'), '{y}-{m}-{d}') }}</div>
@@ -307,7 +302,6 @@ const displayQualityGrade = (row = {}) => {
 }
 const displayProductMark = (row = {}) => row.productMark ?? row.inventoryDetail?.productMark ?? row.itemInstance?.productMark ?? '-'
 const displayBelongUnit = (row = {}) => row.belongUnit ?? row.item?.defaultBelongUnit ?? row.itemSku?.item?.defaultBelongUnit ?? '-'
-const displayBatchNo = (row = {}) => row.batchNo ?? row.inventoryDetail?.batchNo ?? row.itemInstance?.batchNo ?? '-'
 const resolveDateValue = (row = {}, field) => row[field] ?? row.inventoryDetail?.[field] ?? row.itemInstance?.[field]
 const formatMoney = (value) => (value || value === 0) ? Number(value).toFixed(2) : '-'
 

@@ -43,9 +43,6 @@
         <el-form-item label="所在单位" prop="belongUnit" class="col4">
           <el-input v-model="queryParams.belongUnit" clearable placeholder="请输入所在单位" />
         </el-form-item>
-        <el-form-item label="批号" prop="batchNo" class="col4">
-          <el-input v-model="queryParams.batchNo" clearable placeholder="请输入批号" />
-        </el-form-item>
         <el-form-item label="过期" prop="daysToExpires" class="col4">
           <el-select v-model="queryParams.daysToExpires" clearable style="width: 100%">
             <el-option label="30天内" :value="30" />
@@ -194,11 +191,6 @@
             <span>{{ formatMoney(row.lineAmount || row.amount) }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="批号" align="left" min-width="120">
-          <template #default="{ row }">
-            <span>{{ displayBatchNo(row) }}</span>
-          </template>
-        </el-table-column>
         <el-table-column label="生产日期/过期日期" align="left" width="200">
           <template #default="{ row }">
             <div v-if="resolveDateValue(row, 'productionDate')">生产日期：{{ parseTime(resolveDateValue(row, 'productionDate'), '{y}-{m}-{d}') }}</div>
@@ -283,7 +275,6 @@ const queryParams = ref({
   skuCode: undefined,
   areaId: undefined,
   warehouseId: undefined,
-  batchNo: undefined,
   daysToExpires: undefined,
   createTimeRange: []
 })
@@ -429,10 +420,8 @@ const displayQualityGrade = (row = {}) => {
 }
 const resolveProductMarkValue = (row = {}) => row.productMark ?? row.inventoryDetail?.productMark ?? row.itemInstance?.productMark
 const resolveBelongUnitValue = (row = {}) => row.belongUnit ?? row.item?.defaultBelongUnit ?? row.itemSku?.item?.defaultBelongUnit
-const resolveBatchNoValue = (row = {}) => row.batchNo ?? row.inventoryDetail?.batchNo ?? row.itemInstance?.batchNo
 const displayProductMark = (row = {}) => resolveProductMarkValue(row) ?? '-'
 const displayBelongUnit = (row = {}) => resolveBelongUnitValue(row) ?? '-'
-const displayBatchNo = (row = {}) => resolveBatchNoValue(row) ?? '-'
 const resolveDateValue = (row = {}, field) => row[field] ?? row.inventoryDetail?.[field] ?? row.itemInstance?.[field]
 const formatMoney = (value) => (value || value === 0) ? Number(value).toFixed(2) : '-'
 

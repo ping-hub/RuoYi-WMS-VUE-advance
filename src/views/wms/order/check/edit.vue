@@ -129,18 +129,6 @@
                   </div>
                 </template>
             </el-table-column>
-            <el-table-column label="规格信息">
-              <template #default="{ row }">
-                <template v-if="row.newInventoryDetail">
-                  <div v-if="row.itemSku">{{ row.itemSku.skuName + (row.itemSku.barcode ? ('(' + row.itemSku.barcode + ')') : '') }}</div>
-                  <div v-else>请选择器材</div>
-                </template>
-                <template v-else>
-                  <div>{{ row.itemSku.skuName + (row.itemSku.barcode ? ('(' + row.itemSku.barcode + ')') : '') }}</div>
-                </template>
-                <div class="hover-text" v-if="row.specModel || row.itemSku?.specModel">规格型号：{{ row.specModel || row.itemSku?.specModel }}</div>
-              </template>
-            </el-table-column>
             <el-table-column label="器材/标识" min-width="220">
               <template #default="{ row }">
                 <div>器材编码：{{ row.equipmentCode || row.itemSku?.item?.itemCode || '-' }}</div>
@@ -163,16 +151,6 @@
                 <template v-else>
                   <div>库区：{{ row.areaName }}</div>
                   <div class="hover-text">货架：{{ row.rackId || '-' }} / 货位：{{ row.locationId || '-' }}</div>
-                </template>
-              </template>
-            </el-table-column>
-            <el-table-column label="批号" prop="batchNo">
-              <template #default="{ row }">
-                <template v-if="row.newInventoryDetail">
-                  <el-input v-model="row.batchNo" :disabled="isViewMode"></el-input>
-                </template>
-                <template v-else>
-                  <div>{{ row.batchNo }}</div>
                 </template>
               </template>
             </el-table-column>
@@ -394,7 +372,6 @@ const startCheck = () => {
             productMark: it.productMark,
             qualityGrade: it.qualityGrade,
             receiptOrderDetailId: it.receiptOrderDetailId,
-            batchNo: it.batchNo,
             productionDate: it.productionDate,
             expirationDate: it.expirationDate,
             receiptTime: it.createTime,
@@ -427,7 +404,6 @@ const handleOkClick = (item) => {
           productMark: undefined,
           qualityGrade: it.item?.defaultQualityGrade,
           receiptOrderDetailId: undefined,
-          batchNo: undefined,
           productionDate: undefined,
           expirationDate: undefined,
           receiptTime: proxy.parseTime(new Date(), '{y}-{m}-{d} {h}:{i}:{s}'),
@@ -471,7 +447,6 @@ const doSave = (checkOrderStatus = 0) => {
           areaId: it.areaId,
           rackId: it.rackId,
           locationId: it.locationId,
-          batchNo: it.batchNo,
           productionDate: it.productionDate,
           expirationDate: it.expirationDate,
           receiptTime: it.receiptTime
@@ -546,7 +521,6 @@ const doCheck = async () => {
         areaId: it.areaId,
         rackId: it.rackId,
         locationId: it.locationId,
-        batchNo: it.batchNo,
         productionDate: it.productionDate,
         expirationDate: it.expirationDate,
         receiptTime: it.receiptTime,

@@ -5,9 +5,6 @@
         <el-form-item label="库区名称" prop="areaName">
           <el-input v-model="queryParams.areaName" placeholder="请输入库区名称" clearable @keyup.enter="handleQuery" />
         </el-form-item>
-        <el-form-item label="库区编号" prop="areaCode">
-          <el-input v-model="queryParams.areaCode" placeholder="请输入库区编号" clearable @keyup.enter="handleQuery" />
-        </el-form-item>
         <el-form-item label="所属仓库" prop="warehouseId">
           <el-select v-model="queryParams.warehouseId" placeholder="请选择所属仓库" clearable filterable style="width: 220px">
             <el-option v-for="item in wmsStore.warehouseList" :key="item.id" :label="item.warehouseName" :value="item.id" />
@@ -24,7 +21,6 @@
       <el-row :gutter="10" class="mb8" type="flex" justify="space-between">
         <el-col :span="8">
           <div class="page-title">库区管理</div>
-          <div class="page-tip">提供独立库区维护入口，支持按所属仓库筛选与新增、编辑、删除。</div>
         </el-col>
         <el-col :span="4" class="toolbar-right">
           <el-button type="primary" plain icon="Plus" @click="handleAdd" v-hasPermi="['wms:area:edit']">新增库区</el-button>
@@ -33,7 +29,6 @@
 
       <el-table v-loading="loading" :data="areaList" border empty-text="暂无库区">
         <el-table-column label="库区名称" prop="areaName" min-width="160" />
-        <el-table-column label="库区编号" prop="areaCode" min-width="140" />
         <el-table-column label="所属仓库" prop="warehouseName" min-width="160" />
         <el-table-column label="备注" prop="remark" min-width="220" show-overflow-tooltip />
         <el-table-column label="操作" align="right" width="160">
@@ -61,12 +56,6 @@
             <FormLabelHelp label="库区名称" purpose="标识仓库下的业务分区，便于货架和货位归属管理。" example="器材待检区、成品存放区" />
           </template>
           <el-input v-model="form.areaName" placeholder="请输入库区名称" />
-        </el-form-item>
-        <el-form-item prop="areaCode">
-          <template #label>
-            <FormLabelHelp label="库区编号" purpose="作为库区识别编码，用于列表筛选和单据回填。" example="A-01、WAIT-CHECK-01" />
-          </template>
-          <el-input v-model="form.areaCode" placeholder="请输入库区编号" />
         </el-form-item>
         <el-form-item label="所属仓库" prop="warehouseId">
           <el-select v-model="form.warehouseId" placeholder="请选择所属仓库" filterable style="width: 100%">
@@ -110,7 +99,6 @@ const data = reactive({
     pageNum: 1,
     pageSize: 10,
     areaName: undefined,
-    areaCode: undefined,
     warehouseId: undefined
   },
   rules: {
@@ -125,10 +113,24 @@ const data = reactive({
 
 const { form, queryParams, rules } = toRefs(data)
 
+function resolveWarehouseId(warehouseId) {
+  if (warehouseId === undefined || warehouseId === null || warehouseId === '') {
+    return undefined
+  }
+  const matchedWarehouse = wmsStore.warehouseList.find(item => String(item.id) === String(warehouseId))
+  return matchedWarehouse ? matchedWarehouse.id : warehouseId
+}
+
+function resolveWarehouseName(warehouseId) {
+  if (warehouseId === undefined || warehouseId === null || warehouseId === '') {
+    return ''
+  }
+  return wmsStore.warehouseList.find(item => String(item.id) === String(warehouseId))?.warehouseName || ''
+}
+
 function reset() {
   form.value = {
     id: undefined,
-    areaCode: undefined,
     areaName: undefined,
     warehouseId: undefined,
     remark: undefined
@@ -140,7 +142,10 @@ async function getList() {
   loading.value = true
   try {
     const res = await listArea(queryParams.value)
-    areaList.value = res.rows || []
+    areaList.value = (res.rows || []).map(item => ({
+      ...item,
+      warehouseName: item.warehouseName || resolveWarehouseName(item.warehouseId)
+    }))
     total.value = res.total || 0
   } finally {
     loading.value = false
@@ -166,7 +171,10 @@ function handleAdd() {
 async function handleUpdate(row) {
   reset()
   const res = await getArea(row.id)
-  form.value = { ...res.data }
+  form.value = {
+    ...res.data,
+    warehouseId: resolveWarehouseId(res.data?.warehouseId)
+  }
   open.value = true
   title.value = '修改库区'
 }

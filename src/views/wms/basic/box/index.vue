@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="app-container">
     <el-card>
       <el-form ref="queryRef" :model="queryParams" :inline="true" label-width="80px">
@@ -51,13 +51,6 @@
       </el-form>
     </el-card>
 
-    <el-alert
-      class="mt20"
-      :closable="false"
-      type="info"
-      title="箱体是辅助容器，不作为库存统计维度；本页仅展示当前箱码、当前位置和当前装箱关系。"
-    />
-
     <el-card class="mt20">
       <el-row :gutter="10" class="mb8" type="flex" justify="space-between">
         <el-col :span="8"><span style="font-size: large">箱体管理</span></el-col>
@@ -74,13 +67,6 @@
             <dict-tag :options="wms_box_status" :value="row.boxStatus" />
           </template>
         </el-table-column>
-        <el-table-column label="尺寸(cm)" min-width="140">
-          <template #default="{ row }">
-            <div>长：{{ row.length ?? '-' }}</div>
-            <div>宽：{{ row.width ?? '-' }}</div>
-            <div>高：{{ row.height ?? '-' }}</div>
-          </template>
-        </el-table-column>
         <el-table-column label="位置" min-width="220">
           <template #default="{ row }">
             <div v-if="row.warehouseName">仓库：{{ row.warehouseName }}</div>
@@ -95,8 +81,6 @@
           <template #default="{ row }">
             <el-button link type="primary" @click="handleView(row)">详情</el-button>
             <el-button link type="primary" @click="handleTrace(row)" v-hasPermi="['wms:box:list']">追踪</el-button>
-            <el-button link type="primary" @click="handlePack(row)" v-hasPermi="['wms:box:edit']">装箱关系</el-button>
-            <el-button link type="primary" @click="handleUnpack(row)" v-hasPermi="['wms:box:edit']">拆箱关系</el-button>
             <el-button link type="primary" @click="handleUpdate(row)" v-hasPermi="['wms:box:edit']">修改</el-button>
             <el-button link type="danger" @click="handleDelete(row)" v-hasPermi="['wms:box:edit']">删除</el-button>
           </template>
@@ -124,15 +108,6 @@
           <el-select v-model="form.boxStatus" placeholder="请选择箱体状态" style="width: 100%">
             <el-option v-for="dict in wms_box_status" :key="dict.value" :label="dict.label" :value="dict.value" />
           </el-select>
-        </el-form-item>
-        <el-form-item label="长(cm)" prop="length">
-          <el-input-number v-model="form.length" :min="0" :precision="2" style="width: 100%" />
-        </el-form-item>
-        <el-form-item label="宽(cm)" prop="width">
-          <el-input-number v-model="form.width" :min="0" :precision="2" style="width: 100%" />
-        </el-form-item>
-        <el-form-item label="高(cm)" prop="height">
-          <el-input-number v-model="form.height" :min="0" :precision="2" style="width: 100%" />
         </el-form-item>
         <el-form-item label="仓库" prop="warehouseId">
           <el-select v-model="form.warehouseId" placeholder="请选择仓库" filterable style="width: 100%" @change="handleFormWarehouseChange">
@@ -184,9 +159,6 @@
         <el-descriptions-item label="箱体状态">
           <dict-tag :options="wms_box_status" :value="detailDialog.data.boxStatus" />
         </el-descriptions-item>
-        <el-descriptions-item label="长(cm)">{{ detailDialog.data.length ?? '-' }}</el-descriptions-item>
-        <el-descriptions-item label="宽(cm)">{{ detailDialog.data.width ?? '-' }}</el-descriptions-item>
-        <el-descriptions-item label="高(cm)">{{ detailDialog.data.height ?? '-' }}</el-descriptions-item>
         <el-descriptions-item label="仓库">{{ detailDialog.data.warehouseName || '-' }}</el-descriptions-item>
         <el-descriptions-item label="库区">{{ detailDialog.data.areaName || '-' }}</el-descriptions-item>
         <el-descriptions-item label="货架">{{ detailDialog.data.rackName || '-' }}</el-descriptions-item>
@@ -218,9 +190,8 @@
             <div class="sub-text">{{ displayBelongUnit(row) }}</div>
           </template>
         </el-table-column>
-        <el-table-column label="批号/日期" min-width="180">
+        <el-table-column label="日期" min-width="180">
           <template #default="{ row }">
-            <div v-if="row.batchNo">批号：{{ row.batchNo }}</div>
             <div v-if="row.productionDate" class="sub-text">生产：{{ parseTime(row.productionDate, '{y}-{m}-{d}') }}</div>
             <div v-if="row.expirationDate" class="sub-text">过期：{{ parseTime(row.expirationDate, '{y}-{m}-{d}') }}</div>
           </template>
@@ -338,9 +309,8 @@
             <dict-tag :options="itemInstanceStatusOptions" :value="row.instanceStatus" />
           </template>
         </el-table-column>
-        <el-table-column label="批号/日期" min-width="180">
+        <el-table-column label="日期" min-width="180">
           <template #default="{ row }">
-            <div v-if="row.batchNo">批号：{{ row.batchNo }}</div>
             <div v-if="row.productionDate" class="sub-text">生产：{{ parseTime(row.productionDate, '{y}-{m}-{d}') }}</div>
             <div v-if="row.expirationDate" class="sub-text">过期：{{ parseTime(row.expirationDate, '{y}-{m}-{d}') }}</div>
           </template>
@@ -425,9 +395,6 @@ const initFormData = () => ({
   boxCode: undefined,
   boxName: undefined,
   boxStatus: 'idle',
-  length: undefined,
-  width: undefined,
-  height: undefined,
   warehouseId: undefined,
   areaId: undefined,
   rackId: undefined,

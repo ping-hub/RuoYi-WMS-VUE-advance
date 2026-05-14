@@ -23,13 +23,6 @@ export function getLocation(id) {
   });
 }
 
-export function getLocationStock(id) {
-  return request({
-    url: '/wms/location/stock/' + id,
-    method: 'get'
-  });
-}
-
 export function rebuildByRack(rackId) {
   return request({
     url: '/wms/location/rebuildByRack/' + rackId,

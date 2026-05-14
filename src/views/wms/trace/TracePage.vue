@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="app-container">
     <el-card>
       <el-form :inline="true" label-width="88px">
@@ -164,11 +164,6 @@
           <el-table-column label="物品码" prop="instanceCode" min-width="160" />
           <el-table-column label="箱码" prop="boxCode" min-width="140" />
           <el-table-column label="数量" prop="quantity" width="80" align="right" />
-          <el-table-column label="批号" min-width="120">
-            <template #default="{ row }">
-              {{ displayBatchNo(row) }}
-            </template>
-          </el-table-column>
           <el-table-column label="生产/过期" min-width="220">
             <template #default="{ row }">
               <div v-if="resolveDateValue(row, 'productionDate')">生产：{{ parseTime(resolveDateValue(row, 'productionDate'), '{y}-{m}-{d}') }}</div>
@@ -345,11 +340,6 @@
           </el-table-column>
           <el-table-column label="箱码" prop="boxCode" min-width="140" />
           <el-table-column label="数量" prop="quantity" width="80" align="right" />
-          <el-table-column label="批号" min-width="120">
-            <template #default="{ row }">
-              {{ displayBatchNo(row) }}
-            </template>
-          </el-table-column>
           <el-table-column label="操作" width="120" align="right">
             <template #default="{ row }">
               <el-button link type="primary" @click="goShipmentOrder(row.shipmentOrderId)">查看单据</el-button>
@@ -553,12 +543,11 @@ const formatInventoryLocation = (row) => {
 };
 
 const displayQualityGrade = (row = {}) => {
-  const value = row.qualityGrade ?? row.defaultQualityGrade ?? row.item?.defaultQualityGrade ?? row.itemSku?.defaultQualityGrade ?? row.itemSku?.item?.defaultQualityGrade;
+  const value = row.qualityGrade;
   return proxy.selectDictLabel(wms_quality_grade.value, value) || value || '-';
 };
 const displayProductMark = (row = {}) => row.productMark ?? row.inventoryDetail?.productMark ?? row.itemInstance?.productMark ?? '-';
-const displayBelongUnit = (row = {}) => row.belongUnit ?? row.item?.defaultBelongUnit ?? row.itemSku?.item?.defaultBelongUnit ?? '-';
-const displayBatchNo = (row = {}) => row.batchNo ?? row.inventoryDetail?.batchNo ?? row.itemInstance?.batchNo ?? '-';
+const displayBelongUnit = (row = {}) => row.belongUnit;
 const resolveDateValue = (row = {}, field) => row[field] ?? row.inventoryDetail?.[field] ?? row.itemInstance?.[field];
 
 const handleQuery = async () => {

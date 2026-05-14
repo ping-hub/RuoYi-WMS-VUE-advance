@@ -5,9 +5,6 @@
         <el-form-item label="仓库名称" prop="warehouseName">
           <el-input v-model="queryParams.warehouseName" placeholder="请输入仓库名称" clearable @keyup.enter="handleQuery" />
         </el-form-item>
-        <el-form-item label="仓库编号" prop="warehouseCode">
-          <el-input v-model="queryParams.warehouseCode" placeholder="请输入仓库编号" clearable @keyup.enter="handleQuery" />
-        </el-form-item>
         <el-form-item>
           <el-button type="primary" icon="Search" @click="handleQuery">搜索</el-button>
           <el-button icon="Refresh" @click="resetQuery">重置</el-button>
@@ -21,7 +18,6 @@
           <el-row :gutter="10" class="mb8" type="flex" justify="space-between">
             <el-col :span="10">
               <div class="page-title">仓库管理</div>
-              <div class="page-tip">仓库页仅负责仓库主档维护；库区维护请使用独立的库区管理入口。</div>
             </el-col>
             <el-col :span="4" class="toolbar-right">
               <el-button type="primary" plain icon="Plus" @click="handleAdd" v-hasPermi="['wms:warehouse:edit']">新增仓库</el-button>
@@ -30,7 +26,6 @@
 
           <el-table v-loading="loading" :data="warehouseList" border highlight-current-row @current-change="handleCurrentChange" empty-text="暂无仓库">
             <el-table-column label="仓库名称" prop="warehouseName" min-width="180" />
-            <el-table-column label="仓库编号" prop="warehouseCode" min-width="160" />
             <el-table-column label="备注" prop="remark" min-width="220" show-overflow-tooltip />
             <el-table-column label="操作" align="right" width="160">
               <template #default="{ row }">
@@ -58,12 +53,8 @@
               <el-button link type="primary" @click="goAreaPage">前往库区管理</el-button>
             </div>
           </template>
-          <div class="page-tip mb12">
-            当前区块仅做所选仓库的库区预览，不再作为库区维护唯一入口。
-          </div>
           <el-descriptions :column="1" border class="mb12">
             <el-descriptions-item label="当前仓库">{{ currentWarehouse?.warehouseName || '未选择仓库' }}</el-descriptions-item>
-            <el-descriptions-item label="仓库编号">{{ currentWarehouse?.warehouseCode || '-' }}</el-descriptions-item>
           </el-descriptions>
           <el-table
             v-loading="areaLoading"
@@ -74,7 +65,6 @@
             empty-text="当前仓库暂无库区"
           >
             <el-table-column label="库区名称" prop="areaName" min-width="120" />
-            <el-table-column label="库区编号" prop="areaCode" min-width="120" />
           </el-table>
         </el-card>
       </el-col>
@@ -88,12 +78,6 @@
             <FormLabelHelp label="仓库名称" purpose="用于标识仓库主体，在库存、单据和布局页面作为主维度展示。" example="主仓、综合器材仓" />
           </template>
           <el-input v-model="form.warehouseName" placeholder="请输入仓库名称" />
-        </el-form-item>
-        <el-form-item prop="warehouseCode">
-          <template #label>
-            <FormLabelHelp label="仓库编号" purpose="作为仓库唯一识别编码，便于筛选、打印和单据引用。" example="WH-001、MAIN-WH" />
-          </template>
-          <el-input v-model="form.warehouseCode" placeholder="请输入仓库编号" />
         </el-form-item>
         <el-form-item label="备注" prop="remark">
           <el-input v-model="form.remark" type="textarea" :rows="3" placeholder="请输入备注" />
@@ -136,7 +120,6 @@ const dialog = reactive({
 
 const initFormData = {
   id: undefined,
-  warehouseCode: undefined,
   warehouseName: undefined,
   remark: undefined
 }
@@ -146,7 +129,6 @@ const data = reactive({
   queryParams: {
     pageNum: 1,
     pageSize: 10,
-    warehouseCode: undefined,
     warehouseName: undefined
   },
   rules: {

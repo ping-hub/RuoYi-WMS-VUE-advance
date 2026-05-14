@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="app-container">
     <el-card>
       <el-form ref="queryRef" :model="queryParams" :inline="true" label-width="88px">
@@ -139,9 +139,8 @@
             <div v-if="row.receiptOrderDetailId" class="sub-text">明细ID：{{ row.receiptOrderDetailId }}</div>
           </template>
         </el-table-column>
-        <el-table-column label="批号/日期" min-width="180">
+        <el-table-column label="日期" min-width="180">
           <template #default="{ row }">
-            <div v-if="row.batchNo">批号：{{ row.batchNo }}</div>
             <div v-if="row.productionDate" class="sub-text">生产：{{ parseTime(row.productionDate, '{y}-{m}-{d}') }}</div>
             <div v-if="row.expirationDate" class="sub-text">过期：{{ parseTime(row.expirationDate, '{y}-{m}-{d}') }}</div>
           </template>
@@ -295,11 +294,6 @@
         </el-row>
         <el-row :gutter="20">
           <el-col :span="12">
-            <el-form-item label="批号" prop="batchNo">
-              <el-input v-model="form.batchNo" placeholder="请输入批号" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
             <el-form-item label="来源单号" prop="sourceOrderNo">
               <el-input v-model="form.sourceOrderNo" placeholder="请输入来源单号" />
             </el-form-item>
@@ -361,7 +355,6 @@
         <el-descriptions-item label="质量等级">{{ displayQualityGrade(detailDialog.data) }}</el-descriptions-item>
         <el-descriptions-item label="所在单位">{{ displayBelongUnit(detailDialog.data) }}</el-descriptions-item>
         <el-descriptions-item label="来源明细ID">{{ detailDialog.data.receiptOrderDetailId || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="批号">{{ detailDialog.data.batchNo || '-' }}</el-descriptions-item>
         <el-descriptions-item label="生产日期">{{ detailDialog.data.productionDate ? parseTime(detailDialog.data.productionDate, '{y}-{m}-{d}') : '-' }}</el-descriptions-item>
         <el-descriptions-item label="过期日期">{{ detailDialog.data.expirationDate ? parseTime(detailDialog.data.expirationDate, '{y}-{m}-{d}') : '-' }}</el-descriptions-item>
         <el-descriptions-item label="备注" :span="2">{{ detailDialog.data.remark || '-' }}</el-descriptions-item>
@@ -528,7 +521,6 @@ const initFormData = () => ({
   sourceOrderId: undefined,
   sourceOrderNo: undefined,
   receiptOrderDetailId: undefined,
-  batchNo: undefined,
   productionDate: undefined,
   expirationDate: undefined,
   remark: undefined

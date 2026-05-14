@@ -249,18 +249,6 @@
                 </div>
               </template>
             </el-table-column>
-            <el-table-column label="器材规格">
-              <template #default="{ row }">
-                <div>{{ row.itemSku.skuName}}</div>
-                <div v-if="row.itemSku.barcode">条码：{{ row.itemSku.barcode }}</div>
-              </template>
-            </el-table-column>
-            <el-table-column label="器材编码/规格型号" min-width="180">
-              <template #default="{ row }">
-                <div>{{ row.equipmentCode || row.itemSku.item.itemCode || '-' }}</div>
-                <div class="table-tip">{{ row.specModel || row.itemSku.specModel || row.itemSku.item.modelText || '-' }}</div>
-              </template>
-            </el-table-column>
             <el-table-column label="源位置" min-width="180">
               <template #default="{ row }">
                 <div>库区：{{ row.sourceAreaName || '-' }}</div>
@@ -307,7 +295,6 @@
                 </el-select>
               </template>
             </el-table-column>
-            <el-table-column label="批号" prop="batchNo" />
             <el-table-column label="生产日期" prop="productionDate">
               <template #default="{ row }">
                 <div v-if="row.productionDate">{{ row.productionDate.substring(0, 10) }}</div>
@@ -490,7 +477,7 @@ const calcLineAmount = (quantity, unitPrice) => {
 }
 
 const syncMovementDetail = (detail) => {
-  const unitPrice = detail.unitPrice ?? detail.itemSku?.defaultUnitPrice
+  const unitPrice = detail.unitPrice
   return {
     ...detail,
     equipmentCode: detail.equipmentCode ?? detail.itemSku?.item?.itemCode,
@@ -604,7 +591,6 @@ const handleOkClick = (item) => {
           skuId: it.skuId,
           quantity: undefined,
           remainQuantity: it.remainQuantity,
-          batchNo: it.batchNo,
           productionDate: it.productionDate,
           expirationDate: it.expirationDate,
           sourceWarehouseId: form.value.sourceWarehouseId,
@@ -620,8 +606,8 @@ const handleOkClick = (item) => {
           equipmentCode: it.equipmentCode ?? it.item?.itemCode,
           specModel: it.specModel ?? it.itemSku?.specModel,
           productMark: it.productMark,
-          qualityGrade: it.qualityGrade ?? it.item?.defaultQualityGrade,
-          unitPrice: it.unitPrice ?? it.itemSku?.defaultUnitPrice
+          qualityGrade: it.qualityGrade,
+          unitPrice: it.unitPrice
         })
       )
     }
@@ -670,7 +656,6 @@ const doSave = (movementOrderStatus = 0) => {
           unitPrice: it.unitPrice,
           lineAmount: it.lineAmount,
           remark: it.remark,
-          batchNo: it.batchNo,
           productionDate: it.productionDate,
           expirationDate: it.expirationDate,
           inventoryDetailId: it.inventoryDetailId,
@@ -774,7 +759,6 @@ const doMovement = async () => {
         movementOrderId: form.value.id,
         skuId: it.skuId,
         quantity: it.quantity,
-        batchNo: it.batchNo,
         productionDate: it.productionDate,
         expirationDate: it.expirationDate,
         inventoryDetailId: it.inventoryDetailId,

@@ -597,7 +597,7 @@ const movementPanel = {
               [
                 {
                   "width": 78.57142857142857,
-                  "title": "商品名称",
+                  "title": "器材名称"
                   "field": "itemName",
                   "checked": true,
                   "columnId": "itemName",
@@ -634,16 +634,6 @@ const movementPanel = {
                   "fixed": false,
                   "rowspan": 1,
                   "colspan": 1
-                },
-                {
-                  "width": 78.57142857142857,
-                  "title": "批号",
-                  "field": "batchNo",
-                  "checked": true,
-                  "columnId": "batchNo",
-                  "fixed": false,
-                  "rowspan": 1,
-                  "colspan": 1,
                 },
                 {
                   "width": 78.57142857142857,

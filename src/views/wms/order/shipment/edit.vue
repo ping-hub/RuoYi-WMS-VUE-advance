@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div>
     <div class="receipt-order-edit-wrapper app-container" :class="{ 'is-view-mode': isViewMode }" style="margin-bottom: 60px" v-loading="loading">
       <el-alert v-if="isViewMode" class="mb10" type="info" :closable="false" title="当前为联查查看模式，已禁用编辑、作废和完成出库操作。" />
@@ -38,9 +38,7 @@
                     v-for="item in wms_shipment_type"
                     :key="item.value"
                     :label="item.value"
-                  >{{ item.label }}
-                  </el-radio-button
-                  >
+                  >{{ item.label }}</el-radio-button>
                 </el-radio-group>
               </el-form-item>
             </el-col>
@@ -170,18 +168,6 @@
                 </div>
               </template>
             </el-table-column>
-            <el-table-column label="器材规格">
-              <template #default="{ row }">
-                <div>{{ row.itemSku?.skuName || row.skuName || '-' }}</div>
-                <div v-if="row.itemSku?.barcode">条码：{{ row.itemSku.barcode }}</div>
-              </template>
-            </el-table-column>
-            <el-table-column label="器材编码/规格型号" min-width="180">
-              <template #default="{ row }">
-                <div>{{ row.equipmentCode || row.itemSku?.item?.itemCode || row.itemCode || '-' }}</div>
-                <div class="table-tip">{{ row.specModel || row.itemSku?.specModel || '-' }}</div>
-              </template>
-            </el-table-column>
             <el-table-column label="出库方式" width="120">
               <template #default="{ row }">
                 <dict-tag :options="shipmentDetailSourceOptions" :value="row.detailSourceType" />
@@ -205,7 +191,6 @@
               </template>
             </el-table-column>
             <el-table-column label="库区" prop="areaName" width="200"/>
-            <el-table-column label="批号" prop="batchNo" />
             <el-table-column label="生产日期" prop="productionDate">
               <template #default="{ row }">
                 <div v-if="row.productionDate">{{ row.productionDate.substring(0, 10) }}</div>
@@ -312,7 +297,6 @@
           <el-table-column label="器材规格" prop="skuName" min-width="160" />
           <el-table-column label="库区" prop="areaName" width="120" />
           <el-table-column label="货位" prop="locationName" width="120" />
-          <el-table-column label="批号" prop="batchNo" min-width="120" />
           <el-table-column label="状态" width="100">
             <template #default="{ row }">
               <dict-tag :options="wms_item_instance_status" :value="row.instanceStatus" />
@@ -506,7 +490,7 @@ const calcLineAmount = (quantity, unitPrice) => {
 }
 
 const syncShipmentDetail = (detail) => {
-  const unitPrice = detail.unitPrice ?? detail.itemSku?.defaultUnitPrice
+  const unitPrice = detail.unitPrice
   const lineAmount = detail.lineAmount ?? detail.amount ?? calcLineAmount(detail.quantity, unitPrice)
   const detailSourceType = detail.detailSourceType ?? (detail.itemInstanceId ? (detail.boxId ? 'box' : 'itemInstance') : 'inventory')
   return {
@@ -559,7 +543,6 @@ const handleOkClick = (item) => {
           skuId: it.skuId,
           quantity: undefined,
           remainQuantity: it.remainQuantity,
-          batchNo: it.batchNo,
           productionDate: it.productionDate,
           expirationDate: it.expirationDate,
           warehouseId: form.value.warehouseId,
@@ -569,8 +552,8 @@ const handleOkClick = (item) => {
           equipmentCode: it.equipmentCode ?? it.item?.itemCode,
           specModel: it.specModel ?? it.itemSku?.specModel,
           productMark: it.productMark,
-          qualityGrade: it.qualityGrade ?? it.item?.defaultQualityGrade,
-          unitPrice: it.unitPrice ?? it.itemSku?.defaultUnitPrice
+          qualityGrade: it.qualityGrade,
+          unitPrice: it.unitPrice
         })
       )
     }
@@ -617,7 +600,6 @@ const matchInventoryDetail = (source, extraUsage = {}) => {
     return it.skuId === source.skuId
       && it.warehouseId === form.value.warehouseId
       && (!targetAreaId || it.areaId === targetAreaId)
-      && (it.batchNo || '') === (source.batchNo || '')
       && normalizeDateTime(it.productionDate) === normalizeDateTime(source.productionDate)
       && normalizeDateTime(it.expirationDate) === normalizeDateTime(source.expirationDate)
   })
@@ -641,7 +623,6 @@ const createDetailRow = (payload) => {
     unitPrice: payload.unitPrice,
     lineAmount: payload.lineAmount,
     remainQuantity: payload.remainQuantity,
-    batchNo: payload.batchNo,
     productionDate: payload.productionDate,
     expirationDate: payload.expirationDate,
     warehouseId: payload.warehouseId,
@@ -693,7 +674,6 @@ const doSave = (shipmentOrderStatus = 0) => {
           qualityGrade: it.qualityGrade,
           unitPrice: it.unitPrice,
           lineAmount: it.lineAmount,
-          batchNo: it.batchNo,
           productionDate: it.productionDate,
           expirationDate: it.expirationDate,
           inventoryDetailId: it.inventoryDetailId,
@@ -781,7 +761,6 @@ const doShipment = async () => {
         skuId: it.skuId,
         amount: it.amount,
         quantity: it.quantity,
-        batchNo: it.batchNo,
         productionDate: it.productionDate,
         expirationDate: it.expirationDate,
         inventoryDetailId: it.inventoryDetailId,
@@ -970,7 +949,6 @@ const handleConfirmItemInstance = async () => {
     const matchedInventory = matchInventoryDetail({
       skuId: item.skuId,
       areaId: item.areaId,
-      batchNo: item.batchNo,
       productionDate: item.productionDate,
       expirationDate: item.expirationDate,
       quantity: 1
@@ -986,7 +964,6 @@ const handleConfirmItemInstance = async () => {
       itemName: item.itemName,
       quantity: 1,
       remainQuantity: matchedInventory.remainQuantity,
-      batchNo: item.batchNo,
       productionDate: item.productionDate,
       expirationDate: item.expirationDate,
       warehouseId: form.value.warehouseId,
@@ -1000,7 +977,7 @@ const handleConfirmItemInstance = async () => {
       specModel: matchedInventory.specModel ?? item.specModel,
       productMark: item.productMark,
       qualityGrade: item.qualityGrade,
-      unitPrice: matchedInventory.unitPrice ?? item.defaultUnitPrice
+      unitPrice: matchedInventory.unitPrice
     }))
   }
   form.value.details.push(...newRows.map(it => syncShipmentDetail(it)))
@@ -1064,7 +1041,6 @@ const handleConfirmBox = async () => {
       const matchedInventory = matchInventoryDetail({
         skuId: item.skuId,
         areaId: item.areaId,
-        batchNo: item.batchNo,
         productionDate: item.productionDate,
         expirationDate: item.expirationDate,
         quantity: 1
@@ -1080,7 +1056,6 @@ const handleConfirmBox = async () => {
         itemName: item.itemName,
         quantity: 1,
         remainQuantity: matchedInventory.remainQuantity,
-        batchNo: item.batchNo,
         productionDate: item.productionDate,
         expirationDate: item.expirationDate,
         warehouseId: form.value.warehouseId,
@@ -1096,7 +1071,7 @@ const handleConfirmBox = async () => {
         specModel: matchedInventory.specModel ?? item.specModel,
         productMark: item.productMark ?? matchedInventory.productMark,
         qualityGrade: item.qualityGrade ?? matchedInventory.qualityGrade,
-        unitPrice: matchedInventory.unitPrice ?? item.defaultUnitPrice
+        unitPrice: matchedInventory.unitPrice
       }))
     }
   }

@@ -44,7 +44,7 @@
       </el-table>
 
     </el-card>
-    <!-- 添加或修改商品品牌对话框 -->
+    <!-- 添加或修改器材品牌对话框 -->
     <el-drawer :title="title" v-model="open" size="50%" append-to-body>
       <el-form ref="itemBrandRef" :model="form" :rules="rules" label-width="80px">
         <el-form-item label="品牌名称" prop="brandName">
@@ -95,7 +95,7 @@ const data = reactive({
 
 const { queryParams, form, rules } = toRefs(data);
 
-/** 查询商品品牌列表 */
+/** 查询器材品牌列表 */
 async function getList() {
   loading.value = true;
   await useWmsStore().getItemBrandList()
@@ -142,7 +142,7 @@ function resetQuery() {
 function handleAdd() {
   reset();
   open.value = true;
-  title.value = "添加商品品牌";
+  title.value = "添加器材品牌";
 }
 
 /** 修改按钮操作 */
@@ -152,7 +152,7 @@ function handleUpdate(row) {
   getItemBrand(_id).then(response => {
     form.value = response.data;
     open.value = true;
-    title.value = "修改商品品牌";
+    title.value = "修改器材品牌";
   });
 }
 

@@ -189,7 +189,6 @@
           <el-table-column label="器材信息" min-width="200">
             <template #default="{ row }">
               <div>{{ row.itemSku?.item?.itemName || '-' }}</div>
-              <div class="sub-text">类型编码：{{ row.itemSku?.item?.itemCode || '-' }}</div>
               <div class="sub-text">器材编码：{{ row.equipmentCode || '-' }}</div>
             </template>
           </el-table-column>
@@ -227,7 +226,6 @@
               <span :class="Number(row.differenceQuantity || 0) === 0 ? '' : 'diff-highlight'">{{ row.differenceQuantity || 0 }}</span>
             </template>
           </el-table-column>
-          <el-table-column label="批号" prop="batchNo" min-width="120" />
           <el-table-column label="备注" min-width="160">
             <template #default="{ row }">
               <el-input v-model="row.remark" placeholder="请输入备注" />
@@ -361,7 +359,6 @@ const normalizeDetail = (item, index) => ({
   beforeQuantity: item.beforeQuantity,
   afterQuantity: item.afterQuantity,
   differenceQuantity: item.differenceQuantity,
-  batchNo: item.batchNo,
   productionDate: item.productionDate,
   expirationDate: item.expirationDate,
   remark: item.remark
@@ -447,7 +444,6 @@ const handleInventorySelectOk = (rows) => {
       beforeQuantity: Number(item.remainQuantity || item.quantity || 0),
       afterQuantity: Number(item.remainQuantity || item.quantity || 0),
       differenceQuantity: 0,
-      batchNo: item.batchNo,
       productionDate: item.productionDate,
       expirationDate: item.expirationDate,
       remark: undefined

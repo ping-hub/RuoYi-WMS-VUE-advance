@@ -81,3 +81,15 @@ export function delItem(id) {
     method: 'delete'
   });
 };
+
+/**
+ * 批量打印器材二维码
+ * @param data
+ */
+export function batchPrintItemQrCode(data) {
+  return request({
+    url: '/wms/item/batchPrintQrCode',
+    method: 'post',
+    data: data
+  });
+};

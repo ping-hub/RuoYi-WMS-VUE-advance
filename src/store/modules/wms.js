@@ -52,7 +52,7 @@ export const useWmsStore = defineStore('wms', () => {
     });
   }
 
-  // 商品分类管理
+  // 器材分类管理
   const itemCategoryList = ref([])
   const itemCategoryTreeList = ref([])
   const itemCategoryMap = ref(new Map())
@@ -80,7 +80,7 @@ export const useWmsStore = defineStore('wms', () => {
     })
   }
 
-  // 商品品牌管理
+  // 器材品牌管理
   const itemBrandList = ref([])
   const itemBrandMap = ref(new Map())
 
@@ -111,13 +111,13 @@ export const useWmsStore = defineStore('wms', () => {
     merchantList,
     merchantMap,
     getMerchantList,
-    // 商品分类管理
+    // 器材分类管理
     itemCategoryList,
     itemCategoryTreeList,
     itemCategoryMap,
     getItemCategoryList,
     getItemCategoryTreeList,
-    // 商品品牌管理
+    // 器材品牌管理
     itemBrandList,
     itemBrandMap,
     getItemBrandList

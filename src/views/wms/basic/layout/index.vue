@@ -104,7 +104,7 @@
               >
                 <span class="grid-cell__title">{{ cell.locationName || `R${cell.rowNo}-C${cell.columnNo}` }}</span>
                 <span class="grid-cell__meta">{{ cell.locationCode || '未建货位' }}</span>
-                <span class="grid-cell__meta">箱体 {{ cell.boxCount || 0 }} / 直存 {{ cell.directItemCount || 0 }} / 明细 {{ cell.itemInstanceCount || 0 }}</span>
+                <span class="grid-cell__meta">{{ formatOccupiedText(cell) }}</span>
               </button>
             </div>
           </div>
@@ -130,24 +130,13 @@
               <el-descriptions-item label="货架">{{ locationSummary.rackName || '-' }}</el-descriptions-item>
               <el-descriptions-item label="格子坐标">{{ `第 ${locationSummary.rowNo || '-'} 行 / 第 ${locationSummary.columnNo || '-'} 列` }}</el-descriptions-item>
               <el-descriptions-item label="尺寸">{{ formatDimensionText(locationSummary.length, locationSummary.width, locationSummary.height) }}</el-descriptions-item>
-              <el-descriptions-item label="容积">{{ locationSummary.volume ?? '-' }}</el-descriptions-item>
               <el-descriptions-item label="最大承重">{{ locationSummary.maxWeight ?? '-' }}</el-descriptions-item>
               <el-descriptions-item label="占用状态">
                 <el-tag size="small" :type="isLocationOccupied(locationSummary) ? 'warning' : 'success'">
                   {{ formatOccupiedText(locationSummary) }}
                 </el-tag>
               </el-descriptions-item>
-              <el-descriptions-item label="箱体数">{{ locationSummary.boxCount || 0 }}</el-descriptions-item>
-              <el-descriptions-item label="直存器材数">{{ locationSummary.directItemCount || 0 }}</el-descriptions-item>
-              <el-descriptions-item label="明细器材数">{{ locationSummary.itemInstanceCount || 0 }}</el-descriptions-item>
             </el-descriptions>
-
-            <div class="summary-subtitle">货位内器材摘要</div>
-            <el-table :data="locationSummary.itemSummaries || []" border empty-text="当前货位暂无器材">
-              <el-table-column label="器材名称" prop="itemName" min-width="180" />
-              <el-table-column label="器材规格" prop="skuName" min-width="180" />
-              <el-table-column label="数量" prop="quantity" width="100" align="right" />
-            </el-table>
           </template>
         </el-card>
       </el-col>
@@ -299,7 +288,7 @@ const normalizedCells = computed(() => {
 const missingCellCount = computed(() => normalizedCells.value.filter(cell => !cell.locationId).length)
 
 function formatNodeLabel(node) {
-  return node.code ? `${node.name} (${node.code})` : node.name
+  return node.name
 }
 
 function nodeTagType(node) {
@@ -332,8 +321,6 @@ function formatDimensionText(length, width, height) {
 function isLocationOccupied(location) {
   return Number(location?.occupiedFlag) === 1
     || Number(location?.boxCount) > 0
-    || Number(location?.directItemCount) > 0
-    || Number(location?.itemInstanceCount) > 0
 }
 
 function formatOccupiedText(location) {

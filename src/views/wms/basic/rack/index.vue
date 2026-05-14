@@ -2,9 +2,6 @@
   <div class="app-container">
     <el-card>
       <el-form ref="queryRef" :model="queryParams" :inline="true" label-width="68px">
-        <el-form-item label="编码" prop="rackCode">
-          <el-input v-model="queryParams.rackCode" placeholder="请输入货架编码" clearable @keyup.enter="handleQuery" />
-        </el-form-item>
         <el-form-item label="名称" prop="rackName">
           <el-input v-model="queryParams.rackName" placeholder="请输入货架名称" clearable @keyup.enter="handleQuery" />
         </el-form-item>
@@ -54,7 +51,6 @@
       </el-row>
 
       <el-table v-loading="loading" :data="rackList" border empty-text="暂无货架">
-        <el-table-column label="编码" prop="rackCode" min-width="140" />
         <el-table-column label="名称" prop="rackName" min-width="140" />
         <el-table-column label="仓库" prop="warehouseName" min-width="120" />
         <el-table-column label="库区" prop="areaName" min-width="120" />
@@ -63,18 +59,18 @@
             <dict-tag :options="wms_rack_status" :value="row.rackStatus" />
           </template>
         </el-table-column>
-        <el-table-column label="类型" prop="rackType" width="120">
+        <el-table-column label="类型" prop="rackType" width="100">
           <template #default="{ row }">
             <dict-tag :options="wms_rack_type" :value="row.rackType" />
           </template>
         </el-table-column>
         <el-table-column label="行数" prop="rowCount" width="80" align="center" />
         <el-table-column label="列数" prop="columnCount" width="80" align="center" />
-        <el-table-column label="长(cm)" prop="length" width="90" align="center" />
-        <el-table-column label="宽(cm)" prop="width" width="90" align="center" />
-        <el-table-column label="高(cm)" prop="height" width="90" align="center" />
-        <el-table-column label="排序号" prop="orderNum" width="90" align="center" />
-        <el-table-column label="备注" prop="remark" min-width="180" show-overflow-tooltip />
+        <el-table-column label="长(cm)" prop="length" width="68" align="center" />
+        <el-table-column label="宽(cm)" prop="width" width="68" align="center" />
+        <el-table-column label="高(cm)" prop="height" width="68" align="center" />
+        <el-table-column label="排序" prop="orderNum" width="55" align="center" />
+        <el-table-column label="备注" prop="remark" min-width="80" show-overflow-tooltip />
         <el-table-column label="操作" align="right" width="160">
           <template #default="{ row }">
             <el-button link type="primary" icon="Edit" @click="handleUpdate(row)" v-hasPermi="['wms:rack:edit']">修改</el-button>
@@ -95,12 +91,6 @@
     <el-drawer :title="title" v-model="open" append-to-body size="40%" :close-on-click-modal="false">
       <div class="form-tip">带 * 为必填项，货架保存成功后将自动生成或同步货位。</div>
       <el-form ref="rackRef" :model="form" :rules="rules" label-width="110px">
-        <el-form-item prop="rackCode">
-          <template #label>
-            <FormLabelHelp label="货架编码" purpose="用于唯一标识货架，在布局页和单据定位中引用。" example="RK-A01" />
-          </template>
-          <el-input v-model="form.rackCode" placeholder="请输入货架编码" />
-        </el-form-item>
         <el-form-item label="货架名称" prop="rackName">
           <el-input v-model="form.rackName" placeholder="请输入货架名称" />
         </el-form-item>
@@ -169,7 +159,7 @@
         </el-form-item>
         <el-form-item prop="orderNum">
           <template #label>
-            <FormLabelHelp label="排序号" purpose="控制同库区下货架的展示顺序。" example="10" />
+            <FormLabelHelp label="排序" purpose="控制同库区下货架的展示顺序。" example="10" />
           </template>
           <el-input-number v-model="form.orderNum" :min="0" :precision="0" style="width: 100%" />
         </el-form-item>
@@ -244,7 +234,6 @@ const data = reactive({
   queryParams: {
     pageNum: 1,
     pageSize: 10,
-    rackCode: undefined,
     rackName: undefined,
     warehouseId: undefined,
     areaId: undefined,
@@ -298,7 +287,6 @@ const formAreaOptions = computed(() => {
 function reset() {
   form.value = {
     id: undefined,
-    rackCode: undefined,
     rackName: undefined,
     warehouseId: undefined,
     areaId: undefined,
@@ -355,7 +343,6 @@ async function handleUpdate(row) {
   originalPlan.value = {
     rowCount: res.data.rowCount,
     columnCount: res.data.columnCount,
-    rackCode: res.data.rackCode,
     rackName: res.data.rackName,
     length: res.data.length,
     width: res.data.width,
