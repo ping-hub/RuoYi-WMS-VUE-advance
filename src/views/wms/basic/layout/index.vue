@@ -104,6 +104,7 @@
               >
                 <span class="grid-cell__title">{{ cell.locationName || `R${cell.rowNo}-C${cell.columnNo}` }}</span>
                 <span class="grid-cell__meta">{{ cell.locationCode || '未建货位' }}</span>
+                <span class="grid-cell__meta">{{ formatCellCountText(cell) }}</span>
                 <span class="grid-cell__meta">{{ formatOccupiedText(cell) }}</span>
               </button>
             </div>
@@ -130,13 +131,34 @@
               <el-descriptions-item label="货架">{{ locationSummary.rackName || '-' }}</el-descriptions-item>
               <el-descriptions-item label="格子坐标">{{ `第 ${locationSummary.rowNo || '-'} 行 / 第 ${locationSummary.columnNo || '-'} 列` }}</el-descriptions-item>
               <el-descriptions-item label="尺寸">{{ formatDimensionText(locationSummary.length, locationSummary.width, locationSummary.height) }}</el-descriptions-item>
-              <el-descriptions-item label="最大承重">{{ locationSummary.maxWeight ?? '-' }}</el-descriptions-item>
               <el-descriptions-item label="占用状态">
                 <el-tag size="small" :type="isLocationOccupied(locationSummary) ? 'warning' : 'success'">
                   {{ formatOccupiedText(locationSummary) }}
                 </el-tag>
               </el-descriptions-item>
+              <el-descriptions-item label="箱子数">{{ locationSummary.boxCount ?? 0 }}</el-descriptions-item>
+              <el-descriptions-item label="器材实例数">{{ locationSummary.itemInstanceCount ?? 0 }}</el-descriptions-item>
             </el-descriptions>
+            <div v-if="isLocationOccupied(locationSummary)" class="summary-stock-block">
+              <div class="summary-section">
+                <div class="summary-section__title">箱子列表</div>
+                <el-table :data="locationSummary.boxes || []" size="small" border empty-text="当前货位暂无箱子">
+                  <el-table-column label="箱码" prop="boxCode" min-width="140" />
+                  <el-table-column label="箱体名称" prop="boxName" min-width="140" />
+                  <el-table-column label="箱内数量" prop="itemCount" width="100" align="center" />
+                </el-table>
+              </div>
+              <div class="summary-section mt16">
+                <div class="summary-section__title">器材列表</div>
+                <el-table :data="locationSummary.itemInstances || []" size="small" border empty-text="当前货位暂无器材实例" max-height="320">
+                  <el-table-column label="器材编码" prop="instanceCode" min-width="160" />
+                  <el-table-column label="器材" prop="itemName" min-width="120" />
+                  <el-table-column label="规格" prop="skuName" min-width="120" />
+                  <el-table-column label="产品标识" prop="productMark" min-width="120" />
+                  <el-table-column label="箱码" prop="boxCode" min-width="120" />
+                </el-table>
+              </div>
+            </div>
           </template>
         </el-card>
       </el-col>
@@ -145,7 +167,7 @@
 </template>
 
 <script setup name="StorageLayout">
-import { computed, getCurrentInstance, onMounted, reactive, ref } from 'vue'
+import { computed, getCurrentInstance, onActivated, onMounted, reactive, ref } from 'vue'
 import { getLocationSummary, getRackGrid, getStorageLayoutTree } from '@/api/wms/storageLayout'
 
 const { proxy } = getCurrentInstance()
@@ -164,6 +186,7 @@ const currentRackId = ref()
 const rackGrid = ref()
 const locationSummary = ref()
 const selectedLocationId = ref()
+let activatedOnce = false
 
 const nodeTypeLabelMap = {
   warehouse: '仓库',
@@ -327,6 +350,12 @@ function formatOccupiedText(location) {
   return isLocationOccupied(location) ? '已占用' : '空闲'
 }
 
+function formatCellCountText(cell) {
+  const boxCount = Number(cell?.boxCount || 0)
+  const itemInstanceCount = Number(cell?.itemInstanceCount || 0)
+  return `箱 ${boxCount} / 器材 ${itemInstanceCount}`
+}
+
 async function loadLayoutTree() {
   treeLoading.value = true
   try {
@@ -451,6 +480,14 @@ onMounted(() => {
   loadLayoutTree().catch(() => {
     proxy?.$modal?.msgError('仓储布局加载失败，请稍后重试')
   })
+})
+
+onActivated(() => {
+  if (!activatedOnce) {
+    activatedOnce = true
+    return
+  }
+  loadLayoutTree().catch(() => {})
 })
 </script>
 
@@ -598,6 +635,16 @@ onMounted(() => {
   color: #606266;
   font-size: 12px;
   line-height: 1.5;
+}
+
+.summary-stock-block {
+  margin-top: 16px;
+}
+
+.summary-section__title {
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: #303133;
 }
 
 .summary-subtitle {

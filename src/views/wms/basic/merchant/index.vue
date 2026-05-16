@@ -18,16 +18,6 @@
             @keyup.enter="handleQuery"
           />
         </el-form-item>
-        <el-form-item label="企业类型" prop="merchantType">
-          <el-select v-model="queryParams.merchantType" placeholder="请选择企业类型" clearable>
-            <el-option
-              v-for="dict in merchant_type"
-              :key="dict.value"
-              :label="dict.label"
-              :value="dict.value"
-            />
-          </el-select>
-        </el-form-item>
         <el-form-item>
           <el-button type="primary" icon="Search" @click="handleQuery">搜索</el-button>
           <el-button icon="Refresh" @click="resetQuery">重置</el-button>
@@ -54,12 +44,6 @@
         <el-table-column label="id" prop="id" v-if="false"/>
         <el-table-column label="编号" prop="merchantCode" />
         <el-table-column label="名称" prop="merchantName" />
-        <el-table-column label="企业类型" prop="merchantType">
-          <template #default="scope">
-            <dict-tag :options="merchant_type" :value="scope.row.merchantType"/>
-          </template>
-        </el-table-column>
-        <el-table-column label="级别" prop="merchantLevel" />
         <el-table-column label="联系人" prop="contactPerson" />
         <el-table-column label="备注" prop="remark" />
         <el-table-column label="操作" align="right" class-name="small-padding fixed-width">
@@ -89,25 +73,6 @@
         </el-form-item>
         <el-form-item label="名称" prop="merchantName">
           <el-input v-model="form.merchantName" placeholder="请输入名称" />
-        </el-form-item>
-        <el-form-item label="企业类型" prop="merchantType">
-          <el-select v-model="form.merchantType" placeholder="请选择企业类型">
-            <el-option
-              v-for="dict in merchant_type"
-              :key="dict.value"
-              :label="dict.label"
-              :value="parseInt(dict.value)"
-            ></el-option>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="级别" prop="merchantLevel">
-          <el-input v-model="form.merchantLevel" placeholder="请输入级别" />
-        </el-form-item>
-        <el-form-item label="开户行" prop="bankName">
-          <el-input v-model="form.bankName" placeholder="请输入开户行" />
-        </el-form-item>
-        <el-form-item label="银行账户" prop="bankAccount">
-          <el-input v-model="form.bankAccount" placeholder="请输入银行账户" />
         </el-form-item>
         <el-form-item label="地址" prop="address">
           <el-input v-model="form.address" placeholder="请输入地址" />
@@ -139,11 +104,11 @@
 </template>
 
 <script setup name="Merchant">
+import { getCurrentInstance, reactive, ref, toRefs } from "vue";
 import { listMerchant, getMerchant, delMerchant, addMerchant, updateMerchant } from "@/api/wms/merchant";
 import {ElMessageBox} from "element-plus";
 
 const { proxy } = getCurrentInstance();
-const { merchant_type } = proxy.useDict('merchant_type');
 
 const merchantList = ref([]);
 const open = ref(false);
@@ -160,7 +125,6 @@ const data = reactive({
     pageSize: 10,
     merchantCode: undefined,
     merchantName: undefined,
-    merchantType: undefined,
   },
   rules: {
     merchantCode: [
@@ -168,9 +132,6 @@ const data = reactive({
     ],
     merchantName: [
       { required: true, message: "名称不能为空", trigger: "blur" }
-    ],
-    merchantType: [
-      { required: true, message: "企业类型不能为空", trigger: "change" }
     ],
   }
 });
@@ -199,17 +160,12 @@ function reset() {
     id: null,
     merchantCode: null,
     merchantName: null,
-    merchantType: null,
-    merchantLevel: null,
-    bankName: null,
-    bankAccount: null,
     address: null,
     mobile: null,
     tel: null,
     contactPerson: null,
     email: null,
     remark: null,
-    delFlag: null,
     createBy: null,
     createTime: null,
     updateBy: null,

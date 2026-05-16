@@ -16,17 +16,19 @@ export function listItemInstanceNoPage(query) {
   });
 }
 
-export function getItemInstance(id) {
+export function getItemInstance(id, query) {
   return request({
     url: '/wms/itemInstance/' + id,
-    method: 'get'
+    method: 'get',
+    params: query
   });
 }
 
-export function getItemInstanceByCode(instanceCode) {
+export function getItemInstanceByCode(instanceCode, query) {
   return request({
     url: '/wms/itemInstance/code/' + instanceCode,
-    method: 'get'
+    method: 'get',
+    params: query
   });
 }
 

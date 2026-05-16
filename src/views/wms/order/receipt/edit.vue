@@ -143,30 +143,35 @@
       </el-card>
       <el-card header="入库明细" class="mt10">
         <div class="receipt-order-content">
-          <div class="flex-space-between mb8">
-            <div class="instance-tip">
-              入库按单品实例执行。可按“分类 -> 器材 -> 实例”选择未入库器材，并在明细行填写箱码和目标货位。
+          <div class="flex-space-between mb8 receipt-toolbar">
+            <div>
+              <div class="instance-tip">
+                入库按单品实例执行。可按“分类 -> 器材 -> 实例”选择未入库器材，并在明细行填写箱码和目标货位。
+              </div>
             </div>
-            <el-popover
-              placement="left"
-              title="提示"
-              :width="200"
-              trigger="hover"
-              :disabled="form.warehouseId"
-              content="请先选择仓库！"
-            >
-              <template #reference>
-                <el-button type="primary" plain="plain" size="default" @click="showAddItem" icon="Plus" :disabled="!form.warehouseId || isViewMode">选择器材实例</el-button>
-              </template>
-            </el-popover>
+            <div class="receipt-toolbar-actions">
+              <el-popover
+                placement="left"
+                title="提示"
+                :width="200"
+                trigger="hover"
+                :disabled="form.warehouseId"
+                content="请先选择仓库！"
+              >
+                <template #reference>
+                  <el-button type="primary" plain="plain" size="default" @click="showAddItem" icon="Plus" :disabled="!form.warehouseId || isViewMode">选择器材实例</el-button>
+                </template>
+              </el-popover>
+            </div>
           </div>
-          <el-table :data="form.details" border empty-text="暂无入库明细">
+          <el-table
+            :data="form.details"
+            border
+            empty-text="暂无入库明细"
+          >
             <el-table-column label="器材信息" prop="itemSku.itemName" min-width="100">
               <template #default="{ row }">
                 <div>{{ row.itemSku?.item?.itemName || row.itemName || '-' }}</div>
-                <div v-if="row.itemSku?.item?.itemBrand || row.itemBrand">
-                  品牌：{{ useWmsStore().itemBrandMap.get(row.itemSku?.item?.itemBrand || row.itemBrand)?.brandName || '-' }}
-                </div>
                 <div class="sub-text">规格：{{ row.itemSku?.skuName || row.skuName || '-' }}</div>
               </template>
             </el-table-column>
@@ -197,7 +202,10 @@
             </el-table-column>
             <el-table-column label="箱码" min-width="180">
               <template #default="{ row }">
-                <el-input v-model="row.boxCode" :disabled="isViewMode" />
+                <el-input
+                  v-model="row.boxCode"
+                  :disabled="isViewMode"
+                />
               </template>
             </el-table-column>
             <el-table-column label="单价" prop="unitPrice" width="160">
@@ -251,7 +259,8 @@
             </el-table-column>
             <el-table-column label="操作" width="100" align="right" fixed="right">
               <template #default="scope">
-                <el-button v-if="!isViewMode" icon="Delete" type="danger" plain size="small" @click="handleDeleteDetail(scope.row, scope.$index)" link>删除</el-button>
+                <el-button v-if="!isViewMode" type="primary" link size="small" @click.stop="setActiveScanDetail(scope.row)">设为扫码目标</el-button>
+                <el-button v-if="!isViewMode" icon="Delete" type="danger" plain size="small" @click.stop="handleDeleteDetail(scope.row, scope.$index)" link>删除</el-button>
               </template>
             </el-table-column>
           </el-table>
@@ -492,6 +501,37 @@ const normalizeReceiptInstance = (instance = {}) => ({
   remark: instance.remark ?? ''
 })
 
+const createReceiptDetailFromInstance = (item = {}) => syncReceiptDetail({
+  itemInstanceId: item.id ?? item.itemInstanceId,
+  instanceCode: item.instanceCode,
+  boxCode: item.boxCode ?? '',
+  itemId: item.itemId,
+  skuId: item.skuId,
+  itemName: item.itemName,
+  itemCode: item.itemCode,
+  skuName: item.skuName,
+  specModel: item.specModel,
+  quantity: 1,
+  productionDate: item.productionDate,
+  expirationDate: item.expirationDate,
+  warehouseId: form.value.warehouseId,
+  areaId: form.value.areaId,
+  rackId: undefined,
+  locationId: undefined,
+  generateItemInstance: 1,
+  generatedInstanceQuantity: 0,
+  productMark: item.productMark,
+  qualityGrade: item.qualityGrade,
+  receiptItemInstances: [normalizeReceiptInstance({
+    id: item.id ?? item.itemInstanceId,
+    instanceCode: item.instanceCode,
+    boxCode: item.boxCode ?? '',
+    productMark: item.productMark,
+    qualityGrade: item.qualityGrade,
+    remark: item.remark
+  })]
+})
+
 const syncReceiptDetail = (detail) => {
   const firstReceiptInstance = detail.receiptItemInstances?.[0] || {}
   const unitPrice = detail.unitPrice
@@ -502,7 +542,6 @@ const syncReceiptDetail = (detail) => {
     skuId: detail.skuId ?? detail.itemSku?.id,
     itemName: detail.itemName ?? detail.itemSku?.item?.itemName,
     itemCode: detail.itemCode ?? detail.itemSku?.item?.itemCode,
-    itemBrand: detail.itemBrand ?? detail.itemSku?.item?.itemBrand,
     skuName: detail.skuName ?? detail.itemSku?.skuName,
     itemInstanceId: detail.itemInstanceId ?? firstReceiptInstance.id,
     instanceCode: detail.instanceCode ?? firstReceiptInstance.instanceCode ?? '',
@@ -615,37 +654,7 @@ const handleConfirmReceiptItemInstance = () => {
     ElMessage.error('请选择器材实例')
     return
   }
-  const newDetails = itemInstanceSelectDialog.selection.map(item => syncReceiptDetail({
-    itemInstanceId: item.id,
-    instanceCode: item.instanceCode,
-    boxCode: '',
-    itemId: item.itemId,
-    skuId: item.skuId,
-    itemName: item.itemName,
-    itemCode: item.itemCode,
-    itemBrand: item.itemBrand,
-    skuName: item.skuName,
-    specModel: item.specModel,
-    quantity: 1,
-    productionDate: item.productionDate,
-    expirationDate: item.expirationDate,
-    warehouseId: form.value.warehouseId,
-    areaId: form.value.areaId,
-    rackId: undefined,
-    locationId: undefined,
-    generateItemInstance: 1,
-    generatedInstanceQuantity: 0,
-    productMark: item.productMark,
-    qualityGrade: item.qualityGrade,
-    receiptItemInstances: [normalizeReceiptInstance({
-      id: item.id,
-      instanceCode: item.instanceCode,
-      boxCode: '',
-      productMark: item.productMark,
-      qualityGrade: item.qualityGrade,
-      remark: item.remark
-    })]
-  }))
+  const newDetails = itemInstanceSelectDialog.selection.map(item => createReceiptDetailFromInstance(item))
   form.value.details.push(...newDetails)
   itemInstanceSelectDialog.visible = false
   Promise.all(newDetails.map(detail => loadRecommendTargets(detail)))
@@ -967,6 +976,16 @@ const handleDeleteDetail = (row, index) => {
 .sub-text {
   color: var(--el-text-color-secondary);
   font-size: 12px;
+}
+
+.receipt-toolbar {
+  gap: 12px;
+}
+
+.receipt-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 </style>

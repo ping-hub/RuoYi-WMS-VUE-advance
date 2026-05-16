@@ -19,9 +19,6 @@
             <el-col :span="10">
               <div class="page-title">仓库管理</div>
             </el-col>
-            <el-col :span="4" class="toolbar-right">
-              <el-button type="primary" plain icon="Plus" @click="handleAdd" v-hasPermi="['wms:warehouse:edit']">新增仓库</el-button>
-            </el-col>
           </el-row>
 
           <el-table v-loading="loading" :data="warehouseList" border highlight-current-row @current-change="handleCurrentChange" empty-text="暂无仓库">

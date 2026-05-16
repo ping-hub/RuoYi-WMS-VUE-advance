@@ -244,9 +244,6 @@
                     row.itemSku.item.itemName + (row.itemSku.item.itemCode ? ('(' + row.itemSku.item.itemCode + ')') : '')
                   }}
                 </div>
-                <div v-if="row.itemSku.item.itemBrand">
-                  品牌：{{ useWmsStore().itemBrandMap.get(row.itemSku.item.itemBrand).brandName }}
-                </div>
               </template>
             </el-table-column>
             <el-table-column label="源位置" min-width="180">

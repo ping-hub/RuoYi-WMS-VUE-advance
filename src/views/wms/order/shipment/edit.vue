@@ -142,16 +142,13 @@
         <div class="receipt-order-content">
           <div class="flex-space-between mb8">
             <div>
-              <el-tag type="info">支持库存出库 / 器材编码出库 / 整箱出库</el-tag>
+              <el-tag type="info">支持器材编码出库 / 整箱出库</el-tag>
             </div>
             <div class="add-actions">
-              <el-button type="primary" plain size="default" @click="showAddInventory" icon="Plus" :disabled="!form.warehouseId || isViewMode">
-                按库存添加
-              </el-button>
-              <el-button type="primary" plain size="default" @click="showAddItemInstance" icon="Tickets" :disabled="!form.warehouseId || isViewMode">
+              <el-button type="primary" plain size="default" @click="showAddItemInstance" icon="Tickets" :disabled="!form.warehouseId || !form.areaId || isViewMode">
                 按器材编码添加
               </el-button>
-              <el-button type="primary" plain size="default" @click="showAddBox" icon="Box" :disabled="!form.warehouseId || isViewMode">
+              <el-button type="primary" plain size="default" @click="showAddBox" icon="Box" :disabled="!form.warehouseId || !form.areaId || isViewMode">
                 按整箱添加
               </el-button>
             </div>
@@ -162,9 +159,6 @@
                 <div>{{
                     (row.itemSku?.item?.itemName || row.itemName || '-') + ((row.itemSku?.item?.itemCode || row.itemCode) ? ('(' + (row.itemSku?.item?.itemCode || row.itemCode) + ')') : '')
                   }}
-                </div>
-                <div v-if="row.itemSku?.item?.itemBrand">
-                  品牌：{{ useWmsStore().itemBrandMap.get(row.itemSku.item.itemBrand)?.brandName }}
                 </div>
               </template>
             </el-table-column>
@@ -263,20 +257,26 @@
           </el-table>
         </div>
       </el-card>
-      <InventoryDetailSelect
-        ref="inventorySelectRef"
-        :model-value="inventorySelectShow"
-        @handleOkClick="handleOkClick"
-        @handleCancelClick="inventorySelectShow = false"
-        :size="'90%'"
-        :select-warehouse-disable="false"
-        :select-area-disable="!!form?.areaId"
-        :warehouse-id="form.warehouseId"
-        :area-id="form.areaId"
-        :selected-inventory="selectedInventory"
-      />
       <el-dialog v-model="itemInstanceDialog.visible" title="按器材编码添加" width="1100px" append-to-body>
         <el-form :inline="true" :model="itemInstanceDialog.query" label-width="88px">
+          <el-form-item label="仓库">
+            <el-select v-model="itemInstanceDialog.query.warehouseId" placeholder="仓库" disabled filterable style="width: 160px">
+              <el-option v-for="item in useWmsStore().warehouseList" :key="item.id" :label="item.warehouseName" :value="item.id" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="库区">
+            <el-select v-model="itemInstanceDialog.query.areaId" placeholder="库区" disabled filterable style="width: 160px">
+              <el-option
+                v-for="item in useWmsStore().areaList.filter(it => it.warehouseId === itemInstanceDialog.query.warehouseId)"
+                :key="item.id"
+                :label="item.areaName"
+                :value="item.id"
+              />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="货架">
+            <RackSelect v-model="itemInstanceDialog.query.rackId" :warehouse-id="itemInstanceDialog.query.warehouseId" :area-id="itemInstanceDialog.query.areaId" placeholder="货架" style="width: 160px" />
+          </el-form-item>
           <el-form-item label="器材编码">
             <el-input v-model="itemInstanceDialog.query.instanceCode" placeholder="请输入器材编码" clearable @keyup.enter="getItemInstanceList" />
           </el-form-item>
@@ -295,7 +295,9 @@
           <el-table-column label="器材编码" prop="instanceCode" min-width="160" />
           <el-table-column label="器材" prop="itemName" min-width="160" />
           <el-table-column label="器材规格" prop="skuName" min-width="160" />
+          <el-table-column label="仓库" prop="warehouseName" width="120" />
           <el-table-column label="库区" prop="areaName" width="120" />
+          <el-table-column label="货架" prop="rackName" width="120" />
           <el-table-column label="货位" prop="locationName" width="120" />
           <el-table-column label="状态" width="100">
             <template #default="{ row }">
@@ -376,10 +378,10 @@ import {ElMessage, ElMessageBox} from "element-plus";
 import {useRoute} from "vue-router";
 import {useWmsStore} from '@/store/modules/wms'
 import {numSub, generateNo} from '@/utils/ruoyi'
-import InventoryDetailSelect from "@/views/components/InventoryDetailSelect.vue";
 import {listInventoryDetailNoPage} from "@/api/wms/inventoryDetail";
 import {listItemInstance} from "@/api/wms/itemInstance";
 import {getBox, listBox} from "@/api/wms/box";
+import RackSelect from "@/views/components/RackSelect.vue";
 
 const {proxy} = getCurrentInstance();
 const route = useRoute();
@@ -421,8 +423,6 @@ const initFormData = {
   totalQuantity: 0,
   details: [],
 }
-const inventorySelectRef = ref(null)
-const selectedInventory = ref([])
 const inventoryDetailOptions = ref([])
 const itemInstanceDialog = reactive({
   visible: false,
@@ -433,6 +433,10 @@ const itemInstanceDialog = reactive({
   pageSize: 10,
   selection: [],
   query: {
+    warehouseId: undefined,
+    areaId: undefined,
+    rackId: undefined,
+    unshippedOnly: true,
     instanceCode: undefined,
     itemName: undefined,
     skuName: undefined
@@ -463,6 +467,9 @@ const data = reactive({
     warehouseId: [
       {required: true, message: "请选择仓库", trigger: ['blur', 'change']}
     ],
+    areaId: [
+      {required: true, message: "请选择库区", trigger: ['blur', 'change']}
+    ],
   }
 });
 const {form, rules} = toRefs(data);
@@ -481,8 +488,6 @@ const close = () => {
   }
   proxy?.$tab.closePage();
 }
-const inventorySelectShow = ref(false)
-
 const calcLineAmount = (quantity, unitPrice) => {
   const qty = Number(quantity || 0)
   const price = Number(unitPrice || 0)
@@ -520,44 +525,6 @@ const recalculateOrderSummary = () => {
 const handleDetailChange = (row) => {
   row.lineAmount = calcLineAmount(row.quantity, row.unitPrice)
   row.amount = row.lineAmount
-  recalculateOrderSummary()
-}
-
-// 选择器材 start
-const showAddInventory = () => {
-  inventorySelectRef.value.getList()
-  inventorySelectShow.value = true
-}
-// 选择成功
-const handleOkClick = (item) => {
-  inventorySelectShow.value = false
-  selectedInventory.value = [...item]
-  item.forEach(it => {
-    if (!form.value.details.find(detail => detail.inventoryDetailId === it.id)) {
-      form.value.details.push(
-        syncShipmentDetail({
-          itemSku: {
-            ...it.itemSku,
-            item: it.item
-          },
-          skuId: it.skuId,
-          quantity: undefined,
-          remainQuantity: it.remainQuantity,
-          productionDate: it.productionDate,
-          expirationDate: it.expirationDate,
-          warehouseId: form.value.warehouseId,
-          areaId: form.value.areaId ?? it.areaId,
-          inventoryDetailId: it.id,
-          areaName: useWmsStore().areaMap.get(form.value.areaId ?? it.areaId)?.areaName,
-          equipmentCode: it.equipmentCode ?? it.item?.itemCode,
-          specModel: it.specModel ?? it.itemSku?.specModel,
-          productMark: it.productMark,
-          qualityGrade: it.qualityGrade,
-          unitPrice: it.unitPrice
-        })
-      )
-    }
-  })
   recalculateOrderSummary()
 }
 
@@ -828,18 +795,11 @@ const loadDetail = (id) => {
         detail.areaName = useWmsStore().areaMap.get(detail.areaId)?.areaName
         detail.detailSourceType = detail.itemInstanceId ? (detail.boxId ? 'box' : 'itemInstance') : 'inventory'
       })
-      selectedInventory.value = response.data.details.map(it => {
-        return {
-          id: it.inventoryDetailId,
-          areaId: it.areaId
-        }
-      })
     }
     form.value = {
       ...response.data,
       details: (response.data.details || []).map(detail => syncShipmentDetail(detail))
     }
-    inventorySelectRef.value.setWarehouseIdAndAreaId(form.value.warehouseId, form.value.areaId)
     recalculateOrderSummary()
     return refreshInventoryOptions()
   }).then(() => {
@@ -851,14 +811,11 @@ const loadDetail = (id) => {
 const handleChangeWarehouse = (e) => {
   form.value.areaId = undefined
   form.value.details = []
-  inventorySelectRef.value.setWarehouseIdAndAreaId(form.value.warehouseId, form.value.areaId)
   refreshInventoryOptions()
 }
 
 const handleChangeArea = (e) => {
-  inventorySelectRef.value.setWarehouseIdAndAreaId(form.value.warehouseId, form.value.areaId)
   form.value.details = form.value.details.filter(it => it.areaId === e)
-  selectedInventory.value = selectedInventory.value.filter(selected => selected.areaId === e)
   refreshInventoryOptions()
 }
 
@@ -894,58 +851,20 @@ const handleDeleteDetail = (row, index) => {
   } else {
     form.value.details.splice(index, 1)
   }
-  if (row.detailSourceType === 'inventory') {
-    const indexOfSelected = selectedInventory.value.findIndex(it => it.id === row.inventoryDetailId)
-    if (indexOfSelected !== -1) {
-      selectedInventory.value.splice(indexOfSelected, 1)
-    }
-  }
   handleChangeQuantity()
 }
 
-const showAddItemInstance = async () => {
-  await refreshInventoryOptions()
-  itemInstanceDialog.pageNum = 1
-  itemInstanceDialog.visible = true
-  itemInstanceDialog.selection = []
-  getItemInstanceList()
-}
-
-const getItemInstanceList = () => {
-  itemInstanceDialog.loading = true
-  listItemInstance({
-    pageNum: itemInstanceDialog.pageNum,
-    pageSize: itemInstanceDialog.pageSize,
-    warehouseId: form.value.warehouseId,
-    areaId: form.value.areaId,
-    borrowed: 0,
-    inBox: 0,
-    ...itemInstanceDialog.query
-  }).then((res) => {
-    itemInstanceDialog.list = (res.rows || []).filter(it => it.instanceStatus !== 'disabled' && it.instanceStatus !== 'outbound')
-    itemInstanceDialog.total = res.total || 0
-  }).finally(() => {
-    itemInstanceDialog.loading = false
-  })
-}
-
-const handleItemInstanceSelectionChange = (selection) => {
-  itemInstanceDialog.selection = selection
-}
-
-const isItemInstanceSelectable = (row) => {
-  return !form.value.details.some(detail => detail.itemInstanceId === row.id)
-}
-
-const handleConfirmItemInstance = async () => {
-  if (!itemInstanceDialog.selection.length) {
-    ElMessage.error('请选择器材编码')
+const addItemInstancesToShipment = async (items) => {
+  if (!items?.length) {
     return
   }
   await refreshInventoryOptions()
   const extraUsage = {}
   const newRows = []
-  for (const item of itemInstanceDialog.selection) {
+  for (const item of items) {
+    if (form.value.details.some(detail => detail.itemInstanceId === item.id)) {
+      throw new Error(`器材编码 ${item.instanceCode} 已添加`)
+    }
     const matchedInventory = matchInventoryDetail({
       skuId: item.skuId,
       areaId: item.areaId,
@@ -954,8 +873,7 @@ const handleConfirmItemInstance = async () => {
       quantity: 1
     }, extraUsage)
     if (!matchedInventory) {
-      ElMessage.error(`器材编码 ${item.instanceCode} 未匹配到可用库存明细`)
-      return
+      throw new Error(`器材编码 ${item.instanceCode} 未匹配到可用库存明细`)
     }
     extraUsage[matchedInventory.id] = Number(extraUsage[matchedInventory.id] || 0) + 1
     newRows.push(createDetailRow({
@@ -981,8 +899,137 @@ const handleConfirmItemInstance = async () => {
     }))
   }
   form.value.details.push(...newRows.map(it => syncShipmentDetail(it)))
-  itemInstanceDialog.visible = false
   handleChangeQuantity()
+}
+
+const addBoxesToShipment = async (selectedBoxes) => {
+  if (!selectedBoxes?.length) {
+    return
+  }
+  await refreshInventoryOptions()
+  const extraUsage = {}
+  const newRows = []
+  const skippedBoxes = []
+  for (const selectedBox of selectedBoxes) {
+    if (selectedBox.id && form.value.details.some(detail => detail.boxId === selectedBox.id)) {
+      throw new Error(`箱体 ${selectedBox.boxCode} 已添加`)
+    }
+    const detailRes = await getBox(selectedBox.id)
+    const box = detailRes.data || {}
+    const items = box.items || []
+    const candidates = items.filter(item => {
+      if (form.value.details.some(detail => detail.itemInstanceId === item.id)) {
+        return false
+      }
+      if (item.shipmentOrderDetailId) {
+        return false
+      }
+      return true
+    })
+    if (!candidates.length) {
+      skippedBoxes.push(`箱体 ${selectedBox.boxCode} 内无可出库器材`)
+      continue
+    }
+    for (const item of candidates) {
+      const matchedInventory = matchInventoryDetail({
+        skuId: item.skuId,
+        areaId: item.areaId,
+        productionDate: item.productionDate,
+        expirationDate: item.expirationDate,
+        quantity: 1
+      }, extraUsage)
+      if (!matchedInventory) {
+        throw new Error(`箱体 ${selectedBox.boxCode} 中器材编码 ${item.instanceCode} 未匹配到可用库存明细`)
+      }
+      extraUsage[matchedInventory.id] = Number(extraUsage[matchedInventory.id] || 0) + 1
+      newRows.push(createDetailRow({
+        skuId: item.skuId,
+        skuName: item.skuName,
+        itemName: item.itemName,
+        quantity: 1,
+        remainQuantity: matchedInventory.remainQuantity,
+        productionDate: item.productionDate,
+        expirationDate: item.expirationDate,
+        warehouseId: form.value.warehouseId,
+        areaId: item.areaId,
+        inventoryDetailId: matchedInventory.id,
+        areaName: useWmsStore().areaMap.get(item.areaId)?.areaName,
+        itemInstanceId: item.id,
+        instanceCode: item.instanceCode,
+        boxId: selectedBox.id,
+        boxCode: selectedBox.boxCode,
+        detailSourceType: 'box',
+        equipmentCode: matchedInventory.equipmentCode ?? item.itemCode,
+        specModel: matchedInventory.specModel ?? item.specModel,
+        productMark: item.productMark ?? matchedInventory.productMark,
+        qualityGrade: item.qualityGrade ?? matchedInventory.qualityGrade,
+        unitPrice: matchedInventory.unitPrice
+      }))
+    }
+  }
+  if (!newRows.length && skippedBoxes.length) {
+    throw new Error(skippedBoxes.join('；'))
+  }
+  form.value.details.push(...newRows.map(it => syncShipmentDetail(it)))
+  handleChangeQuantity()
+  if (skippedBoxes.length) {
+    ElMessage.warning(skippedBoxes.join('；'))
+  }
+}
+
+const showAddItemInstance = async () => {
+  await refreshInventoryOptions()
+  if (!useWmsStore().warehouseList?.length) {
+    await useWmsStore().getWarehouseList()
+  }
+  if (!useWmsStore().areaList?.length) {
+    await useWmsStore().getAreaList()
+  }
+  itemInstanceDialog.query.warehouseId = form.value.warehouseId
+  itemInstanceDialog.query.areaId = form.value.areaId
+  itemInstanceDialog.query.rackId = undefined
+  itemInstanceDialog.pageNum = 1
+  itemInstanceDialog.visible = true
+  itemInstanceDialog.selection = []
+  getItemInstanceList()
+}
+
+const getItemInstanceList = () => {
+  itemInstanceDialog.loading = true
+  listItemInstance({
+    pageNum: itemInstanceDialog.pageNum,
+    pageSize: itemInstanceDialog.pageSize,
+    warehouseId: form.value.warehouseId,
+    areaId: form.value.areaId,
+    borrowed: 0,
+    ...itemInstanceDialog.query
+  }).then((res) => {
+    itemInstanceDialog.list = (res.rows || []).filter(it => it.instanceStatus !== 'disabled' && it.instanceStatus !== 'outbound')
+    itemInstanceDialog.total = res.total || 0
+  }).finally(() => {
+    itemInstanceDialog.loading = false
+  })
+}
+
+const handleItemInstanceSelectionChange = (selection) => {
+  itemInstanceDialog.selection = selection
+}
+
+const isItemInstanceSelectable = (row) => {
+  return !form.value.details.some(detail => detail.itemInstanceId === row.id)
+}
+
+const handleConfirmItemInstance = async () => {
+  if (!itemInstanceDialog.selection.length) {
+    ElMessage.error('请选择器材编码')
+    return
+  }
+  try {
+    await addItemInstancesToShipment(itemInstanceDialog.selection)
+    itemInstanceDialog.visible = false
+  } catch (e) {
+    ElMessage.error(e?.message || '器材编码添加失败')
+  }
 }
 
 const showAddBox = async () => {
@@ -1022,62 +1069,12 @@ const handleConfirmBox = async () => {
     ElMessage.error('请选择箱体')
     return
   }
-  await refreshInventoryOptions()
-  const extraUsage = {}
-  const newRows = []
-  for (const selectedBox of boxDialog.selection) {
-    const detailRes = await getBox(selectedBox.id)
-    const box = detailRes.data || {}
-    const items = box.items || []
-    if (!items.length) {
-      ElMessage.error(`箱体 ${selectedBox.boxCode} 内无可出库器材`)
-      return
-    }
-    for (const item of items) {
-      if (form.value.details.some(detail => detail.itemInstanceId === item.id)) {
-        ElMessage.error(`箱体 ${selectedBox.boxCode} 内存在已添加的器材编码 ${item.instanceCode}`)
-        return
-      }
-      const matchedInventory = matchInventoryDetail({
-        skuId: item.skuId,
-        areaId: item.areaId,
-        productionDate: item.productionDate,
-        expirationDate: item.expirationDate,
-        quantity: 1
-      }, extraUsage)
-      if (!matchedInventory) {
-        ElMessage.error(`箱体 ${selectedBox.boxCode} 中器材编码 ${item.instanceCode} 未匹配到可用库存明细`)
-        return
-      }
-      extraUsage[matchedInventory.id] = Number(extraUsage[matchedInventory.id] || 0) + 1
-      newRows.push(createDetailRow({
-        skuId: item.skuId,
-        skuName: item.skuName,
-        itemName: item.itemName,
-        quantity: 1,
-        remainQuantity: matchedInventory.remainQuantity,
-        productionDate: item.productionDate,
-        expirationDate: item.expirationDate,
-        warehouseId: form.value.warehouseId,
-        areaId: item.areaId,
-        inventoryDetailId: matchedInventory.id,
-        areaName: useWmsStore().areaMap.get(item.areaId)?.areaName,
-        itemInstanceId: item.id,
-        instanceCode: item.instanceCode,
-        boxId: selectedBox.id,
-        boxCode: selectedBox.boxCode,
-        detailSourceType: 'box',
-        equipmentCode: matchedInventory.equipmentCode ?? item.itemCode,
-        specModel: matchedInventory.specModel ?? item.specModel,
-        productMark: item.productMark ?? matchedInventory.productMark,
-        qualityGrade: item.qualityGrade ?? matchedInventory.qualityGrade,
-        unitPrice: matchedInventory.unitPrice
-      }))
-    }
+  try {
+    await addBoxesToShipment(boxDialog.selection)
+    boxDialog.visible = false
+  } catch (e) {
+    ElMessage.error(e?.message || '箱体添加失败')
   }
-  form.value.details.push(...newRows.map(it => syncShipmentDetail(it)))
-  boxDialog.visible = false
-  handleChangeQuantity()
 }
 </script>
 
@@ -1098,6 +1095,8 @@ const handleConfirmBox = async () => {
 
 .add-actions {
   display: flex;
+  align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
 }
 

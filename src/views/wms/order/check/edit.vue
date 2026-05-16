@@ -124,9 +124,6 @@
                       scope.row.itemSku.item.itemName + (scope.row.itemSku.item.itemCode ? ('(' + scope.row.itemSku.item.itemCode + ')') : '')
                     }}
                   </div>
-                  <div v-if="scope.row.itemSku.item.itemBrand">
-                    品牌：{{ useWmsStore().itemBrandMap.get(scope.row.itemSku.item.itemBrand).brandName }}
-                  </div>
                 </template>
             </el-table-column>
             <el-table-column label="器材/标识" min-width="220">

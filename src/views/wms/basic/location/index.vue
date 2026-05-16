@@ -50,13 +50,16 @@
           <div class="sub-text">货位由货架自动生成，当前页面用于查看、维护和异常修正；结构字段仅展示，不支持手工改档。</div>
         </el-col>
         <el-col :span="10" class="toolbar-actions">
+          <el-button type="primary" plain icon="Printer" :disabled="!selectedRows.length" :loading="printDialog.sending" @click="handleBatchPrintLocation" v-hasPermi="['wms:location:list']">批量打印</el-button>
           <el-button type="primary" plain icon="RefreshRight" :disabled="!queryParams.rackId" :loading="rackActionLoading" @click="handleRebuildByRack" v-hasPermi="['wms:location:edit']">按货架重建</el-button>
           <el-button plain icon="Search" :disabled="!queryParams.rackId" :loading="healthCheckLoading" @click="handleHealthCheckByRack" v-hasPermi="['wms:location:list']">按货架体检</el-button>
         </el-col>
       </el-row>
       
-      <el-table v-loading="loading" :data="locationList" border empty-text="暂无货位">
+      <el-table v-loading="loading" :data="locationList" border empty-text="暂无货位" @selection-change="handleSelectionChange">
+        <el-table-column type="selection" width="50" align="center" />
         <el-table-column label="名称" prop="locationName" min-width="120" />
+        <el-table-column label="编码" prop="locationCode" min-width="120" show-overflow-tooltip />
         <el-table-column label="仓库" prop="warehouseName" min-width="120" />
         <el-table-column label="库区" prop="areaName" min-width="120" />
         <el-table-column label="所属货架" min-width="120">
@@ -74,7 +77,6 @@
         <el-table-column label="长(cm)" prop="length" width="90" align="center" />
         <el-table-column label="宽(cm)" prop="width" width="90" align="center" />
         <el-table-column label="高(cm)" prop="height" width="90" align="center" />
-        <el-table-column label="最大承重" prop="maxWeight" width="110" align="center" />
         <el-table-column label="占用状态" width="100" align="center">
           <template #default="{ row }">
             <el-tag size="small" :type="Number(row.occupiedFlag) === 1 ? 'warning' : 'success'">
@@ -132,12 +134,6 @@
             <FormLabelHelp label="高" purpose="记录货位物理高度，用于容量与布局摘要展示。" example="50" />
           </template>
           <el-input-number v-model="form.height" :min="0" :precision="2" style="width: 100%" />
-        </el-form-item>
-        <el-form-item prop="maxWeight">
-          <template #label>
-            <FormLabelHelp label="最大承重" purpose="表示货位允许承载的最大重量，用于基础资料维护。" example="200" />
-          </template>
-          <el-input-number v-model="form.maxWeight" :min="0" :precision="2" style="width: 100%" />
         </el-form-item>
         <el-form-item label="占用状态" prop="occupiedFlag">
           <el-radio-group v-model="form.occupiedFlag">
@@ -200,6 +196,23 @@
         <el-button type="primary" @click="resultDialog.visible = false">我知道了</el-button>
       </template>
     </el-dialog>
+
+    <el-dialog v-model="printDialog.visible" title="选择打印机" width="520px" append-to-body :close-on-click-modal="false" @closed="handlePrintDialogClosed">
+      <el-form label-width="90px">
+        <el-form-item label="打印机">
+          <el-select v-model="printDialog.printerId" placeholder="请选择打印机" filterable style="width: 100%" :disabled="printDialog.loading || printDialog.sending">
+            <el-option v-for="item in printDialog.printers" :key="item.printerId" :label="item.printerId" :value="item.printerId" />
+          </el-select>
+        </el-form-item>
+      </el-form>
+      <el-alert v-if="printDialog.errorMessage" :title="printDialog.errorMessage" type="error" :closable="false" class="mb12" show-icon />
+      <div v-if="printDialog.total" class="mb12">进度：{{ printDialog.current }}/{{ printDialog.total }}</div>
+      <template #footer>
+        <el-button :loading="printDialog.loading" :disabled="printDialog.sending" @click="loadPrinters">刷新</el-button>
+        <el-button :disabled="printDialog.sending" @click="printDialog.visible = false">取消</el-button>
+        <el-button type="primary" :loading="printDialog.sending" :disabled="!printDialog.printerId || !printDialog.printers.length" @click="handleConfirmPrint">开始打印</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -211,6 +224,7 @@ import { getRack } from '@/api/wms/rack';
 import { useWmsStore } from '@/store/modules/wms';
 import RackSelect from '@/views/components/RackSelect.vue';
 import FormLabelHelp from '@/views/components/FormLabelHelp.vue'
+import { buildQrTscCommand, WssPrintClient } from '@/utils/wssPrintClient';
 
 const { proxy } = getCurrentInstance();
 const route = useRoute();
@@ -226,6 +240,7 @@ const healthCheckLoading = ref(false);
 const total = ref(0);
 const title = ref('');
 const ids = ref([]);
+const selectedRows = ref([]);
 const originalDimension = ref({
   length: undefined,
   height: undefined
@@ -237,11 +252,26 @@ const resultDialog = reactive({
   data: {}
 });
 
+const printDialog = reactive({
+  visible: false,
+  loading: false,
+  sending: false,
+  printers: [],
+  printerId: '',
+  total: 0,
+  current: 0,
+  errorMessage: ''
+});
+
+const printCodes = ref([]);
+let printClient;
+
 const data = reactive({
   form: {},
   queryParams: {
     pageNum: 1,
     pageSize: 10,
+    locationCode: undefined,
     locationName: undefined,
     warehouseId: undefined,
     areaId: undefined,
@@ -277,7 +307,6 @@ function reset() {
     length: undefined,
     width: undefined,
     height: undefined,
-    maxWeight: undefined,
     occupiedFlag: 0,
     sortNo: 0,
     remark: undefined
@@ -319,7 +348,6 @@ function buildLocationUpdatePayload() {
     length: form.value.length,
     width: form.value.width,
     height: form.value.height,
-    maxWeight: form.value.maxWeight,
     occupiedFlag: form.value.occupiedFlag,
     sortNo: form.value.sortNo,
     remark: form.value.remark
@@ -349,6 +377,121 @@ function handleQueryWarehouseChange() {
 
 function handleQueryAreaChange() {
   queryParams.value.rackId = undefined;
+}
+
+function handleSelectionChange(selection) {
+  selectedRows.value = selection || [];
+}
+
+async function ensurePrintClient() {
+  if (!printClient) {
+    printClient = new WssPrintClient();
+  }
+  await printClient.connect();
+}
+
+async function loadPrinters() {
+  printDialog.errorMessage = '';
+  printDialog.loading = true;
+  try {
+    await ensurePrintClient();
+    const printers = await printClient.listDevices();
+    printDialog.printers = printers;
+    const savedPrinterId = localStorage.getItem('wss_print_printer_id') || '';
+    if (!printDialog.printerId && savedPrinterId && printers.some(item => item.printerId === savedPrinterId)) {
+      printDialog.printerId = savedPrinterId;
+    }
+    if (!printDialog.printerId && printers.length) {
+      printDialog.printerId = printers[0].printerId;
+    }
+  } catch (e) {
+    printDialog.errorMessage = e?.message || '获取打印机列表失败';
+    try {
+      printClient?.disconnect();
+    } finally {
+      printClient = undefined;
+    }
+  } finally {
+    printDialog.loading = false;
+  }
+}
+
+async function openPrintDialog() {
+  printDialog.total = printCodes.value.length;
+  printDialog.current = 0;
+  printDialog.errorMessage = '';
+  printDialog.visible = true;
+  await loadPrinters();
+}
+
+async function handleBatchPrintLocation() {
+  if (!selectedRows.value.length) {
+    proxy.$modal.msgError('请先勾选要打印的货位');
+    return;
+  }
+  const codes = selectedRows.value.map(item => item.locationCode).filter(Boolean);
+  if (!codes.length) {
+    proxy.$modal.msgError('勾选数据中未找到货位编码');
+    return;
+  }
+  printCodes.value = codes;
+  await openPrintDialog();
+}
+
+async function handleConfirmPrint() {
+  if (!printDialog.printerId) {
+    proxy.$modal.msgError('请选择打印机');
+    return;
+  }
+  if (!printCodes.value.length) {
+    proxy.$modal.msgError('没有可打印的数据');
+    return;
+  }
+  localStorage.setItem('wss_print_printer_id', printDialog.printerId);
+  printDialog.sending = true;
+  printDialog.errorMessage = '';
+  try {
+    await ensurePrintClient();
+    for (const code of printCodes.value) {
+      const command = buildQrTscCommand(code);
+      const res = await printClient.sendData(command, printDialog.printerId);
+      if (Number(res?.code) <= 0) {
+        throw new Error(res?.msg || '打印失败');
+      }
+      printDialog.current += 1;
+    }
+    await printClient.closePrinter(printDialog.printerId);
+    proxy.$modal.msgSuccess(`已发送 ${printDialog.total} 条打印任务`);
+    printDialog.visible = false;
+  } catch (e) {
+    printDialog.errorMessage = e?.message || '打印失败';
+    try {
+      await printClient?.closePrinter(printDialog.printerId);
+    } catch {
+      return;
+    }
+  } finally {
+    printDialog.sending = false;
+    try {
+      printClient?.disconnect();
+    } finally {
+      printClient = undefined;
+    }
+  }
+}
+
+function handlePrintDialogClosed() {
+  printDialog.errorMessage = '';
+  printDialog.loading = false;
+  printDialog.sending = false;
+  printDialog.printers = [];
+  printDialog.total = 0;
+  printDialog.current = 0;
+  try {
+    printClient?.disconnect();
+  } finally {
+    printClient = undefined;
+  }
 }
 
 function handleQuery() {

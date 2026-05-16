@@ -52,6 +52,7 @@
 
       <el-table v-loading="loading" :data="rackList" border empty-text="暂无货架">
         <el-table-column label="名称" prop="rackName" min-width="140" />
+        <el-table-column label="编码" prop="rackCode" min-width="120" show-overflow-tooltip />
         <el-table-column label="仓库" prop="warehouseName" min-width="120" />
         <el-table-column label="库区" prop="areaName" min-width="120" />
         <el-table-column label="状态" prop="rackStatus" width="100">

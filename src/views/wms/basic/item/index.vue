@@ -92,12 +92,7 @@
                 {{ getCategoryName(resolveCategoryId(row)) }}
               </template>
             </el-table-column>
-            <el-table-column label="器材品牌" min-width="120">
-              <template #default="{ row }">
-                {{ getBrandName(row.itemBrand) }}
-              </template>
-            </el-table-column>
-            <el-table-column label="单位" prop="unit" width="100" />
+            <el-table-column label="计量单位" prop="unit" width="100" />
             <el-table-column label="启用状态" width="100">
               <template #default="{ row }">
                 <el-tag :type="row.status === '0' ? 'info' : 'success'">{{ row.status === '0' ? '停用' : '启用' }}</el-tag>
@@ -163,18 +158,6 @@
               </el-form-item>
             </el-col>
             <el-col :span="12">
-              <el-form-item label="器材品牌" prop="itemBrand">
-                <el-select v-model="form.itemBrand" clearable filterable style="width: 100%" placeholder="请选择器材品牌">
-                  <el-option
-                    v-for="item in wmsStore.itemBrandList"
-                    :key="item.id"
-                    :label="item.brandName"
-                    :value="item.id"
-                  />
-                </el-select>
-              </el-form-item>
-            </el-col>
-            <el-col :span="12">
               <el-form-item label="装备名称" prop="equipmentName">
                 <el-input v-model="form.equipmentName" placeholder="请输入装备名称" />
               </el-form-item>
@@ -230,46 +213,7 @@
             </el-col>
           </el-row>
           <el-row :gutter="20">
-            <el-col :span="8">
-              <el-form-item label="长度(cm)">
-                <el-input-number v-model="skuForm.itemSkuList[0].length" :controls="false" :min="0" :precision="1" style="width: 100%" />
-              </el-form-item>
-            </el-col>
-            <el-col :span="8">
-              <el-form-item label="宽度(cm)">
-                <el-input-number v-model="skuForm.itemSkuList[0].width" :controls="false" :min="0" :precision="1" style="width: 100%" />
-              </el-form-item>
-            </el-col>
-            <el-col :span="8">
-              <el-form-item label="高度(cm)">
-                <el-input-number v-model="skuForm.itemSkuList[0].height" :controls="false" :min="0" :precision="1" style="width: 100%" />
-              </el-form-item>
-            </el-col>
-          </el-row>
-          <el-row :gutter="20">
-            <el-col :span="8">
-              <el-form-item label="净重(kg)">
-                <el-input-number v-model="skuForm.itemSkuList[0].netWeight" :controls="false" :min="0" :precision="3" style="width: 100%" />
-              </el-form-item>
-            </el-col>
-            <el-col :span="8">
-              <el-form-item label="毛重(kg)">
-                <el-input-number v-model="skuForm.itemSkuList[0].grossWeight" :controls="false" :min="0" :precision="3" style="width: 100%" />
-              </el-form-item>
-            </el-col>
-          </el-row>
-          <el-row :gutter="20">
-            <el-col :span="8">
-              <el-form-item label="成本价(元)">
-                <el-input-number v-model="skuForm.itemSkuList[0].costPrice" :controls="false" :min="0" :precision="2" style="width: 100%" />
-              </el-form-item>
-            </el-col>
-            <el-col :span="8">
-              <el-form-item label="销售价(元)">
-                <el-input-number v-model="skuForm.itemSkuList[0].sellingPrice" :controls="false" :min="0" :precision="2" style="width: 100%" />
-              </el-form-item>
-            </el-col>
-            <el-col :span="8">
+            <el-col :span="12">
               <el-form-item label="状态">
                 <el-select v-model="skuForm.itemSkuList[0].status" placeholder="请选择状态" style="width: 100%">
                   <el-option v-for="item in statusOptions" :key="item.value" :label="item.label" :value="item.value" />
@@ -313,6 +257,23 @@
         </div>
       </template>
     </el-dialog>
+
+    <el-dialog v-model="printDialog.visible" title="选择打印机" width="520px" append-to-body :close-on-click-modal="false" @closed="handlePrintDialogClosed">
+      <el-form label-width="90px">
+        <el-form-item label="打印机">
+          <el-select v-model="printDialog.printerId" placeholder="请选择打印机" filterable style="width: 100%" :disabled="printDialog.loading || printDialog.sending">
+            <el-option v-for="item in printDialog.printers" :key="item.printerId" :label="item.printerId" :value="item.printerId" />
+          </el-select>
+        </el-form-item>
+      </el-form>
+      <el-alert v-if="printDialog.errorMessage" :title="printDialog.errorMessage" type="error" :closable="false" class="mb12" show-icon />
+      <div v-if="printDialog.total" class="mb12">进度：{{ printDialog.current }}/{{ printDialog.total }}</div>
+      <template #footer>
+        <el-button :loading="printDialog.loading" :disabled="printDialog.sending" @click="loadPrinters">刷新</el-button>
+        <el-button :disabled="printDialog.sending" @click="printDialog.visible = false">取消</el-button>
+        <el-button type="primary" :loading="printDialog.sending" :disabled="!printDialog.printerId || !printDialog.printers.length" @click="handleConfirmPrint">开始打印</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -323,6 +284,7 @@ import { ElMessageBox } from 'element-plus';
 import { addItem, batchPrintItemQrCode, delItem, getItem, listItemPage, updateItem } from '@/api/wms/item';
 import { addItemCategory, delItemCategory, updateItemCategory, updateOrderNum } from '@/api/wms/itemCategory';
 import { useWmsStore } from '@/store/modules/wms';
+import { buildQrTscCommand, WssPrintClient } from '@/utils/wssPrintClient';
 
 const route = useRoute();
 const { proxy } = getCurrentInstance();
@@ -361,13 +323,26 @@ const categoryDialog = reactive({
   title: ''
 });
 
+const printDialog = reactive({
+  visible: false,
+  loading: false,
+  sending: false,
+  printers: [],
+  printerId: '',
+  total: 0,
+  current: 0,
+  errorMessage: ''
+});
+
+const printCodes = ref([]);
+let printClient;
+
 const initFormData = () => ({
   id: undefined,
   itemCode: undefined,
   itemName: undefined,
   itemCategory: undefined,
   unit: undefined,
-  itemBrand: undefined,
   equipmentName: undefined,
   equipmentType: undefined,
   status: '1',
@@ -388,14 +363,7 @@ const createEmptySku = () => ({
   itemId: undefined,
   skuName: '',
   specModel: '',
-  status: '1',
-  length: undefined,
-  width: undefined,
-  height: undefined,
-  grossWeight: undefined,
-  netWeight: undefined,
-  costPrice: undefined,
-  sellingPrice: undefined
+  status: '1'
 });
 
 const data = reactive({
@@ -475,13 +443,6 @@ const getCategoryName = (categoryId) => {
   return resolveCategoryOption(categoryId)?.categoryName || '';
 };
 
-const getBrandName = (brandId) => {
-  if (!brandId) {
-    return '';
-  }
-  return wmsStore.itemBrandMap.get(brandId)?.brandName || '';
-};
-
 const refreshCategoryData = async () => {
   await Promise.all([
     wmsStore.getItemCategoryList(),
@@ -504,9 +465,27 @@ const resetSkuList = () => {
   skuForm.itemSkuList = [createEmptySku()];
 };
 
-const normalizeSkuList = () => skuForm.itemSkuList.slice(0, 1).map(item => ({
-  ...item
-}));
+const normalizeSkuItem = (item) => {
+  if (!item) {
+    return createEmptySku();
+  }
+  const {
+    length,
+    width,
+    height,
+    grossWeight,
+    netWeight,
+    costPrice,
+    sellingPrice,
+    ...rest
+  } = item;
+  return {
+    ...createEmptySku(),
+    ...rest
+  };
+};
+
+const normalizeSkuList = () => skuForm.itemSkuList.slice(0, 1).map(item => normalizeSkuItem(item));
 
 const normalizeItemPayload = () => ({
   ...form.value,
@@ -615,7 +594,7 @@ const handleUpdate = async (row) => {
     equipmentType: res.data.equipmentType || res.data.itemType,
     status: res.data.status || '1'
   };
-  skuForm.itemSkuList = res.data.sku?.length ? [{ ...res.data.sku[0] }] : [createEmptySku()];
+  skuForm.itemSkuList = res.data.sku?.length ? [normalizeSkuItem(res.data.sku[0])] : [createEmptySku()];
   dialog.visible = true;
   dialog.title = '修改器材';
 };
@@ -638,8 +617,15 @@ const handleBatchPrintQrCode = async (row) => {
       row: { ...row },
       qrCodeCount: Number(value)
     };
-    await batchPrintItemQrCode(payload);
-    proxy.$modal.msgSuccess('批量打印请求已提交');
+    const res = await batchPrintItemQrCode(payload);
+    const details = res?.data?.details || [];
+    const codes = details.map(item => item.instanceCode).filter(Boolean);
+    if (!codes.length) {
+      proxy.$modal.msgError('后端未返回可打印的器材实例明细');
+      return;
+    }
+    printCodes.value = codes;
+    await openPrintDialog();
   } catch (error) {
     if (error === 'cancel' || error === 'close') {
       return;
@@ -647,6 +633,103 @@ const handleBatchPrintQrCode = async (row) => {
     throw error;
   }
 };
+
+async function ensurePrintClient() {
+  if (!printClient) {
+    printClient = new WssPrintClient();
+  }
+  await printClient.connect();
+}
+
+async function loadPrinters() {
+  printDialog.errorMessage = '';
+  printDialog.loading = true;
+  try {
+    await ensurePrintClient();
+    const printers = await printClient.listDevices();
+    printDialog.printers = printers;
+    const savedPrinterId = localStorage.getItem('wss_print_printer_id') || '';
+    if (!printDialog.printerId && savedPrinterId && printers.some(item => item.printerId === savedPrinterId)) {
+      printDialog.printerId = savedPrinterId;
+    }
+    if (!printDialog.printerId && printers.length) {
+      printDialog.printerId = printers[0].printerId;
+    }
+  } catch (e) {
+    printDialog.errorMessage = e?.message || '获取打印机列表失败';
+    try {
+      printClient?.disconnect();
+    } finally {
+      printClient = undefined;
+    }
+  } finally {
+    printDialog.loading = false;
+  }
+}
+
+async function openPrintDialog() {
+  printDialog.total = printCodes.value.length;
+  printDialog.current = 0;
+  printDialog.errorMessage = '';
+  printDialog.visible = true;
+  await loadPrinters();
+}
+
+async function handleConfirmPrint() {
+  if (!printDialog.printerId) {
+    proxy.$modal.msgError('请选择打印机');
+    return;
+  }
+  if (!printCodes.value.length) {
+    proxy.$modal.msgError('没有可打印的数据');
+    return;
+  }
+  localStorage.setItem('wss_print_printer_id', printDialog.printerId);
+  printDialog.sending = true;
+  printDialog.errorMessage = '';
+  try {
+    await ensurePrintClient();
+    for (const code of printCodes.value) {
+      const command = buildQrTscCommand(code);
+      const res = await printClient.sendData(command, printDialog.printerId);
+      if (Number(res?.code) <= 0) {
+        throw new Error(res?.msg || '打印失败');
+      }
+      printDialog.current += 1;
+    }
+    await printClient.closePrinter(printDialog.printerId);
+    proxy.$modal.msgSuccess(`已发送 ${printDialog.total} 条打印任务`);
+    printDialog.visible = false;
+  } catch (e) {
+    printDialog.errorMessage = e?.message || '打印失败';
+    try {
+      await printClient?.closePrinter(printDialog.printerId);
+    } catch {
+      return;
+    }
+  } finally {
+    printDialog.sending = false;
+    try {
+      printClient?.disconnect();
+    } finally {
+      printClient = undefined;
+    }
+  }
+}
+
+function handlePrintDialogClosed() {
+  printDialog.errorMessage = '';
+  printDialog.loading = false;
+  printDialog.sending = false;
+  printDialog.printers = [];
+  printDialog.total = 0;
+  printDialog.current = 0;
+  try {
+    printClient?.disconnect();
+  } finally {
+    printClient = undefined;
+  }
+}
 
 const validateSkuForm = async () => {
   if (!skuForm.itemSkuList.length) {
@@ -739,10 +822,7 @@ const handleDelete = async (row) => {
 };
 
 onMounted(async () => {
-  await Promise.all([
-    refreshCategoryData(),
-    wmsStore.getItemBrandList()
-  ]);
+  await refreshCategoryData();
   await getList();
   if (route.query.openDrawer) {
     handleAdd();

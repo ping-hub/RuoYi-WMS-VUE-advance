@@ -35,36 +35,6 @@
                 <template #default="{ row }">
                   <div>{{ row.item.itemName }}</div>
                   <div v-if="row.item.itemCode">编号：{{ row.item.itemCode }}</div>
-                  <div v-if="row.item.itemBrand">品牌：{{ useWmsStore().itemBrandMap.get(row.item.itemBrand).brandName }}</div>
-                </template>
-              </el-table-column>
-              <el-table-column label="价格(元)" width="160" align="left">
-                <template #default="{ row }">
-                  <div v-if="row.costPrice" class="flex-space-between">
-                    <span>成本价：</span>
-                    <div>{{ (row.costPrice || row.costPrice === 0) ? row.costPrice : '' }}</div>
-                  </div>
-                  <div v-if="row.sellingPrice" class="flex-space-between">
-                    <span>销售价：</span>
-                    <div>{{ (row.sellingPrice || row.sellingPrice === 0) ? row.sellingPrice : '' }}</div>
-                  </div>
-                </template>
-              </el-table-column>
-              <el-table-column label="重量(kg)" width="160" align="left">
-                <template #default="{ row }">
-                  <div v-if="row.netWeight" class="flex-space-between">
-                    <span>净重：</span>
-                    <div>{{ (row.netWeight || row.netWeight === 0) ? row.netWeight : '' }}</div>
-                  </div>
-                  <div v-if="row.grossWeight" class="flex-space-between">
-                    <span>毛重：</span>
-                    <div>{{ (row.grossWeight || row.grossWeight === 0) ? row.grossWeight : '' }}</div>
-                  </div>
-                </template>
-              </el-table-column>
-              <el-table-column label="长宽高(cm)" align="right" width="250">
-                <template #default="{ row }">
-                  <div>{{ getVolumeText(row) }}</div>
                 </template>
               </el-table-column>
               <el-table-column label="操作" width="100" v-if="singleSelect" align="right">
@@ -97,7 +67,6 @@ import {ElForm} from "element-plus";
 import {getRowspanMethod} from "@/utils/getRowSpanMethod";
 import {listItemSkuPage} from "@/api/wms/itemSku";
 import {useRouter} from "vue-router";
-import {useWmsStore} from '@/store/modules/wms'
 
 const { proxy } = getCurrentInstance()
 
@@ -207,15 +176,6 @@ const handleSelectionChange = (selection) => {
 
 function clearQuantity() {
   skuSelectFormRef.value.clearSelection()
-}
-
-const getVolumeText = (row) => {
-  if((row.length || row.length === 0) && (row.width || row.width === 0) && (row.height || row.height === 0)) {
-    return row.length + ' * ' + row.width + ' * ' + row.height
-  }
-  return ((row.length || row.length === 0) ? ('长：' + row.length) : '')
-    + ((row.width || row.width === 0) ? (' 宽：' + row.width) : '')
-    + ((row.height || row.height === 0) ? (' 高：' + row.height) : '')
 }
 
 onMounted(() => {
