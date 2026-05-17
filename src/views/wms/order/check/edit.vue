@@ -129,8 +129,6 @@
             <el-table-column label="器材/标识" min-width="220">
               <template #default="{ row }">
                 <div>器材编码：{{ row.equipmentCode || row.itemSku?.item?.itemCode || '-' }}</div>
-                <div>产品标识：{{ row.productMark || '-' }}</div>
-                <div>质量等级：{{ displayQualityGrade(row) }}</div>
               </template>
             </el-table-column>
             <el-table-column label="货位信息" min-width="220">
@@ -280,7 +278,7 @@ const {proxy} = getCurrentInstance();
 const router = useRouter();
 const route = useRoute();
 const isViewMode = computed(() => route.query.mode === 'view');
-const {wms_shipment_type, wms_quality_grade} = proxy.useDict("wms_shipment_type", "wms_quality_grade");
+const {wms_shipment_type} = proxy.useDict("wms_shipment_type");
 const checkGreaterThanZero = ref(false)
 const loading = ref(false)
 const initFormData = {
@@ -333,11 +331,6 @@ const currentSkuSelectIndex = ref(null)
 // 盘点中标识
 const checking = ref(false)
 
-const displayQualityGrade = (row = {}) => {
-  const value = row.qualityGrade ?? row?.itemSku?.defaultQualityGrade ?? row?.itemSku?.item?.defaultQualityGrade
-  return proxy.selectDictLabel(wms_quality_grade.value, value) || value || '-'
-}
-
 // 选择器材 start
 const startCheck = () => {
   if (!form.value.warehouseId) {
@@ -366,8 +359,6 @@ const startCheck = () => {
             areaName: useWmsStore().areaMap.get(it.areaId)?.areaName,
             equipmentCode: it.equipmentCode,
             specModel: it.specModel,
-            productMark: it.productMark,
-            qualityGrade: it.qualityGrade,
             receiptOrderDetailId: it.receiptOrderDetailId,
             productionDate: it.productionDate,
             expirationDate: it.expirationDate,
@@ -398,8 +389,6 @@ const handleOkClick = (item) => {
           areaName: useWmsStore().areaMap.get(form.value.areaId)?.areaName,
           equipmentCode: it.item?.itemCode,
           specModel: it.specModel,
-          productMark: undefined,
-          qualityGrade: it.item?.defaultQualityGrade,
           receiptOrderDetailId: undefined,
           productionDate: undefined,
           expirationDate: undefined,

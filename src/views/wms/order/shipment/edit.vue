@@ -174,16 +174,6 @@
                 <div v-if="!row.instanceCode && !row.boxCode">-</div>
               </template>
             </el-table-column>
-            <el-table-column label="产品标识" width="180">
-              <template #default="{ row }">
-                <span>{{ row.productMark || '-' }}</span>
-              </template>
-            </el-table-column>
-            <el-table-column label="质量等级" width="160">
-              <template #default="{ row }">
-                <dict-tag :options="wms_quality_grade" :value="row.qualityGrade ?? row?.inventoryDetail?.qualityGrade ?? row?.itemSku?.defaultQualityGrade ?? row?.itemSku?.item?.defaultQualityGrade" />
-              </template>
-            </el-table-column>
             <el-table-column label="库区" prop="areaName" width="200"/>
             <el-table-column label="生产日期" prop="productionDate">
               <template #default="{ row }">
@@ -386,11 +376,10 @@ import RackSelect from "@/views/components/RackSelect.vue";
 const {proxy} = getCurrentInstance();
 const route = useRoute();
 const isViewMode = computed(() => route.query.mode === 'view');
-const {wms_shipment_type, wms_item_instance_status, wms_box_status, wms_quality_grade, wms_dispatch_mode} = proxy.useDict(
+const {wms_shipment_type, wms_item_instance_status, wms_box_status, wms_dispatch_mode} = proxy.useDict(
   "wms_shipment_type",
   "wms_item_instance_status",
   "wms_box_status",
-  "wms_quality_grade",
   "wms_dispatch_mode"
 );
 
@@ -502,8 +491,6 @@ const syncShipmentDetail = (detail) => {
     ...detail,
     equipmentCode: detail.equipmentCode ?? detail.itemSku?.item?.itemCode ?? detail.itemCode,
     specModel: detail.specModel ?? detail.itemSku?.specModel,
-    productMark: detail.productMark ?? detail.inventoryDetail?.productMark,
-    qualityGrade: detail.qualityGrade ?? detail.inventoryDetail?.qualityGrade ?? detail.itemSku?.item?.defaultQualityGrade,
     detailSourceType,
     unitPrice,
     lineAmount,
@@ -585,8 +572,6 @@ const createDetailRow = (payload) => {
     quantity: payload.quantity,
     equipmentCode: payload.equipmentCode,
     specModel: payload.specModel,
-    productMark: payload.productMark,
-    qualityGrade: payload.qualityGrade,
     unitPrice: payload.unitPrice,
     lineAmount: payload.lineAmount,
     remainQuantity: payload.remainQuantity,
@@ -637,8 +622,6 @@ const doSave = (shipmentOrderStatus = 0) => {
           quantity: it.quantity,
           equipmentCode: it.equipmentCode,
           specModel: it.specModel,
-          productMark: it.productMark,
-          qualityGrade: it.qualityGrade,
           unitPrice: it.unitPrice,
           lineAmount: it.lineAmount,
           productionDate: it.productionDate,
@@ -893,8 +876,6 @@ const addItemInstancesToShipment = async (items) => {
       detailSourceType: 'itemInstance',
       equipmentCode: matchedInventory.equipmentCode ?? item.itemCode,
       specModel: matchedInventory.specModel ?? item.specModel,
-      productMark: item.productMark,
-      qualityGrade: item.qualityGrade,
       unitPrice: matchedInventory.unitPrice
     }))
   }
@@ -961,8 +942,6 @@ const addBoxesToShipment = async (selectedBoxes) => {
         detailSourceType: 'box',
         equipmentCode: matchedInventory.equipmentCode ?? item.itemCode,
         specModel: matchedInventory.specModel ?? item.specModel,
-        productMark: item.productMark ?? matchedInventory.productMark,
-        qualityGrade: item.qualityGrade ?? matchedInventory.qualityGrade,
         unitPrice: matchedInventory.unitPrice
       }))
     }

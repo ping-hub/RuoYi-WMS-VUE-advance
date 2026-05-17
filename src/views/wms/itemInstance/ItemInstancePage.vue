@@ -30,12 +30,6 @@
             <el-option v-for="dict in wms_item_instance_status" :key="dict.value" :label="dict.label" :value="dict.value" />
           </el-select>
         </el-form-item>
-        <el-form-item label="产品标识" prop="productMark">
-          <el-input v-model="queryParams.productMark" placeholder="请输入产品标识" clearable @keyup.enter="handleQuery" />
-        </el-form-item>
-        <el-form-item label="质量等级" prop="qualityGrade">
-          <el-input v-model="queryParams.qualityGrade" placeholder="请输入质量等级" clearable @keyup.enter="handleQuery" />
-        </el-form-item>
         <el-form-item label="所在单位" prop="belongUnit">
           <el-input v-model="queryParams.belongUnit" placeholder="请输入所在单位" clearable @keyup.enter="handleQuery" />
         </el-form-item>
@@ -104,7 +98,6 @@
           <template #default="{ row }">
             <div>{{ row.itemName || '-' }}</div>
             <div v-if="row.skuName" class="sub-text">器材规格：{{ row.skuName }}</div>
-            <div v-if="row.productMark" class="sub-text">标识：{{ row.productMark }}</div>
           </template>
         </el-table-column>
         <el-table-column label="状态" width="100">
@@ -112,10 +105,9 @@
             <dict-tag :options="wms_item_instance_status" :value="row.instanceStatus" />
           </template>
         </el-table-column>
-        <el-table-column label="质量/单位" min-width="180">
+        <el-table-column label="所在单位" min-width="180">
           <template #default="{ row }">
-            <div>{{ displayQualityGrade(row) }}</div>
-            <div class="sub-text">{{ displayBelongUnit(row) }}</div>
+            <div>{{ displayBelongUnit(row) }}</div>
           </template>
         </el-table-column>
         <el-table-column label="位置" min-width="220">
@@ -351,8 +343,6 @@
         <el-descriptions-item label="货位">{{ detailDialog.data.locationName || '-' }}</el-descriptions-item>
         <el-descriptions-item label="来源类型">{{ formatSourceType(detailDialog.data.sourceType) }}</el-descriptions-item>
         <el-descriptions-item label="来源单号">{{ detailDialog.data.sourceOrderNo || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="产品标识">{{ detailDialog.data.productMark || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="质量等级">{{ displayQualityGrade(detailDialog.data) }}</el-descriptions-item>
         <el-descriptions-item label="所在单位">{{ displayBelongUnit(detailDialog.data) }}</el-descriptions-item>
         <el-descriptions-item label="来源明细ID">{{ detailDialog.data.receiptOrderDetailId || '-' }}</el-descriptions-item>
         <el-descriptions-item label="生产日期">{{ detailDialog.data.productionDate ? parseTime(detailDialog.data.productionDate, '{y}-{m}-{d}') : '-' }}</el-descriptions-item>
@@ -454,7 +444,7 @@ import LocationSelect from '@/views/components/LocationSelect.vue';
 const router = useRouter();
 const { proxy } = getCurrentInstance();
 const route = useRoute();
-const { wms_item_instance_status, wms_quality_grade } = proxy.useDict('wms_item_instance_status', 'wms_quality_grade');
+const { wms_item_instance_status } = proxy.useDict('wms_item_instance_status');
 const wmsStore = useWmsStore();
 
 const yesNoOptions = [
@@ -542,8 +532,6 @@ const data = reactive({
     rackId: undefined,
     locationId: undefined,
     sourceOrderId: undefined,
-    productMark: undefined,
-    qualityGrade: undefined,
     belongUnit: undefined,
     receiptOrderDetailId: undefined
   },
@@ -587,10 +575,6 @@ const formatSourceType = (value) => {
   return value || '-';
 };
 
-const displayQualityGrade = (row = {}) => {
-  const value = row.qualityGrade ?? row.defaultQualityGrade ?? row.item?.defaultQualityGrade ?? row.itemSku?.defaultQualityGrade ?? row.itemSku?.item?.defaultQualityGrade;
-  return proxy.selectDictLabel(wms_quality_grade.value, value) || value || '-';
-};
 const displayBelongUnit = (row = {}) => row.belongUnit ?? row.item?.defaultBelongUnit ?? row.itemSku?.item?.defaultBelongUnit ?? '-';
 
 const loadItemOptions = async () => {
@@ -669,12 +653,6 @@ const applyRouteQuery = () => {
   }
   if (skuId) {
     queryParams.value.skuId = Number(skuId);
-  }
-  if (route.query.productMark) {
-    queryParams.value.productMark = route.query.productMark;
-  }
-  if (route.query.qualityGrade) {
-    queryParams.value.qualityGrade = route.query.qualityGrade;
   }
   if (route.query.belongUnit) {
     queryParams.value.belongUnit = route.query.belongUnit;

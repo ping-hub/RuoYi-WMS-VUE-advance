@@ -99,16 +99,6 @@
                     <div>{{ row.specModel || row?.itemSku?.specModel || row?.itemSku?.item?.modelText || '-' }}</div>
                   </template>
                 </el-table-column>
-                <el-table-column label="产品标识" min-width="140">
-                  <template #default="{ row }">
-                    <div>{{ row.productMark || '-' }}</div>
-                  </template>
-                </el-table-column>
-                <el-table-column label="质量等级" min-width="120">
-                  <template #default="{ row }">
-                    <dict-tag :options="wms_quality_grade" :value="row.qualityGrade ?? row?.itemSku?.defaultQualityGrade ?? row?.itemSku?.item?.defaultQualityGrade" />
-                  </template>
-                </el-table-column>
                 <el-table-column label="源位置" min-width="220">
                   <template #default="{ row }">
                     <div>库区：{{ row.sourceAreaName || '-' }}</div>
@@ -281,12 +271,11 @@ const { proxy } = getCurrentInstance();
 const route = useRoute();
 const router = useRouter();
 const wmsStore = useWmsStore();
-const { wms_movement_status, wms_movement_type, wms_dispatch_mode, wms_basis_type, wms_quality_grade } = proxy.useDict(
+const { wms_movement_status, wms_movement_type, wms_dispatch_mode, wms_basis_type } = proxy.useDict(
   "wms_movement_status",
   "wms_movement_type",
   "wms_dispatch_mode",
-  "wms_basis_type",
-  "wms_quality_grade"
+  "wms_basis_type"
 );
 const movementOrderList = ref([]);
 const open = ref(false);

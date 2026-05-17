@@ -25,14 +25,6 @@
         <el-form-item label="规格型号" prop="specModel">
           <el-input v-model="queryParams.specModel" clearable placeholder="请输入规格型号" />
         </el-form-item>
-        <el-form-item label="产品标识" prop="productMark">
-          <el-input v-model="queryParams.productMark" clearable placeholder="请输入产品标识" />
-        </el-form-item>
-        <el-form-item label="质量等级" prop="qualityGrade">
-          <el-select v-model="queryParams.qualityGrade" clearable placeholder="请选择质量等级" style="width: 180px">
-            <el-option v-for="item in wms_quality_grade" :key="item.value" :label="item.label" :value="item.value" />
-          </el-select>
-        </el-form-item>
         <el-form-item label="所在单位" prop="belongUnit">
           <el-input v-model="queryParams.belongUnit" clearable placeholder="请输入所在单位" />
         </el-form-item>
@@ -92,16 +84,6 @@
           <template #default="{ row }">
             <div>{{ row.itemSku?.skuName || row.skuName || '-' }}</div>
             <div class="sub-text">规格型号：{{ row.specModel || row.itemSku?.specModel || '-' }}</div>
-          </template>
-        </el-table-column>
-        <el-table-column label="产品标识" min-width="150" show-overflow-tooltip>
-          <template #default="{ row }">
-            <span>{{ displayProductMark(row) }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="质量等级" min-width="120">
-          <template #default="{ row }">
-            <span>{{ displayQualityGrade(row) }}</span>
           </template>
         </el-table-column>
         <el-table-column label="所在单位" min-width="140" show-overflow-tooltip>
@@ -180,7 +162,7 @@ const defaultTime = reactive([new Date(0, 0, 0, 0, 0, 0), new Date(0, 0, 0, 23, 
 const { proxy } = getCurrentInstance()
 const route = useRoute()
 const router = useRouter()
-const { wms_inventory_history_type, wms_quality_grade } = proxy.useDict('wms_inventory_history_type', 'wms_quality_grade')
+const { wms_inventory_history_type } = proxy.useDict('wms_inventory_history_type')
 
 const inventoryHistoryList = ref([])
 const loading = ref(true)
@@ -194,8 +176,6 @@ const queryParams = ref({
   itemCode: undefined,
   equipmentCode: undefined,
   specModel: undefined,
-  productMark: undefined,
-  qualityGrade: undefined,
   belongUnit: undefined,
   skuName: undefined,
   skuCode: undefined,
@@ -296,11 +276,6 @@ const handleGoOrder = (row) => {
   router.push({ path, query: { id: row.orderId, mode: 'view', returnFullPath: route.fullPath } })
 }
 
-const displayQualityGrade = (row = {}) => {
-  const value = row.qualityGrade ?? row.item?.defaultQualityGrade ?? row.itemSku?.defaultQualityGrade ?? row.itemSku?.item?.defaultQualityGrade
-  return proxy.selectDictLabel(wms_quality_grade.value, value) || value || '-'
-}
-const displayProductMark = (row = {}) => row.productMark ?? row.inventoryDetail?.productMark ?? row.itemInstance?.productMark ?? '-'
 const displayBelongUnit = (row = {}) => row.belongUnit ?? row.item?.defaultBelongUnit ?? row.itemSku?.item?.defaultBelongUnit ?? '-'
 const resolveDateValue = (row = {}, field) => row[field] ?? row.inventoryDetail?.[field] ?? row.itemInstance?.[field]
 const formatMoney = (value) => (value || value === 0) ? Number(value).toFixed(2) : '-'
@@ -310,8 +285,6 @@ const initFromRoute = () => {
   queryParams.value.itemName = route.query.itemName || undefined
   queryParams.value.equipmentCode = route.query.equipmentCode || undefined
   queryParams.value.specModel = route.query.specModel || undefined
-  queryParams.value.productMark = route.query.productMark || undefined
-  queryParams.value.qualityGrade = route.query.qualityGrade || undefined
   queryParams.value.belongUnit = route.query.belongUnit || undefined
 }
 

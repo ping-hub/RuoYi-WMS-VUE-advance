@@ -211,11 +211,10 @@ import { resolveRoutePath } from "@/utils/routeResolver";
 const { proxy } = getCurrentInstance();
 const route = useRoute();
 const router = useRouter();
-const { wms_shipment_status, wms_shipment_type, wms_dispatch_mode, wms_quality_grade } = proxy.useDict(
+const { wms_shipment_status, wms_shipment_type, wms_dispatch_mode } = proxy.useDict(
   "wms_shipment_status",
   "wms_shipment_type",
-  "wms_dispatch_mode",
-  "wms_quality_grade"
+  "wms_dispatch_mode"
 );
 const shipmentOrderList = ref([]);
 const loading = ref(true);
@@ -323,8 +322,6 @@ async function handlePrint(row) {
         quantity: Number(detail.quantity).toFixed(0),
         equipmentCode: detail.equipmentCode,
         specModel: detail.specModel,
-        productMark: detail.productMark,
-        qualityGrade: proxy.selectDictLabel(wms_quality_grade.value, detail.qualityGrade ?? detail.inventoryDetail?.qualityGrade ?? detail.itemSku?.defaultQualityGrade ?? detail.itemSku?.item?.defaultQualityGrade),
         unitPrice: detail.unitPrice,
         productionDate: proxy.parseTime(detail.productionDate, '{y}-{m}-{d}'),
         expirationDate: proxy.parseTime(detail.expirationDate, '{y}-{m}-{d}'),

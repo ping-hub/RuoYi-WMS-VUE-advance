@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="app-container">
     <el-card>
       <el-form ref="queryRef" :model="queryParams" :inline="true" label-width="88px">
@@ -101,8 +101,6 @@
             <div v-if="row.fromPerson || row.toPerson" class="sub-text">经手：{{ row.fromPerson || '-' }} / {{ row.toPerson || '-' }}</div>
             <div v-if="row.docDate" class="sub-text">单据日期：{{ parseTime(row.docDate, '{y}-{m}-{d}') }}</div>
             <div v-if="row.planReturnDate" class="sub-text">计划归还：{{ parseTime(row.planReturnDate, '{y}-{m}-{d}') }}</div>
-            <div v-if="row.productMark" class="sub-text">产品标识：{{ row.productMark }}</div>
-            <div v-if="row.qualityGrade" class="sub-text">质量等级：{{ proxy.selectDictLabel(wms_quality_grade, row.qualityGrade) || row.qualityGrade }}</div>
             <div class="sub-text">借用时间：{{ row.borrowTime ? parseTime(row.borrowTime, '{y}-{m}-{d} {h}:{i}:{s}') : '-' }}</div>
             <div v-if="row.borrowRemark" class="sub-text">借用备注：{{ row.borrowRemark }}</div>
           </template>
@@ -258,17 +256,7 @@
               />
             </el-form-item>
           </el-col>
-          <el-col :span="12">
-            <el-form-item label="质量等级" prop="qualityGrade">
-              <el-select v-model="borrowDialog.form.qualityGrade" placeholder="请选择质量等级" clearable style="width: 100%">
-                <el-option v-for="dict in wms_quality_grade" :key="dict.value" :label="dict.label" :value="dict.value" />
-              </el-select>
-            </el-form-item>
-          </el-col>
         </el-row>
-        <el-form-item label="产品标识" prop="productMark">
-          <el-input v-model="borrowDialog.form.productMark" placeholder="请输入产品标识" />
-        </el-form-item>
         <el-form-item label="借用备注" prop="borrowRemark">
           <el-input v-model="borrowDialog.form.borrowRemark" type="textarea" :rows="3" placeholder="请输入借用备注" />
         </el-form-item>
@@ -362,12 +350,10 @@
         <el-descriptions-item label="收货人">{{ detailDialog.data.toPerson || '-' }}</el-descriptions-item>
         <el-descriptions-item label="单据日期">{{ detailDialog.data.docDate ? parseTime(detailDialog.data.docDate, '{y}-{m}-{d}') : '-' }}</el-descriptions-item>
         <el-descriptions-item label="计划归还">{{ detailDialog.data.planReturnDate ? parseTime(detailDialog.data.planReturnDate, '{y}-{m}-{d}') : '-' }}</el-descriptions-item>
-        <el-descriptions-item label="质量等级">{{ displayQualityGrade(detailDialog.data) }}</el-descriptions-item>
         <el-descriptions-item label="超期状态">
           <el-tag v-if="detailDialog.data.overdueFlag === 1" type="danger">超期{{ detailDialog.data.overdueDays || 0 }}天</el-tag>
           <el-tag v-else type="success">正常</el-tag>
         </el-descriptions-item>
-        <el-descriptions-item label="产品标识" :span="2">{{ detailDialog.data.productMark || '-' }}</el-descriptions-item>
         <el-descriptions-item label="借用备注" :span="2">{{ detailDialog.data.borrowRemark || '-' }}</el-descriptions-item>
         <el-descriptions-item label="原位置" :span="2">{{ getOriginalLocationText(detailDialog.data) }}</el-descriptions-item>
         <el-descriptions-item label="归还时间">{{ detailDialog.data.returnTime ? parseTime(detailDialog.data.returnTime, '{y}-{m}-{d} {h}:{i}:{s}') : '-' }}</el-descriptions-item>
@@ -396,7 +382,7 @@ import FormLabelHelp from '@/views/components/FormLabelHelp.vue'
 const router = useRouter();
 const route = useRoute();
 const { proxy } = getCurrentInstance();
-const { wms_borrow_status, wms_item_instance_status, wms_quality_grade } = proxy.useDict('wms_borrow_status', 'wms_item_instance_status', 'wms_quality_grade');
+const { wms_borrow_status, wms_item_instance_status } = proxy.useDict('wms_borrow_status', 'wms_item_instance_status');
 
 const loading = ref(true);
 const buttonLoading = ref(false);
@@ -410,11 +396,6 @@ const queryRef = ref();
 const borrowFormRef = ref();
 const returnFormRef = ref();
 const instanceOptions = ref([]);
-
-const displayQualityGrade = (row = {}) => {
-  const value = row.qualityGrade ?? row.item?.defaultQualityGrade ?? row.itemSku?.defaultQualityGrade ?? row.itemSku?.item?.defaultQualityGrade
-  return proxy.selectDictLabel(wms_quality_grade, value) || value || '-'
-};
 
 const queryParams = reactive({
   pageNum: 1,
@@ -438,8 +419,6 @@ const borrowDialog = reactive({
     fromPerson: undefined,
     toPerson: undefined,
     docDate: undefined,
-    productMark: undefined,
-    qualityGrade: undefined,
     planReturnDate: undefined,
     borrowTime: undefined,
     borrowRemark: undefined
@@ -616,8 +595,6 @@ const handleBorrow = async (row) => {
     fromPerson: undefined,
     toPerson: undefined,
     docDate: undefined,
-    productMark: undefined,
-    qualityGrade: undefined,
     planReturnDate: undefined,
     borrowTime: undefined,
     borrowRemark: undefined
@@ -636,8 +613,6 @@ const handleBorrowInstanceChange = async (itemInstanceId) => {
   }
   const res = await getItemInstance(itemInstanceId);
   borrowDialog.currentItem = res.data || {};
-  borrowDialog.form.productMark = borrowDialog.form.productMark || res.data?.productMark;
-  borrowDialog.form.qualityGrade = borrowDialog.form.qualityGrade || res.data?.qualityGrade;
   borrowDialog.form.instanceCode = res.data?.instanceCode;
 };
 

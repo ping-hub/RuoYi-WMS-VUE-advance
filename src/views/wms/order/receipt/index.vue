@@ -209,11 +209,10 @@ import receiptPanel from "@/components/PrintTemplate/receipt-panel";
 const { proxy } = getCurrentInstance();
 const route = useRoute();
 const router = useRouter();
-const { wms_receipt_status, wms_receipt_type, wms_dispatch_mode, wms_quality_grade } = proxy.useDict(
+const { wms_receipt_status, wms_receipt_type, wms_dispatch_mode } = proxy.useDict(
   "wms_receipt_status",
   "wms_receipt_type",
-  "wms_dispatch_mode",
-  "wms_quality_grade"
+  "wms_dispatch_mode"
 );
 const receiptOrderList = ref([]);
 const loading = ref(true);
@@ -319,8 +318,6 @@ async function handlePrint(row) {
       quantity: Number(detail.quantity || 0).toFixed(0),
       equipmentCode: detail.equipmentCode,
       specModel: detail.specModel,
-      productMark: detail.productMark,
-      qualityGrade: proxy.selectDictLabel(wms_quality_grade.value, detail.qualityGrade ?? detail.itemSku?.item?.defaultQualityGrade),
       unitPrice: detail.unitPrice,
       productionDate: proxy.parseTime(detail.productionDate, '{y}-{m}-{d}'),
       expirationDate: proxy.parseTime(detail.expirationDate, '{y}-{m}-{d}'),

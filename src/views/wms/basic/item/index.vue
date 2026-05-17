@@ -98,7 +98,6 @@
                 <el-tag :type="row.status === '0' ? 'info' : 'success'">{{ row.status === '0' ? '停用' : '启用' }}</el-tag>
               </template>
             </el-table-column>
-            <el-table-column label="产品标识" prop="productMark" min-width="160" show-overflow-tooltip />
             <el-table-column label="备注" prop="remark" min-width="180" show-overflow-tooltip />
             <el-table-column label="操作" align="right" width="260">
               <template #default="{ row }">
@@ -171,11 +170,6 @@
             </el-col>
           </el-row>
           <el-row :gutter="20">
-            <el-col :span="12">
-              <el-form-item label="产品标识" prop="productMark">
-                <el-input v-model="form.productMark" placeholder="请输入产品标识" />
-              </el-form-item>
-            </el-col>
             <el-col :span="12">
               <el-form-item label="备注" prop="remark">
                 <el-input v-model="form.remark" placeholder="请输入备注" />
@@ -288,9 +282,6 @@ import { buildQrTscCommand, WssPrintClient } from '@/utils/wssPrintClient';
 
 const route = useRoute();
 const { proxy } = getCurrentInstance();
-const { wms_quality_grade } = proxy.useDict(
-  'wms_quality_grade'
-);
 const wmsStore = useWmsStore();
 
 
@@ -346,7 +337,6 @@ const initFormData = () => ({
   equipmentName: undefined,
   equipmentType: undefined,
   status: '1',
-  productMark: undefined,
   modelText: undefined,
   remark: undefined,
   sku: []

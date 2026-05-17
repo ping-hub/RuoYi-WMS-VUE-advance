@@ -37,8 +37,6 @@
             </el-descriptions-item>
             <el-descriptions-item label="器材">{{ itemTrace.itemInstance.itemName || '-' }}</el-descriptions-item>
             <el-descriptions-item label="器材规格">{{ itemTrace.itemInstance.skuName || '-' }}</el-descriptions-item>
-            <el-descriptions-item label="产品标识">{{ displayProductMark(itemTrace.itemInstance) }}</el-descriptions-item>
-            <el-descriptions-item label="质量等级">{{ displayQualityGrade(itemTrace.itemInstance) }}</el-descriptions-item>
             <el-descriptions-item label="所在单位">{{ displayBelongUnit(itemTrace.itemInstance) }}</el-descriptions-item>
             <el-descriptions-item label="来源单号">{{ itemTrace.itemInstance.sourceOrderNo || '-' }}</el-descriptions-item>
             <el-descriptions-item label="当前位置" :span="2">{{ getItemLocation(itemTrace.itemInstance) }}</el-descriptions-item>
@@ -86,8 +84,6 @@
           <el-descriptions-item label="借用时间">{{ itemTrace.currentBorrowRecord.borrowTime ? parseTime(itemTrace.currentBorrowRecord.borrowTime, '{y}-{m}-{d} {h}:{i}:{s}') : '-' }}</el-descriptions-item>
           <el-descriptions-item label="发货单位">{{ itemTrace.currentBorrowRecord.fromUnit || '-' }}</el-descriptions-item>
           <el-descriptions-item label="收货单位">{{ itemTrace.currentBorrowRecord.toUnit || '-' }}</el-descriptions-item>
-          <el-descriptions-item label="产品标识">{{ displayProductMark(itemTrace.currentBorrowRecord) }}</el-descriptions-item>
-          <el-descriptions-item label="质量等级">{{ displayQualityGrade(itemTrace.currentBorrowRecord) }}</el-descriptions-item>
           <el-descriptions-item label="原位置" :span="2">{{ getBorrowLocation(itemTrace.currentBorrowRecord) }}</el-descriptions-item>
           <el-descriptions-item label="借用备注" :span="2">{{ itemTrace.currentBorrowRecord.borrowRemark || '-' }}</el-descriptions-item>
         </el-descriptions>
@@ -107,10 +103,9 @@
           </el-table-column>
           <el-table-column label="借用单号" prop="borrowNo" min-width="140" />
           <el-table-column label="借用人" prop="borrower" min-width="120" />
-          <el-table-column label="单位/标识" min-width="220">
+          <el-table-column label="单位" min-width="220">
             <template #default="{ row }">
               <div>{{ row.fromUnit || '-' }} -> {{ row.toUnit || '-' }}</div>
-              <div class="sub-text">产品标识：{{ displayProductMark(row) }}</div>
             </template>
           </el-table-column>
           <el-table-column label="借用时间" min-width="180">
@@ -155,12 +150,6 @@
               {{ row.itemSku?.skuName || '-' }}
             </template>
           </el-table-column>
-          <el-table-column label="产品标识/质量等级" min-width="180">
-            <template #default="{ row }">
-              <div>{{ displayProductMark(row) }}</div>
-              <div class="sub-text">{{ displayQualityGrade(row) }}</div>
-            </template>
-          </el-table-column>
           <el-table-column label="物品码" prop="instanceCode" min-width="160" />
           <el-table-column label="箱码" prop="boxCode" min-width="140" />
           <el-table-column label="数量" prop="quantity" width="80" align="right" />
@@ -187,12 +176,6 @@
         </template>
         <el-table :data="itemTrace.movementDetails" border empty-text="暂无调拨记录">
           <el-table-column label="调拨单ID" prop="movementOrderId" width="120" />
-          <el-table-column label="产品标识/质量等级" min-width="180">
-            <template #default="{ row }">
-              <div>{{ displayProductMark(row) }}</div>
-              <div class="sub-text">{{ displayQualityGrade(row) }}</div>
-            </template>
-          </el-table-column>
           <el-table-column label="源位置/目标位置" min-width="260">
             <template #default="{ row }">
               <div>源：{{ formatLocationPath(row, 'source') }}</div>
@@ -300,10 +283,9 @@
               <div v-if="row.skuName" class="sub-text">器材规格：{{ row.skuName }}</div>
             </template>
           </el-table-column>
-          <el-table-column label="产品标识/所在单位" min-width="220">
+          <el-table-column label="所在单位" min-width="220">
             <template #default="{ row }">
-              <div>{{ displayProductMark(row) }}</div>
-              <div class="sub-text">{{ displayBelongUnit(row) }}</div>
+              <div>{{ displayBelongUnit(row) }}</div>
             </template>
           </el-table-column>
           <el-table-column label="状态" width="100">
@@ -332,12 +314,6 @@
               {{ row.itemSku?.skuName || '-' }}
             </template>
           </el-table-column>
-          <el-table-column label="产品标识/质量等级" min-width="180">
-            <template #default="{ row }">
-              <div>{{ displayProductMark(row) }}</div>
-              <div class="sub-text">{{ displayQualityGrade(row) }}</div>
-            </template>
-          </el-table-column>
           <el-table-column label="箱码" prop="boxCode" min-width="140" />
           <el-table-column label="数量" prop="quantity" width="80" align="right" />
           <el-table-column label="操作" width="120" align="right">
@@ -358,12 +334,6 @@
           <el-table-column label="调拨单ID" prop="movementOrderId" width="120" />
           <el-table-column label="箱码" prop="boxCode" min-width="140" />
           <el-table-column label="数量" prop="quantity" width="80" align="right" />
-          <el-table-column label="产品标识/质量等级" min-width="180">
-            <template #default="{ row }">
-              <div>{{ displayProductMark(row) }}</div>
-              <div class="sub-text">{{ displayQualityGrade(row) }}</div>
-            </template>
-          </el-table-column>
           <el-table-column label="源位置/目标位置" min-width="260">
             <template #default="{ row }">
               <div>源：{{ formatLocationPath(row, 'source') }}</div>
@@ -430,11 +400,10 @@ const route = useRoute();
 const router = useRouter();
 const { proxy } = getCurrentInstance();
 const wmsStore = useWmsStore();
-const { wms_item_instance_status, wms_box_status, wms_borrow_status, wms_quality_grade } = proxy.useDict(
+const { wms_item_instance_status, wms_box_status, wms_borrow_status } = proxy.useDict(
   'wms_item_instance_status',
   'wms_box_status',
-  'wms_borrow_status',
-  'wms_quality_grade'
+  'wms_borrow_status'
 );
 
 const isItemMode = props.mode === 'item';
@@ -542,11 +511,6 @@ const formatInventoryLocation = (row) => {
   return parts.length ? parts.join(' / ') : '-';
 };
 
-const displayQualityGrade = (row = {}) => {
-  const value = row.qualityGrade;
-  return proxy.selectDictLabel(wms_quality_grade.value, value) || value || '-';
-};
-const displayProductMark = (row = {}) => row.productMark ?? row.inventoryDetail?.productMark ?? row.itemInstance?.productMark ?? '-';
 const displayBelongUnit = (row = {}) => row.belongUnit;
 const resolveDateValue = (row = {}, field) => row[field] ?? row.inventoryDetail?.[field] ?? row.itemInstance?.[field];
 

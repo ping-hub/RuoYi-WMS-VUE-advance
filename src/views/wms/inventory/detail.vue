@@ -32,14 +32,6 @@
         <el-form-item label="规格型号" prop="specModel" class="col4">
           <el-input v-model="queryParams.specModel" clearable placeholder="请输入规格型号" />
         </el-form-item>
-        <el-form-item label="产品标识" prop="productMark" class="col4">
-          <el-input v-model="queryParams.productMark" clearable placeholder="请输入产品标识" />
-        </el-form-item>
-        <el-form-item label="质量等级" prop="qualityGrade" class="col4">
-          <el-select v-model="queryParams.qualityGrade" clearable placeholder="请选择质量等级" style="width: 100%">
-            <el-option v-for="item in wms_quality_grade" :key="item.value" :label="item.label" :value="item.value" />
-          </el-select>
-        </el-form-item>
         <el-form-item label="所在单位" prop="belongUnit" class="col4">
           <el-input v-model="queryParams.belongUnit" clearable placeholder="请输入所在单位" />
         </el-form-item>
@@ -69,7 +61,6 @@
           <el-button type="primary" icon="Search" @click="handleQuery">搜索</el-button>
           <el-button icon="Refresh" @click="resetQuery">重置</el-button>
           <el-button type="warning" plain icon="Download" @click="handleExport" v-hasPermi="['wms:inventoryDetail:all']">导出</el-button>
-          <el-button v-if="fromLedger" plain icon="Back" @click="handleBackToLedger">返回器材总账</el-button>
         </el-form-item>
       </el-form>
     </el-card>
@@ -95,7 +86,7 @@
     <el-card class="mt20">
       <div class="mb8 flex-space-between">
         <div class="table-title">库存明细</div>
-        <div class="table-tip">支持从器材总账下钻，并联查相关单据与库存流水</div>
+        <div class="table-tip">支持联查相关单据与库存流水</div>
       </div>
       <el-table
         :data="inventoryDetailList"
@@ -155,16 +146,6 @@
             </template>
           </el-table-column>
         </template>
-        <el-table-column label="产品标识" min-width="150" show-overflow-tooltip>
-          <template #default="{ row }">
-            <span>{{ displayProductMark(row) }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="质量等级" min-width="120">
-          <template #default="{ row }">
-            <span>{{ displayQualityGrade(row) }}</span>
-          </template>
-        </el-table-column>
         <el-table-column label="所在单位" min-width="140" show-overflow-tooltip>
           <template #default="{ row }">
             <span>{{ displayBelongUnit(row) }}</span>
@@ -235,13 +216,11 @@ const defaultTime = reactive([new Date(0, 0, 0, 0, 0, 0), new Date(0, 0, 0, 23, 
 const { proxy } = getCurrentInstance()
 const router = useRouter()
 const route = useRoute()
-const { wms_quality_grade } = proxy.useDict('wms_quality_grade')
 
 const queryType = ref('warehouse')
 const inventoryDetailList = ref([])
 const loading = ref(false)
 const total = ref(0)
-const fromLedger = computed(() => route.query.fromLedger === '1')
 const rowSpanArray = ref(['warehouseId', 'areaId', 'areaIdAndItemId', 'areaIdAndSkuId'])
 const spanMethod = computed(() => getRowspanMethod(inventoryDetailList.value, rowSpanArray.value))
 const resolveInventoryHistoryPath = () => {
@@ -268,8 +247,6 @@ const queryParams = ref({
   equipmentCode: undefined,
   equipmentName: undefined,
   specModel: undefined,
-  productMark: undefined,
-  qualityGrade: undefined,
   belongUnit: undefined,
   skuName: undefined,
   skuCode: undefined,
@@ -394,15 +371,9 @@ const handleGoHistory = (row) => {
       equipmentCode: row.equipmentCode || undefined,
       itemName: row.itemName || row.item?.itemName || undefined,
       specModel: row.specModel || undefined,
-      productMark: resolveProductMarkValue(row) || undefined,
-      qualityGrade: row.qualityGrade || undefined,
       belongUnit: resolveBelongUnitValue(row) || undefined
     }
   })
-}
-
-const handleBackToLedger = () => {
-  router.back()
 }
 
 const orderTypeText = (type) => {
@@ -414,13 +385,7 @@ const orderTypeText = (type) => {
   return map[type] || '未知单据'
 }
 
-const displayQualityGrade = (row = {}) => {
-  const value = row.qualityGrade ?? row.item?.defaultQualityGrade ?? row.itemSku?.defaultQualityGrade ?? row.itemSku?.item?.defaultQualityGrade
-  return proxy.selectDictLabel(wms_quality_grade.value, value) || value || '-'
-}
-const resolveProductMarkValue = (row = {}) => row.productMark ?? row.inventoryDetail?.productMark ?? row.itemInstance?.productMark
 const resolveBelongUnitValue = (row = {}) => row.belongUnit ?? row.item?.defaultBelongUnit ?? row.itemSku?.item?.defaultBelongUnit
-const displayProductMark = (row = {}) => resolveProductMarkValue(row) ?? '-'
 const displayBelongUnit = (row = {}) => resolveBelongUnitValue(row) ?? '-'
 const resolveDateValue = (row = {}, field) => row[field] ?? row.inventoryDetail?.[field] ?? row.itemInstance?.[field]
 const formatMoney = (value) => (value || value === 0) ? Number(value).toFixed(2) : '-'
@@ -431,8 +396,6 @@ const initFromRoute = () => {
   queryParams.value.equipmentCode = route.query.equipmentCode || undefined
   queryParams.value.equipmentName = route.query.equipmentName || undefined
   queryParams.value.specModel = route.query.specModel || undefined
-  queryParams.value.productMark = route.query.productMark || undefined
-  queryParams.value.qualityGrade = route.query.qualityGrade || undefined
   queryParams.value.belongUnit = route.query.belongUnit || undefined
   if (route.query.createStartTime && route.query.createEndTime) {
     queryParams.value.createTimeRange = [route.query.createStartTime, route.query.createEndTime]

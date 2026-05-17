@@ -274,22 +274,10 @@
                 </div>
               </template>
             </el-table-column>
-            <el-table-column label="产品标识" width="180">
-              <template #default="{ row }">
-                <el-input v-model="row.productMark" :placeholder="form.movementType === 'special' ? '专装请录入产品标识' : '可选录入产品标识'" :disabled="isViewMode" />
-              </template>
-            </el-table-column>
             <el-table-column v-if="form.movementType === 'special'" label="物品码/箱码" min-width="240">
               <template #default="{ row }">
                 <el-input v-model="row.instanceCode" placeholder="请输入物品码" :disabled="isViewMode" @blur="handleSpecialCodeBlur(row, 'item')" />
                 <el-input class="mt5" v-model="row.boxCode" placeholder="请输入箱码" :disabled="isViewMode" @blur="handleSpecialCodeBlur(row, 'box')" />
-              </template>
-            </el-table-column>
-            <el-table-column label="质量等级" width="160">
-              <template #default="{ row }">
-                <el-select v-model="row.qualityGrade" placeholder="请选择质量等级" clearable style="width: 100%" :disabled="isViewMode">
-                  <el-option v-for="item in wms_quality_grade" :key="item.value" :label="item.label" :value="item.value" />
-                </el-select>
               </template>
             </el-table-column>
             <el-table-column label="生产日期" prop="productionDate">
@@ -391,11 +379,10 @@ import FormLabelHelp from '@/views/components/FormLabelHelp.vue'
 const {proxy} = getCurrentInstance();
 const route = useRoute();
 const isViewMode = computed(() => route.query.mode === 'view');
-const {wms_movement_type, wms_dispatch_mode, wms_basis_type, wms_quality_grade} = proxy.useDict(
+const {wms_movement_type, wms_dispatch_mode, wms_basis_type} = proxy.useDict(
   "wms_movement_type",
   "wms_dispatch_mode",
-  "wms_basis_type",
-  "wms_quality_grade"
+  "wms_basis_type"
 );
 
 const loading = ref(false)
@@ -479,8 +466,6 @@ const syncMovementDetail = (detail) => {
     ...detail,
     equipmentCode: detail.equipmentCode ?? detail.itemSku?.item?.itemCode,
     specModel: detail.specModel ?? detail.itemSku?.specModel ?? detail.itemSku?.item?.modelText,
-    productMark: detail.productMark,
-    qualityGrade: detail.qualityGrade ?? detail.itemSku?.item?.defaultQualityGrade,
     itemInstanceId: detail.itemInstanceId,
     instanceCode: detail.instanceCode,
     boxId: detail.boxId,
@@ -513,12 +498,6 @@ const handleSpecialCodeBlur = async (row, mode) => {
       row.itemInstanceId = data?.id
       row.boxId = undefined
       row.boxCode = undefined
-      if (data?.productMark && !row.productMark) {
-        row.productMark = data.productMark
-      }
-      if (data?.qualityGrade && !row.qualityGrade) {
-        row.qualityGrade = data.qualityGrade
-      }
       row.quantity = 1
       handleChangeQuantity()
     } catch (e) {
@@ -602,8 +581,6 @@ const handleOkClick = (item) => {
           sourceAreaName: useWmsStore().areaMap.get(form.value.sourceAreaId ?? it.areaId)?.areaName,
           equipmentCode: it.equipmentCode ?? it.item?.itemCode,
           specModel: it.specModel ?? it.itemSku?.specModel,
-          productMark: it.productMark,
-          qualityGrade: it.qualityGrade,
           unitPrice: it.unitPrice
         })
       )
@@ -648,8 +625,6 @@ const doSave = (movementOrderStatus = 0) => {
           quantity: it.quantity,
           equipmentCode: it.equipmentCode,
           specModel: it.specModel,
-          productMark: it.productMark,
-          qualityGrade: it.qualityGrade,
           unitPrice: it.unitPrice,
           lineAmount: it.lineAmount,
           remark: it.remark,

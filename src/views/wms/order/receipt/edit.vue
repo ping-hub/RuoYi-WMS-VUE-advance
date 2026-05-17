@@ -180,11 +180,6 @@
                 <span>{{ row.instanceCode || row.receiptItemInstances?.[0]?.instanceCode || '-' }}</span>
               </template>
             </el-table-column>
-            <el-table-column label="产品标识" width="100">
-              <template #default="{ row }">
-                <span>{{ row.productMark || row.receiptItemInstances?.[0]?.productMark || '-' }}</span>
-              </template>
-            </el-table-column>
             <el-table-column label="货架/货位" min-width="220">
               <template #default="{ row }">
                 <div class="location-editor">
@@ -325,7 +320,6 @@
           <el-table-column label="器材" prop="itemName" min-width="160" />
           <el-table-column label="规格" prop="skuName" min-width="160" />
           <el-table-column label="规格型号" prop="specModel" min-width="160" />
-          <el-table-column label="产品标识" prop="productMark" min-width="160" />
           <el-table-column label="状态" width="120">
             <template #default="{ row }">
               <span>{{ row.locationName ? '已入库' : '未入库' }}</span>
@@ -377,9 +371,8 @@ import { listItemInstance } from "@/api/wms/itemInstance";
 const {proxy} = getCurrentInstance();
 const route = useRoute();
 const isViewMode = computed(() => route.query.mode === 'view');
-const { wms_receipt_type, wms_quality_grade, wms_dispatch_mode } = proxy.useDict(
+const { wms_receipt_type, wms_dispatch_mode } = proxy.useDict(
   "wms_receipt_type",
-  "wms_quality_grade",
   "wms_dispatch_mode"
 );
 const loading = ref(false)
@@ -496,8 +489,6 @@ const normalizeReceiptInstance = (instance = {}) => ({
   id: instance.id,
   instanceCode: instance.instanceCode ?? '',
   boxCode: instance.boxCode ?? '',
-  productMark: instance.productMark ?? '',
-  qualityGrade: instance.qualityGrade ?? '',
   remark: instance.remark ?? ''
 })
 
@@ -520,14 +511,10 @@ const createReceiptDetailFromInstance = (item = {}) => syncReceiptDetail({
   locationId: undefined,
   generateItemInstance: 1,
   generatedInstanceQuantity: 0,
-  productMark: item.productMark,
-  qualityGrade: item.qualityGrade,
   receiptItemInstances: [normalizeReceiptInstance({
     id: item.id ?? item.itemInstanceId,
     instanceCode: item.instanceCode,
     boxCode: item.boxCode ?? '',
-    productMark: item.productMark,
-    qualityGrade: item.qualityGrade,
     remark: item.remark
   })]
 })
@@ -548,8 +535,6 @@ const syncReceiptDetail = (detail) => {
     boxCode: detail.boxCode ?? firstReceiptInstance.boxCode ?? '',
     equipmentCode: detail.equipmentCode ?? detail.itemSku?.item?.itemCode ?? detail.itemCode ?? firstReceiptInstance.instanceCode,
     specModel: detail.specModel ?? detail.itemSku?.specModel ?? detail.itemSku?.item?.modelText,
-    productMark: detail.productMark ?? firstReceiptInstance.productMark ?? '',
-    qualityGrade: detail.qualityGrade ?? detail.itemSku?.item?.defaultQualityGrade,
     quantity: Number(detail.quantity || 1),
     generateItemInstance: 1,
     rackId: detail.rackId,
@@ -699,8 +684,6 @@ const buildReceiptItemInstances = (detail) => [{
   id: detail.itemInstanceId ?? detail.receiptItemInstances?.[0]?.id,
   instanceCode: detail.instanceCode ?? detail.receiptItemInstances?.[0]?.instanceCode,
   boxCode: detail.boxCode ?? detail.receiptItemInstances?.[0]?.boxCode,
-  productMark: detail.productMark,
-  qualityGrade: detail.qualityGrade,
   remark: detail.remark
 }]
 
@@ -731,8 +714,6 @@ const doSave = async (receiptOrderStatus = 0) => {
         quantity: 1,
         equipmentCode: it.equipmentCode,
         specModel: it.specModel,
-        productMark: it.productMark,
-        qualityGrade: it.qualityGrade,
         unitPrice: it.unitPrice,
         lineAmount: it.lineAmount,
         productionDate: it.productionDate,
@@ -831,8 +812,6 @@ const doWarehousing = async () => {
         quantity: 1,
         equipmentCode: it.equipmentCode,
         specModel: it.specModel,
-        productMark: it.productMark,
-        qualityGrade: it.qualityGrade,
         unitPrice: it.unitPrice,
         lineAmount: it.lineAmount,
         productionDate: it.productionDate,

@@ -152,7 +152,6 @@
                   <el-table-column label="器材编码" prop="instanceCode" min-width="160" />
                   <el-table-column label="器材" prop="itemName" min-width="120" />
                   <el-table-column label="规格" prop="skuName" min-width="120" />
-                  <el-table-column label="产品标识" prop="productMark" min-width="120" />
                   <el-table-column label="箱码" prop="boxCode" min-width="120" />
                 </el-table>
               </div>

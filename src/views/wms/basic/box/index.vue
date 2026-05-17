@@ -176,7 +176,6 @@
           <template #default="{ row }">
             <div>{{ row.itemName || '-' }}</div>
             <div v-if="row.skuName" class="sub-text">器材规格：{{ row.skuName }}</div>
-            <div v-if="row.productMark" class="sub-text">标识：{{ row.productMark }}</div>
           </template>
         </el-table-column>
         <el-table-column label="状态" width="100">
@@ -184,10 +183,9 @@
             <dict-tag :options="itemInstanceStatusOptions" :value="row.instanceStatus" />
           </template>
         </el-table-column>
-        <el-table-column label="质量/单位" min-width="180">
+        <el-table-column label="所在单位" min-width="180">
           <template #default="{ row }">
-            <div>{{ displayQualityGrade(row) }}</div>
-            <div class="sub-text">{{ displayBelongUnit(row) }}</div>
+            <div>{{ displayBelongUnit(row) }}</div>
           </template>
         </el-table-column>
         <el-table-column label="日期" min-width="180">
@@ -341,7 +339,7 @@ import LocationSelect from '@/views/components/LocationSelect.vue';
 const router = useRouter();
 const route = useRoute();
 const { proxy } = getCurrentInstance();
-const { wms_box_status, wms_item_instance_status, wms_quality_grade } = proxy.useDict('wms_box_status', 'wms_item_instance_status', 'wms_quality_grade');
+const { wms_box_status, wms_item_instance_status } = proxy.useDict('wms_box_status', 'wms_item_instance_status');
 const wmsStore = useWmsStore();
 
 const loading = ref(true);
@@ -425,10 +423,6 @@ const data = reactive({
 const { form, queryParams, rules } = toRefs(data);
 
 const itemInstanceStatusOptions = computed(() => wms_item_instance_status.value);
-const displayQualityGrade = (row = {}) => {
-  const value = row.qualityGrade ?? row?.item?.defaultQualityGrade ?? row?.itemSku?.defaultQualityGrade ?? row?.itemSku?.item?.defaultQualityGrade;
-  return proxy.selectDictLabel(wms_quality_grade.value, value) || value || '-';
-};
 const displayBelongUnit = (row = {}) => row.belongUnit ?? row?.item?.defaultBelongUnit ?? row?.itemSku?.item?.defaultBelongUnit ?? '-';
 
 const applyRouteQuery = () => {
