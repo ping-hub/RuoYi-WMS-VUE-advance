@@ -121,14 +121,14 @@
           <el-empty v-if="!locationSummary" description="点击货架格子查看货位摘要" />
           <template v-else>
             <el-descriptions :column="3" border>
+              <el-descriptions-item label="仓库">{{ locationSummary.warehouseName || '-' }}</el-descriptions-item>
+              <el-descriptions-item label="库区">{{ locationSummary.areaName || '-' }}</el-descriptions-item>
+              <el-descriptions-item label="货架">{{ locationSummary.rackName || '-' }}</el-descriptions-item>
               <el-descriptions-item label="货位">{{ locationSummary.locationName || '-' }}</el-descriptions-item>
               <el-descriptions-item label="货位编码">{{ locationSummary.locationCode || '-' }}</el-descriptions-item>
               <el-descriptions-item label="货位状态">
                 <dict-tag :options="wms_location_status" :value="locationSummary.locationStatus" />
               </el-descriptions-item>
-              <el-descriptions-item label="仓库">{{ locationSummary.warehouseName || '-' }}</el-descriptions-item>
-              <el-descriptions-item label="库区">{{ locationSummary.areaName || '-' }}</el-descriptions-item>
-              <el-descriptions-item label="货架">{{ locationSummary.rackName || '-' }}</el-descriptions-item>
               <el-descriptions-item label="格子坐标">{{ `第 ${locationSummary.rowNo || '-'} 行 / 第 ${locationSummary.columnNo || '-'} 列` }}</el-descriptions-item>
               <el-descriptions-item label="尺寸">{{ formatDimensionText(locationSummary.length, locationSummary.width, locationSummary.height) }}</el-descriptions-item>
               <el-descriptions-item label="占用状态">
@@ -136,9 +136,7 @@
                   {{ formatOccupiedText(locationSummary) }}
                 </el-tag>
               </el-descriptions-item>
-              <el-descriptions-item label="箱子数">{{ locationSummary.boxCount ?? 0 }}</el-descriptions-item>
-              <el-descriptions-item label="器材实例数">{{ locationSummary.itemInstanceCount ?? 0 }}</el-descriptions-item>
-            </el-descriptions>
+              </el-descriptions>
             <div v-if="isLocationOccupied(locationSummary)" class="summary-stock-block">
               <div class="summary-section">
                 <div class="summary-section__title">箱子列表</div>
