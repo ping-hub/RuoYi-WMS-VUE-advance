@@ -142,14 +142,11 @@
         <div class="receipt-order-content">
           <div class="flex-space-between mb8">
             <div>
-              <el-tag type="info">支持器材编码出库 / 整箱出库</el-tag>
+              <el-tag type="info">支持“选择器材实例”或扫码枪直扫 `instance_code` 直接新增，当前只允许选择在库实例</el-tag>
             </div>
             <div class="add-actions">
               <el-button type="primary" plain size="default" @click="showAddItemInstance" icon="Tickets" :disabled="!form.warehouseId || !form.areaId || isViewMode">
-                按器材编码添加
-              </el-button>
-              <el-button type="primary" plain size="default" @click="showAddBox" icon="Box" :disabled="!form.warehouseId || !form.areaId || isViewMode">
-                按整箱添加
+                选择器材实例
               </el-button>
             </div>
           </div>
@@ -247,7 +244,7 @@
           </el-table>
         </div>
       </el-card>
-      <el-dialog v-model="itemInstanceDialog.visible" title="按器材编码添加" width="1100px" append-to-body>
+      <el-dialog v-model="itemInstanceDialog.visible" title="选择器材实例" width="1100px" append-to-body>
         <el-form :inline="true" :model="itemInstanceDialog.query" label-width="88px">
           <el-form-item label="仓库">
             <el-select v-model="itemInstanceDialog.query.warehouseId" placeholder="仓库" disabled filterable style="width: 160px">
@@ -307,43 +304,6 @@
           <el-button type="primary" @click="handleConfirmItemInstance">确认添加</el-button>
         </template>
       </el-dialog>
-      <el-dialog v-model="boxDialog.visible" title="按整箱添加" width="1100px" append-to-body>
-        <el-form :inline="true" :model="boxDialog.query" label-width="88px">
-          <el-form-item label="箱码">
-            <el-input v-model="boxDialog.query.boxCode" placeholder="请输入箱码" clearable @keyup.enter="getBoxList" />
-          </el-form-item>
-          <el-form-item label="箱体名称">
-            <el-input v-model="boxDialog.query.boxName" placeholder="请输入箱体名称" clearable @keyup.enter="getBoxList" />
-          </el-form-item>
-          <el-form-item>
-            <el-button type="primary" @click="getBoxList">查询</el-button>
-          </el-form-item>
-        </el-form>
-        <el-table v-loading="boxDialog.loading" :data="boxDialog.list" @selection-change="handleBoxSelectionChange" border row-key="id">
-          <el-table-column type="selection" width="55" :selectable="isBoxSelectable" />
-          <el-table-column label="箱码" prop="boxCode" min-width="160" />
-          <el-table-column label="箱体名称" prop="boxName" min-width="160" />
-          <el-table-column label="库区" prop="areaName" width="120" />
-          <el-table-column label="货位" prop="locationName" width="120" />
-          <el-table-column label="箱内数量" prop="itemCount" width="100" align="right" />
-          <el-table-column label="状态" width="100">
-            <template #default="{ row }">
-              <dict-tag :options="wms_box_status" :value="row.boxStatus" />
-            </template>
-          </el-table-column>
-        </el-table>
-        <pagination
-          v-show="boxDialog.total > 0"
-          :total="boxDialog.total"
-          v-model:page="boxDialog.pageNum"
-          v-model:limit="boxDialog.pageSize"
-          @pagination="getBoxList"
-        />
-        <template #footer>
-          <el-button @click="boxDialog.visible = false">取消</el-button>
-          <el-button type="primary" @click="handleConfirmBox">确认添加</el-button>
-        </template>
-      </el-dialog>
     </div>
     <div class="footer-global">
       <div class="btn-box">
@@ -361,7 +321,7 @@
 </template>
 
 <script setup name="ShipmentOrderEdit">
-import {computed, getCurrentInstance, onMounted, reactive, ref, toRefs} from "vue";
+import {computed, getCurrentInstance, onBeforeUnmount, onMounted, reactive, ref, toRefs} from "vue";
 import {addShipmentOrder, getShipmentOrder, updateShipmentOrder, shipment} from "@/api/wms/shipmentOrder";
 import {delShipmentOrderDetail} from "@/api/wms/shipmentOrderDetail";
 import {ElMessage, ElMessageBox} from "element-plus";
@@ -369,17 +329,15 @@ import {useRoute} from "vue-router";
 import {useWmsStore} from '@/store/modules/wms'
 import {numSub, generateNo} from '@/utils/ruoyi'
 import {listInventoryDetailNoPage} from "@/api/wms/inventoryDetail";
-import {listItemInstance} from "@/api/wms/itemInstance";
-import {getBox, listBox} from "@/api/wms/box";
+import {getItemInstanceByCode, listItemInstance} from "@/api/wms/itemInstance";
 import RackSelect from "@/views/components/RackSelect.vue";
 
 const {proxy} = getCurrentInstance();
 const route = useRoute();
 const isViewMode = computed(() => route.query.mode === 'view');
-const {wms_shipment_type, wms_item_instance_status, wms_box_status, wms_dispatch_mode} = proxy.useDict(
-  "wms_shipment_type",
+const {wms_item_instance_status, wms_shipment_type, wms_dispatch_mode} = proxy.useDict(
   "wms_item_instance_status",
-  "wms_box_status",
+  "wms_shipment_type",
   "wms_dispatch_mode"
 );
 
@@ -392,7 +350,7 @@ const shipmentDetailSourceOptions = computed(() => ([
 const initFormData = {
   id: undefined,
   shipmentOrderNo: undefined,
-  shipmentOrderType: "2",
+  shipmentOrderType: undefined,
   merchantId: undefined,
   orderNo: undefined,
   basisNo: undefined,
@@ -431,18 +389,10 @@ const itemInstanceDialog = reactive({
     skuName: undefined
   }
 })
-const boxDialog = reactive({
-  visible: false,
-  loading: false,
-  list: [],
-  total: 0,
-  pageNum: 1,
-  pageSize: 10,
-  selection: [],
-  query: {
-    boxCode: undefined,
-    boxName: undefined
-  }
+const shipmentScanBuffer = reactive({
+  value: '',
+  lastTime: 0,
+  pending: false
 })
 const data = reactive({
   form: {...initFormData},
@@ -759,13 +709,19 @@ const doShipment = async () => {
 }
 
 onMounted(() => {
+  window.addEventListener('keydown', handleShipmentScanKeydown)
   const id = route.query && route.query.id;
   if (id) {
     loadDetail(id)
   } else {
     form.value.shipmentOrderNo = 'CK' + generateNo()
+    form.value.shipmentOrderType = wms_shipment_type.value?.[0]?.value
     refreshInventoryOptions()
   }
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', handleShipmentScanKeydown)
 })
 
 
@@ -883,76 +839,53 @@ const addItemInstancesToShipment = async (items) => {
   handleChangeQuantity()
 }
 
-const addBoxesToShipment = async (selectedBoxes) => {
-  if (!selectedBoxes?.length) {
+const isTypingTarget = (event) => {
+  const tagName = event?.target?.tagName
+  return ['INPUT', 'TEXTAREA'].includes(tagName) || event?.target?.isContentEditable
+}
+
+const handleScanAddItemInstance = async (instanceCode) => {
+  if (!form.value.warehouseId || !form.value.areaId) {
+    ElMessage.warning('请先选择仓库和库区后再扫码')
     return
   }
-  await refreshInventoryOptions()
-  const extraUsage = {}
-  const newRows = []
-  const skippedBoxes = []
-  for (const selectedBox of selectedBoxes) {
-    if (selectedBox.id && form.value.details.some(detail => detail.boxId === selectedBox.id)) {
-      throw new Error(`箱体 ${selectedBox.boxCode} 已添加`)
-    }
-    const detailRes = await getBox(selectedBox.id)
-    const box = detailRes.data || {}
-    const items = box.items || []
-    const candidates = items.filter(item => {
-      if (form.value.details.some(detail => detail.itemInstanceId === item.id)) {
-        return false
-      }
-      if (item.shipmentOrderDetailId) {
-        return false
-      }
-      return true
-    })
-    if (!candidates.length) {
-      skippedBoxes.push(`箱体 ${selectedBox.boxCode} 内无可出库器材`)
-      continue
-    }
-    for (const item of candidates) {
-      const matchedInventory = matchInventoryDetail({
-        skuId: item.skuId,
-        areaId: item.areaId,
-        productionDate: item.productionDate,
-        expirationDate: item.expirationDate,
-        quantity: 1
-      }, extraUsage)
-      if (!matchedInventory) {
-        throw new Error(`箱体 ${selectedBox.boxCode} 中器材编码 ${item.instanceCode} 未匹配到可用库存明细`)
-      }
-      extraUsage[matchedInventory.id] = Number(extraUsage[matchedInventory.id] || 0) + 1
-      newRows.push(createDetailRow({
-        skuId: item.skuId,
-        skuName: item.skuName,
-        itemName: item.itemName,
-        quantity: 1,
-        remainQuantity: matchedInventory.remainQuantity,
-        productionDate: item.productionDate,
-        expirationDate: item.expirationDate,
-        warehouseId: form.value.warehouseId,
-        areaId: item.areaId,
-        inventoryDetailId: matchedInventory.id,
-        areaName: useWmsStore().areaMap.get(item.areaId)?.areaName,
-        itemInstanceId: item.id,
-        instanceCode: item.instanceCode,
-        boxId: selectedBox.id,
-        boxCode: selectedBox.boxCode,
-        detailSourceType: 'box',
-        equipmentCode: matchedInventory.equipmentCode ?? item.itemCode,
-        specModel: matchedInventory.specModel ?? item.specModel,
-        unitPrice: matchedInventory.unitPrice
-      }))
-    }
+  const res = await getItemInstanceByCode(instanceCode, { unshippedOnly: true, instanceStatus: '在库' })
+  const item = res.data
+  if (!item?.id) {
+    ElMessage.error(`未找到可出库器材实例：${instanceCode}`)
+    return
   }
-  if (!newRows.length && skippedBoxes.length) {
-    throw new Error(skippedBoxes.join('；'))
+  await addItemInstancesToShipment([item])
+  ElMessage.success(`已扫码添加：${instanceCode}`)
+}
+
+const handleShipmentScanKeydown = async (event) => {
+  if (isViewMode.value || loading.value || shipmentScanBuffer.pending || isTypingTarget(event)) {
+    return
   }
-  form.value.details.push(...newRows.map(it => syncShipmentDetail(it)))
-  handleChangeQuantity()
-  if (skippedBoxes.length) {
-    ElMessage.warning(skippedBoxes.join('；'))
+  const now = Date.now()
+  if (now - shipmentScanBuffer.lastTime > 120) {
+    shipmentScanBuffer.value = ''
+  }
+  shipmentScanBuffer.lastTime = now
+  if (event.key === 'Enter') {
+    const instanceCode = shipmentScanBuffer.value.trim()
+    shipmentScanBuffer.value = ''
+    if (!instanceCode) {
+      return
+    }
+    shipmentScanBuffer.pending = true
+    try {
+      await handleScanAddItemInstance(instanceCode)
+    } catch (e) {
+      ElMessage.error(e?.message || '扫码添加失败')
+    } finally {
+      shipmentScanBuffer.pending = false
+    }
+    return
+  }
+  if (event.key.length === 1) {
+    shipmentScanBuffer.value += event.key
   }
 }
 
@@ -981,9 +914,10 @@ const getItemInstanceList = () => {
     warehouseId: form.value.warehouseId,
     areaId: form.value.areaId,
     borrowed: 0,
+    instanceStatus: '在库',
     ...itemInstanceDialog.query
   }).then((res) => {
-    itemInstanceDialog.list = (res.rows || []).filter(it => it.instanceStatus !== 'disabled' && it.instanceStatus !== 'outbound')
+    itemInstanceDialog.list = res.rows || []
     itemInstanceDialog.total = res.total || 0
   }).finally(() => {
     itemInstanceDialog.loading = false
@@ -1008,51 +942,6 @@ const handleConfirmItemInstance = async () => {
     itemInstanceDialog.visible = false
   } catch (e) {
     ElMessage.error(e?.message || '器材编码添加失败')
-  }
-}
-
-const showAddBox = async () => {
-  await refreshInventoryOptions()
-  boxDialog.pageNum = 1
-  boxDialog.visible = true
-  boxDialog.selection = []
-  getBoxList()
-}
-
-const getBoxList = () => {
-  boxDialog.loading = true
-  listBox({
-    pageNum: boxDialog.pageNum,
-    pageSize: boxDialog.pageSize,
-    warehouseId: form.value.warehouseId,
-    areaId: form.value.areaId,
-    ...boxDialog.query
-  }).then((res) => {
-    boxDialog.list = (res.rows || []).filter(it => it.boxStatus !== 'disabled' && it.boxStatus !== 'outbound' && Number(it.itemCount || 0) > 0)
-    boxDialog.total = res.total || 0
-  }).finally(() => {
-    boxDialog.loading = false
-  })
-}
-
-const handleBoxSelectionChange = (selection) => {
-  boxDialog.selection = selection
-}
-
-const isBoxSelectable = (row) => {
-  return !form.value.details.some(detail => detail.boxId === row.id)
-}
-
-const handleConfirmBox = async () => {
-  if (!boxDialog.selection.length) {
-    ElMessage.error('请选择箱体')
-    return
-  }
-  try {
-    await addBoxesToShipment(boxDialog.selection)
-    boxDialog.visible = false
-  } catch (e) {
-    ElMessage.error(e?.message || '箱体添加失败')
   }
 }
 </script>

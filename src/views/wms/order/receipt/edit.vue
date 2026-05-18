@@ -146,7 +146,7 @@
           <div class="flex-space-between mb8 receipt-toolbar">
             <div>
               <div class="instance-tip">
-                入库按单品实例执行。可按“分类 -> 器材 -> 实例”选择未入库器材，并在明细行填写箱码和目标货位。
+                入库按单品实例执行。支持“选择器材实例”或扫码枪直扫 `instance_code` 直接新增；箱码可直接录入，货位通过下拉选择。
               </div>
             </div>
             <div class="receipt-toolbar-actions">
@@ -254,7 +254,6 @@
             </el-table-column>
             <el-table-column label="操作" width="100" align="right" fixed="right">
               <template #default="scope">
-                <el-button v-if="!isViewMode" type="primary" link size="small" @click.stop="setActiveScanDetail(scope.row)">设为扫码目标</el-button>
                 <el-button v-if="!isViewMode" icon="Delete" type="danger" plain size="small" @click.stop="handleDeleteDetail(scope.row, scope.$index)" link>删除</el-button>
               </template>
             </el-table-column>
@@ -355,7 +354,7 @@
 </template>
 
 <script setup name="ReceiptOrderEdit">
-import {computed, getCurrentInstance, onMounted, reactive, ref, toRefs} from "vue";
+import {computed, getCurrentInstance, onBeforeUnmount, onMounted, reactive, ref, toRefs} from "vue";
 import {addReceiptOrder, getReceiptOrder, updateReceiptOrder, warehousing} from "@/api/wms/receiptOrder";
 import {ElMessage} from "element-plus";
 import RackSelect from "@/views/components/RackSelect.vue";
@@ -366,20 +365,17 @@ import { numSub, generateNo } from '@/utils/ruoyi'
 import { delReceiptOrderDetail } from '@/api/wms/receiptOrderDetail'
 import { listReceiptTargets } from '@/api/wms/storageLayout'
 import { listItem } from "@/api/wms/item";
-import { listItemInstance } from "@/api/wms/itemInstance";
+import { getItemInstanceByCode, listItemInstance } from "@/api/wms/itemInstance";
 
 const {proxy} = getCurrentInstance();
 const route = useRoute();
 const isViewMode = computed(() => route.query.mode === 'view');
-const { wms_receipt_type, wms_dispatch_mode } = proxy.useDict(
-  "wms_receipt_type",
-  "wms_dispatch_mode"
-);
+const { wms_receipt_type, wms_dispatch_mode } = proxy.useDict("wms_receipt_type", "wms_dispatch_mode");
 const loading = ref(false)
 const initFormData = {
   id: undefined,
   receiptOrderNo: undefined,
-  receiptOrderType: "2",
+  receiptOrderType: undefined,
   merchantId: undefined,
   orderNo: undefined,
   basisNo: undefined,
@@ -463,6 +459,11 @@ const itemInstanceSelectDialog = reactive({
     instanceCode: undefined
   }
 })
+const receiptScanBuffer = reactive({
+  value: '',
+  lastTime: 0,
+  pending: false
+})
 
 // 选择器材实例 start
 const showAddItem = async () => {
@@ -534,7 +535,7 @@ const syncReceiptDetail = (detail) => {
     instanceCode: detail.instanceCode ?? firstReceiptInstance.instanceCode ?? '',
     boxCode: detail.boxCode ?? firstReceiptInstance.boxCode ?? '',
     equipmentCode: detail.equipmentCode ?? detail.itemSku?.item?.itemCode ?? detail.itemCode ?? firstReceiptInstance.instanceCode,
-    specModel: detail.specModel ?? detail.itemSku?.specModel ?? detail.itemSku?.item?.modelText,
+    specModel: detail.specModel ?? detail.itemSku?.specModel,
     quantity: Number(detail.quantity || 1),
     generateItemInstance: 1,
     rackId: detail.rackId,
@@ -617,7 +618,8 @@ const getReceiptItemInstanceList = () => {
     pageSize: itemInstanceSelectDialog.pageSize,
     itemId: itemInstanceSelectDialog.query.itemId,
     instanceCode: itemInstanceSelectDialog.query.instanceCode,
-    unreceivedOnly: true
+    unreceivedOnly: true,
+    instanceStatus: '待入库'
   }).then((res) => {
     itemInstanceSelectDialog.list = res.rows || []
     itemInstanceSelectDialog.total = res.total || 0
@@ -646,6 +648,65 @@ const handleConfirmReceiptItemInstance = () => {
   recalculateOrderSummary()
 }
 // 选择器材实例 end
+
+const isTypingTarget = (event) => {
+  const tagName = event?.target?.tagName
+  return ['INPUT', 'TEXTAREA'].includes(tagName) || event?.target?.isContentEditable
+}
+
+const handleScanAddReceiptInstance = async (instanceCode) => {
+  if (!form.value.warehouseId || !form.value.areaId) {
+    ElMessage.warning('请先选择仓库和库区后再扫码')
+    return
+  }
+  if (form.value.details.some(detail => detail.instanceCode === instanceCode)) {
+    ElMessage.warning(`器材实例 ${instanceCode} 已在当前单据中`)
+    return
+  }
+  const res = await getItemInstanceByCode(instanceCode, { unreceivedOnly: true, instanceStatus: '待入库' })
+  const item = res.data
+  if (!item?.id) {
+    ElMessage.error(`未找到待入库器材实例：${instanceCode}`)
+    return
+  }
+  if (form.value.details.some(detail => detail.itemInstanceId === item.id)) {
+    ElMessage.warning(`器材实例 ${instanceCode} 已在当前单据中`)
+    return
+  }
+  const detail = createReceiptDetailFromInstance(item)
+  form.value.details.push(detail)
+  await loadRecommendTargets(detail)
+  recalculateOrderSummary()
+  ElMessage.success(`已扫码添加：${instanceCode}`)
+}
+
+const handleReceiptScanKeydown = async (event) => {
+  if (isViewMode.value || loading.value || receiptScanBuffer.pending || isTypingTarget(event)) {
+    return
+  }
+  const now = Date.now()
+  if (now - receiptScanBuffer.lastTime > 120) {
+    receiptScanBuffer.value = ''
+  }
+  receiptScanBuffer.lastTime = now
+  if (event.key === 'Enter') {
+    const instanceCode = receiptScanBuffer.value.trim()
+    receiptScanBuffer.value = ''
+    if (!instanceCode) {
+      return
+    }
+    receiptScanBuffer.pending = true
+    try {
+      await handleScanAddReceiptInstance(instanceCode)
+    } finally {
+      receiptScanBuffer.pending = false
+    }
+    return
+  }
+  if (event.key.length === 1) {
+    receiptScanBuffer.value += event.key
+  }
+}
 
 // 初始化receipt-order-form ref
 const receiptForm = ref()
@@ -863,12 +924,18 @@ const doWarehousing = async () => {
 }
 
 onMounted(() => {
+  window.addEventListener('keydown', handleReceiptScanKeydown)
   const id = route.query && route.query.id;
   if (id) {
     loadDetail(id)
   } else {
     form.value.receiptOrderNo = 'RK' + generateNo()
+    form.value.receiptOrderType = wms_receipt_type.value?.[0]?.value
   }
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', handleReceiptScanKeydown)
 })
 
 

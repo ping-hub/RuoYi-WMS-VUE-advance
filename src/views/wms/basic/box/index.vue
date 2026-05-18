@@ -613,7 +613,7 @@ const getPackCandidates = async () => {
       inBox: 0,
       borrowed: 0
     });
-    packDialog.list = res.rows.filter(item => item.instanceStatus !== 'disabled' && item.instanceStatus !== 'outbound');
+    packDialog.list = res.rows.filter(item => item.instanceStatus === '在库');
   } finally {
     packDialog.loading = false;
   }

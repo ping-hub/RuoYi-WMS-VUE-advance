@@ -5,12 +5,6 @@
         <el-form-item label="器材名称" prop="itemName">
           <el-input v-model="queryParams.itemName" placeholder="请输入器材名称" clearable @keyup.enter="handleQuery" />
         </el-form-item>
-        <el-form-item label="装备名称" prop="equipmentName">
-          <el-input v-model="queryParams.equipmentName" placeholder="请输入装备名称" clearable @keyup.enter="handleQuery" />
-        </el-form-item>
-        <el-form-item label="规格型号" prop="modelText">
-          <el-input v-model="queryParams.modelText" placeholder="请输入规格型号" clearable @keyup.enter="handleQuery" />
-        </el-form-item>
         <el-form-item label="器材类型" prop="equipmentType">
           <el-select v-model="queryParams.equipmentType" placeholder="请选择器材类型" clearable style="width: 120px">
             <el-option v-for="item in equipmentTypeOptions" :key="item.value" :label="item.label" :value="item.value" />
@@ -85,7 +79,6 @@
 
           <el-table v-loading="loading" :data="itemList" border empty-text="暂无器材">
             <el-table-column label="器材名称" prop="itemName" min-width="180" />
-            <el-table-column label="装备名称" prop="equipmentName" min-width="160" show-overflow-tooltip />
             <el-table-column label="器材类型" prop="equipmentType" min-width="140" show-overflow-tooltip />
             <el-table-column label="器材分类" min-width="140">
               <template #default="{ row }">
@@ -157,9 +150,6 @@
               </el-form-item>
             </el-col>
             <el-col :span="12">
-              <el-form-item label="装备名称" prop="equipmentName">
-                <el-input v-model="form.equipmentName" placeholder="请输入装备名称" />
-              </el-form-item>
             </el-col>
             <el-col :span="12">
               <el-form-item label="器材类型" prop="equipmentType">
@@ -334,10 +324,8 @@ const initFormData = () => ({
   itemName: undefined,
   itemCategory: undefined,
   unit: undefined,
-  equipmentName: undefined,
   equipmentType: undefined,
   status: '1',
-  modelText: undefined,
   remark: undefined,
   sku: []
 });
@@ -363,8 +351,6 @@ const data = reactive({
     pageSize: 10,
     itemCode: undefined,
     itemName: undefined,
-    equipmentName: undefined,
-    modelText: undefined,
     itemCategory: undefined,
     equipmentType: undefined
   },

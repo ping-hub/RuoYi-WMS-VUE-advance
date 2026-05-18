@@ -100,9 +100,7 @@
         </el-table-column>
         <el-table-column label="出库类型" width="95" align="left" prop="shipmentOrderType">
           <template #default="{ row }">
-            <el-tag type="primary" effect="light">
-              {{ proxy.selectDictLabel(wms_shipment_type, row.shipmentOrderType) || '-' }}
-            </el-tag>
+            <dict-tag :options="wms_shipment_type" :value="row.shipmentOrderType" />
           </template>
         </el-table-column>
         <el-table-column label="客户" align="left" prop="merchantId">
@@ -331,7 +329,7 @@ async function handlePrint(row) {
   }
   const printData = {
     shipmentOrderNo: shipmentOrder.shipmentOrderNo,
-    shipmentOrderType: proxy.selectDictLabel(wms_shipment_type.value, shipmentOrder.shipmentOrderType),
+    shipmentOrderType: shipmentOrder.shipmentOrderType,
     shipmentOrderStatus: proxy.selectDictLabel(wms_shipment_status.value, shipmentOrder.shipmentOrderStatus),
     merchantName: useWmsStore().merchantMap.get(shipmentOrder.merchantId)?.merchantName,
     supplierName: useWmsStore().merchantMap.get(shipmentOrder.merchantId)?.merchantName,

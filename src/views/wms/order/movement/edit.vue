@@ -465,7 +465,7 @@ const syncMovementDetail = (detail) => {
   return {
     ...detail,
     equipmentCode: detail.equipmentCode ?? detail.itemSku?.item?.itemCode,
-    specModel: detail.specModel ?? detail.itemSku?.specModel ?? detail.itemSku?.item?.modelText,
+    specModel: detail.specModel ?? detail.itemSku?.specModel,
     itemInstanceId: detail.itemInstanceId,
     instanceCode: detail.instanceCode,
     boxId: detail.boxId,

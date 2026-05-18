@@ -77,7 +77,6 @@
           <template #default="{ row }">
             <div>{{ row.itemName || row.item?.itemName || '-' }}</div>
             <div class="sub-text">器材编码：{{ row.equipmentCode || row.item?.itemCode || '-' }}</div>
-            <div v-if="row.equipmentName" class="sub-text">装备名称：{{ row.equipmentName }}</div>
           </template>
         </el-table-column>
         <el-table-column label="规格信息" min-width="180">

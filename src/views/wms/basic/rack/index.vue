@@ -30,11 +30,6 @@
             <el-option v-for="dict in wms_rack_status" :key="dict.value" :label="dict.label" :value="dict.value" />
           </el-select>
         </el-form-item>
-        <el-form-item label="类型" prop="rackType">
-          <el-select v-model="queryParams.rackType" placeholder="请选择类型" clearable style="width: 140px">
-            <el-option v-for="dict in wms_rack_type" :key="dict.value" :label="dict.label" :value="dict.value" />
-          </el-select>
-        </el-form-item>
         <el-form-item>
           <el-button type="primary" icon="Search" @click="handleQuery">搜索</el-button>
           <el-button icon="Refresh" @click="resetQuery">重置</el-button>
@@ -58,11 +53,6 @@
         <el-table-column label="状态" prop="rackStatus" width="100">
           <template #default="{ row }">
             <dict-tag :options="wms_rack_status" :value="row.rackStatus" />
-          </template>
-        </el-table-column>
-        <el-table-column label="类型" prop="rackType" width="100">
-          <template #default="{ row }">
-            <dict-tag :options="wms_rack_type" :value="row.rackType" />
           </template>
         </el-table-column>
         <el-table-column label="行数" prop="rowCount" width="80" align="center" />
@@ -118,14 +108,6 @@
         <el-form-item label="货架状态" prop="rackStatus">
           <el-select v-model="form.rackStatus" placeholder="请选择货架状态" style="width: 100%">
             <el-option v-for="dict in wms_rack_status" :key="dict.value" :label="dict.label" :value="dict.value" />
-          </el-select>
-        </el-form-item>
-        <el-form-item prop="rackType">
-          <template #label>
-            <FormLabelHelp label="货架类型" purpose="区分货架使用形态，便于布局和维护时识别不同存储方式。" example="标准货架、平面堆位" />
-          </template>
-          <el-select v-model="form.rackType" placeholder="请选择货架类型" style="width: 100%">
-            <el-option v-for="dict in wms_rack_type" :key="dict.value" :label="dict.label" :value="dict.value" />
           </el-select>
         </el-form-item>
         <el-form-item prop="rowCount">
@@ -186,7 +168,7 @@ import { useWmsStore } from '@/store/modules/wms';
 import FormLabelHelp from '@/views/components/FormLabelHelp.vue'
 
 const { proxy } = getCurrentInstance();
-const { wms_rack_status, wms_rack_type } = proxy.useDict('wms_rack_status', 'wms_rack_type');
+const { wms_rack_status } = proxy.useDict('wms_rack_status');
 const wmsStore = useWmsStore();
 
 const rackList = ref([]);
@@ -238,8 +220,7 @@ const data = reactive({
     rackName: undefined,
     warehouseId: undefined,
     areaId: undefined,
-    rackStatus: undefined,
-    rackType: undefined
+    rackStatus: undefined
   },
   rules: {
     rackName: [
@@ -292,7 +273,6 @@ function reset() {
     warehouseId: undefined,
     areaId: undefined,
     rackStatus: 'enabled',
-    rackType: 'standard',
     rowCount: 1,
     columnCount: 1,
     length: undefined,

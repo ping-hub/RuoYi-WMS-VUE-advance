@@ -508,17 +508,15 @@ const loadBorrowableInstances = async () => {
   const res = await listItemInstance({
     pageNum: 1,
     pageSize: 200,
-    inBox: 0,
-    borrowed: 0
+    inBox: 0
   });
-  borrowDialog.instanceOptions = res.rows.filter(item => item.instanceStatus !== 'disabled' && item.instanceStatus !== 'outbound');
+  borrowDialog.instanceOptions = res.rows.filter(item => item.instanceStatus === '在库');
 };
 
 const loadReturnableInstances = async () => {
   const res = await listItemInstance({
     pageNum: 1,
-    pageSize: 200,
-    borrowed: 1
+    pageSize: 200
   });
   returnDialog.instanceOptions = res.rows;
 };

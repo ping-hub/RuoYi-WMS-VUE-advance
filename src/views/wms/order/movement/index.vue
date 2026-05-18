@@ -96,7 +96,7 @@
                 </el-table-column>
                 <el-table-column label="规格型号" min-width="140">
                   <template #default="{ row }">
-                    <div>{{ row.specModel || row?.itemSku?.specModel || row?.itemSku?.item?.modelText || '-' }}</div>
+                    <div>{{ row.specModel || row?.itemSku?.specModel || '-' }}</div>
                   </template>
                 </el-table-column>
                 <el-table-column label="源位置" min-width="220">

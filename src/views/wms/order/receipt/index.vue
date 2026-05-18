@@ -326,7 +326,7 @@ async function handlePrint(row) {
   }
   const printData = {
     receiptOrderNo: receiptOrder.receiptOrderNo,
-    receiptOrderType: proxy.selectDictLabel(wms_receipt_type.value, receiptOrder.receiptOrderType),
+    receiptOrderType: receiptOrder.receiptOrderType,
     receiptOrderStatus: proxy.selectDictLabel(wms_receipt_status.value, receiptOrder.receiptOrderStatus),
     merchantName: useWmsStore().merchantMap.get(receiptOrder.merchantId)?.merchantName,
     supplierName: useWmsStore().merchantMap.get(receiptOrder.merchantId)?.merchantName,

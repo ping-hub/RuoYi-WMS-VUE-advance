@@ -111,11 +111,8 @@
         <div class="receipt-order-content">
           <div class="flex-space-between mb8">
             <div>
-              <el-tag type="info">支持按仓库、库区、货架发起盘点，盘点后可继续联查器材与追踪信息</el-tag>
+              <el-tag type="info">仅盘点在库明细，实际库存不能大于账面数量，盘点后可继续联查器材与追踪信息</el-tag>
             </div>
-                  <el-button type="primary" plain="plain" size="default" @click="showSkuSelect" icon="Plus"
-                             :disabled="!form.warehouseId || isViewMode">新增库存
-                  </el-button>
           </div>
           <el-table :data="form.details" border empty-text="暂无盘点明细">
             <el-table-column label="器材信息" prop="itemSku.itemName">
@@ -214,6 +211,7 @@
                   v-model="scope.row.checkQuantity"
                   placeholder="实际库存"
                   :min="0"
+                  :max="Number(scope.row.quantity || 0)"
                   :disabled="isViewMode"
                   @change="handleChangeQuantity"
                 ></el-input-number>
@@ -238,13 +236,6 @@
           </el-table>
         </div>
       </el-card>
-      <SkuSelect
-        ref="sku-select"
-        :model-value="skuSelectShow"
-        @handleOkClick="handleOkClick"
-        @handleCancelClick="skuSelectShow = false"
-        :size="'80%'"
-      />
     </div>
     <div class="footer-global" v-if="checking">
       <div class="btn-box">
@@ -270,7 +261,6 @@ import {ElMessage, ElMessageBox} from "element-plus";
 import {useRoute, useRouter} from "vue-router";
 import {useWmsStore} from '@/store/modules/wms'
 import {numSub, generateNo} from '@/utils/ruoyi'
-import SkuSelect from "@/views/components/SkuSelect.vue";
 import RackSelect from "@/views/components/RackSelect.vue";
 import LocationSelect from "@/views/components/LocationSelect.vue";
 
@@ -278,7 +268,6 @@ const {proxy} = getCurrentInstance();
 const router = useRouter();
 const route = useRoute();
 const isViewMode = computed(() => route.query.mode === 'view');
-const {wms_shipment_type} = proxy.useDict("wms_shipment_type");
 const checkGreaterThanZero = ref(false)
 const loading = ref(false)
 const initFormData = {
@@ -296,8 +285,6 @@ const initFormData = {
   checkOrderTotal: 0,
   details: [],
 }
-const inventorySelectRef = ref(null)
-const selectedInventory = ref([])
 const data = reactive({
   form: {...initFormData},
   rules: {
@@ -325,9 +312,6 @@ const close = () => {
   }
   proxy?.$tab.closePage();
 }
-const inventorySelectShow = ref(false)
-const skuSelectShow = ref(false)
-const currentSkuSelectIndex = ref(null)
 // 盘点中标识
 const checking = ref(false)
 
@@ -369,37 +353,6 @@ const startCheck = () => {
       }
     })
   }).finally(() => loading.value = false)
-}
-// 选择成功
-const handleOkClick = (item) => {
-  skuSelectShow.value = false
-  selectedInventory.value = [...item]
-  item.forEach(it => {
-      form.value.details.push(
-        {
-          itemSku: {...it},
-          skuId: it.id,
-          warehouseId: form.value.warehouseId,
-          inventoryDetailId: null,
-          areaId: form.value.areaId,
-          rackId: form.value.rackId,
-          locationId: undefined,
-          quantity: 0,
-          checkQuantity: 0,
-          areaName: useWmsStore().areaMap.get(form.value.areaId)?.areaName,
-          equipmentCode: it.item?.itemCode,
-          specModel: it.specModel,
-          receiptOrderDetailId: undefined,
-          productionDate: undefined,
-          expirationDate: undefined,
-          receiptTime: proxy.parseTime(new Date(), '{y}-{m}-{d} {h}:{i}:{s}'),
-          newInventoryDetail: true
-        })
-  })
-}
-
-const showSkuSelect = () => {
-  skuSelectShow.value = true
 }
 // 选择器材 end
 
@@ -488,12 +441,6 @@ const doCheck = async () => {
     // 校验
     if (!valid) {
       return ElMessage.error('请填写必填项')
-    }
-    const newList = form.value.details.filter(it => it.newInventoryDetail)
-    if (newList?.length) {
-      if (newList.filter(it => !it.areaId)?.length) {
-        return ElMessage.error('请选择库区')
-      }
     }
     // 构建参数
     const details = form.value.details.map(it => {
