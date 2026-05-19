@@ -103,11 +103,6 @@
             <dict-tag :options="wms_receipt_type" :value="row.receiptOrderType" />
           </template>
         </el-table-column>
-        <el-table-column label="供应商" align="left" prop="merchantId">
-          <template #default="{ row }">
-            <div>{{ useWmsStore().merchantMap.get(row.merchantId)?.merchantName }}</div>
-          </template>
-        </el-table-column>
         <el-table-column label="仓库/库区" align="left" width="130">
           <template #default="{ row }">
             <div>仓库：{{ useWmsStore().warehouseMap.get(row.warehouseId)?.warehouseName }}</div>
@@ -223,8 +218,6 @@ const data = reactive({
     pageSize: 10,
     receiptOrderNo: undefined,
     receiptOrderType: -1,
-    merchantId: undefined,
-    orderNo: undefined,
     basisNo: undefined,
     receiveUnit: undefined,
     payableAmount: undefined,
@@ -317,7 +310,6 @@ async function handlePrint(row) {
       areaName: useWmsStore().areaMap.get(detail.areaId)?.areaName,
       quantity: Number(detail.quantity || 0).toFixed(0),
       equipmentCode: detail.equipmentCode,
-      specModel: detail.specModel,
       unitPrice: detail.unitPrice,
       productionDate: proxy.parseTime(detail.productionDate, '{y}-{m}-{d}'),
       expirationDate: proxy.parseTime(detail.expirationDate, '{y}-{m}-{d}'),
@@ -328,9 +320,6 @@ async function handlePrint(row) {
     receiptOrderNo: receiptOrder.receiptOrderNo,
     receiptOrderType: receiptOrder.receiptOrderType,
     receiptOrderStatus: proxy.selectDictLabel(wms_receipt_status.value, receiptOrder.receiptOrderStatus),
-    merchantName: useWmsStore().merchantMap.get(receiptOrder.merchantId)?.merchantName,
-    supplierName: useWmsStore().merchantMap.get(receiptOrder.merchantId)?.merchantName,
-    orderNo: receiptOrder.orderNo,
     basisNo: receiptOrder.basisNo,
     dispatchMode: proxy.selectDictLabel(wms_dispatch_mode.value, receiptOrder.dispatchMode),
     noticeOrg: receiptOrder.noticeOrg,

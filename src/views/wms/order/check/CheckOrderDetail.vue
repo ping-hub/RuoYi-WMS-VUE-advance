@@ -18,12 +18,6 @@
         </template>
       </el-table-column>
       <el-table-column label="库区" prop="areaName"/>
-      <el-table-column label="生产日期/过期日期" width="180">
-        <template #default="{ row }">
-          <div v-if="row.productionDate">生产日期：{{ parseTime(row.productionDate, '{y}-{m}-{d}') }}</div>
-          <div v-if="row.expirationDate">过期日期：{{ parseTime(row.expirationDate, '{y}-{m}-{d}') }}</div>
-        </template>
-      </el-table-column>
       <el-table-column label="入库日期" prop="receiptTime" width="120">
         <template #default="{ row }">
           <div>{{ parseTime(row.receiptTime, '{y}-{m}-{d}') }}</div>

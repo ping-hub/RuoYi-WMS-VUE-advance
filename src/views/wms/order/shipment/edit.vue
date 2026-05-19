@@ -42,19 +42,6 @@
                 </el-radio-group>
               </el-form-item>
             </el-col>
-            <el-col :span="6">
-              <el-form-item label="客户" prop="merchantId">
-                <el-select v-model="form.merchantId" placeholder="请选择客户" clearable filterable>
-                  <el-option v-for="item in useWmsStore().merchantList" :key="item.id" :label="item.merchantName"
-                             :value="item.id"/>
-                </el-select>
-              </el-form-item>
-            </el-col>
-            <el-col :span="6">
-              <el-form-item label="订单号" prop="orderNo">
-                <el-input v-model="form.orderNo" placeholder="请输入订单号"></el-input>
-              </el-form-item>
-            </el-col>
           </el-row>
           <el-row :gutter="24">
             <el-col :span="6">
@@ -91,23 +78,6 @@
                 <el-date-picker v-model="form.shipmentDate" type="date" value-format="YYYY-MM-DD" format="YYYY-MM-DD" style="width: 100%" />
               </el-form-item>
             </el-col>
-            <el-col :span="6">
-              <el-form-item label="采购配发人" prop="purchaserName">
-                <el-input v-model="form.purchaserName" placeholder="请输入采购配发人"></el-input>
-              </el-form-item>
-            </el-col>
-            <el-col :span="6">
-              <el-form-item label="验收人" prop="acceptorName">
-                <el-input v-model="form.acceptorName" placeholder="请输入验收人"></el-input>
-              </el-form-item>
-            </el-col>
-          </el-row>
-          <el-row :gutter="24">
-            <el-col :span="6">
-              <el-form-item label="保管员" prop="keeperName">
-                <el-input v-model="form.keeperName" placeholder="请输入保管员"></el-input>
-              </el-form-item>
-            </el-col>
             <el-col :span="11">
               <el-form-item label="备注" prop="remark">
                 <el-input
@@ -120,21 +90,6 @@
                 ></el-input>
               </el-form-item>
             </el-col>
-            <el-col :span="6">
-              <div style="display: flex;align-items: start">
-                <el-form-item label="金额" prop="receivableAmount">
-                  <el-input-number v-model="form.receivableAmount" :precision="2" :min="0"></el-input-number>
-                </el-form-item>
-                <el-button v-if="!isViewMode" link type="primary" @click="handleAutoCalc" class="ml20" style="line-height: 32px">自动计算
-                </el-button>
-              </div>
-            </el-col>
-            <el-col :span="6">
-              <el-form-item label="数量" prop="totalQuantity">
-                <el-input-number v-model="form.totalQuantity" :controls="false" :precision="0"
-                                 :disabled="true"></el-input-number>
-              </el-form-item>
-            </el-col>
           </el-row>
         </el-form>
       </el-card>
@@ -142,7 +97,7 @@
         <div class="receipt-order-content">
           <div class="flex-space-between mb8">
             <div>
-              <el-tag type="info">支持“选择器材实例”或扫码枪直扫 `instance_code` 直接新增，当前只允许选择在库实例</el-tag>
+              <el-tag type="info">支持“选择器材实例”或扫码枪扫二维码直接新增，当前只允许选择在库实例</el-tag>
             </div>
             <div class="add-actions">
               <el-button type="primary" plain size="default" @click="showAddItemInstance" icon="Tickets" :disabled="!form.warehouseId || !form.areaId || isViewMode">
@@ -172,16 +127,6 @@
               </template>
             </el-table-column>
             <el-table-column label="库区" prop="areaName" width="200"/>
-            <el-table-column label="生产日期" prop="productionDate">
-              <template #default="{ row }">
-                <div v-if="row.productionDate">{{ row.productionDate.substring(0, 10) }}</div>
-              </template>
-            </el-table-column>
-            <el-table-column label="过期日期" prop="expirationDate">
-              <template #default="{ row }">
-                <div v-if="row.expirationDate">{{ row.expirationDate.substring(0, 10) }}</div>
-              </template>
-            </el-table-column>
             <el-table-column label="剩余库存" prop="remainQuantity" align="right" width="150">
               <template #default="{ row }">
                 <el-statistic :value="Number(row.remainQuantity)" :precision="0"/>
@@ -351,17 +296,12 @@ const initFormData = {
   id: undefined,
   shipmentOrderNo: undefined,
   shipmentOrderType: undefined,
-  merchantId: undefined,
-  orderNo: undefined,
   basisNo: undefined,
   dispatchMode: undefined,
   noticeOrg: undefined,
   receiveUnit: undefined,
   purchaseDate: undefined,
   shipmentDate: undefined,
-  purchaserName: undefined,
-  acceptorName: undefined,
-  keeperName: undefined,
   receivableAmount: undefined,
   shipmentOrderStatus: 0,
   remark: undefined,
@@ -440,7 +380,6 @@ const syncShipmentDetail = (detail) => {
   return {
     ...detail,
     equipmentCode: detail.equipmentCode ?? detail.itemSku?.item?.itemCode ?? detail.itemCode,
-    specModel: detail.specModel ?? detail.itemSku?.specModel,
     detailSourceType,
     unitPrice,
     lineAmount,
@@ -504,8 +443,6 @@ const matchInventoryDetail = (source, extraUsage = {}) => {
     return it.skuId === source.skuId
       && it.warehouseId === form.value.warehouseId
       && (!targetAreaId || it.areaId === targetAreaId)
-      && normalizeDateTime(it.productionDate) === normalizeDateTime(source.productionDate)
-      && normalizeDateTime(it.expirationDate) === normalizeDateTime(source.expirationDate)
   })
   return candidates.find(it => getInventoryAvailableQuantity(it.id, extraUsage) >= Number(source.quantity || 1))
 }
@@ -520,13 +457,7 @@ const createDetailRow = (payload) => {
     skuId: payload.skuId,
     amount: payload.lineAmount,
     quantity: payload.quantity,
-    equipmentCode: payload.equipmentCode,
-    specModel: payload.specModel,
-    unitPrice: payload.unitPrice,
-    lineAmount: payload.lineAmount,
     remainQuantity: payload.remainQuantity,
-    productionDate: payload.productionDate,
-    expirationDate: payload.expirationDate,
     warehouseId: payload.warehouseId,
     areaId: payload.areaId,
     inventoryDetailId: payload.inventoryDetailId,
@@ -570,12 +501,6 @@ const doSave = (shipmentOrderStatus = 0) => {
           skuId: it.skuId,
           amount: it.lineAmount,
           quantity: it.quantity,
-          equipmentCode: it.equipmentCode,
-          specModel: it.specModel,
-          unitPrice: it.unitPrice,
-          lineAmount: it.lineAmount,
-          productionDate: it.productionDate,
-          expirationDate: it.expirationDate,
           inventoryDetailId: it.inventoryDetailId,
           itemInstanceId: it.itemInstanceId,
           boxId: it.boxId,
@@ -593,17 +518,12 @@ const doSave = (shipmentOrderStatus = 0) => {
       shipmentOrderNo: form.value.shipmentOrderNo,
       shipmentOrderType: form.value.shipmentOrderType,
       shipmentOrderStatus,
-      merchantId: form.value.merchantId,
-      orderNo: form.value.orderNo,
       basisNo: form.value.basisNo,
       dispatchMode: form.value.dispatchMode,
       noticeOrg: form.value.noticeOrg,
       receiveUnit: form.value.receiveUnit,
       purchaseDate: form.value.purchaseDate,
       shipmentDate: form.value.shipmentDate,
-      purchaserName: form.value.purchaserName,
-      acceptorName: form.value.acceptorName,
-      keeperName: form.value.keeperName,
       remark: form.value.remark,
       receivableAmount: form.value.receivableAmount,
       totalQuantity: form.value.totalQuantity,
@@ -661,8 +581,6 @@ const doShipment = async () => {
         skuId: it.skuId,
         amount: it.amount,
         quantity: it.quantity,
-        productionDate: it.productionDate,
-        expirationDate: it.expirationDate,
         inventoryDetailId: it.inventoryDetailId,
         itemInstanceId: it.itemInstanceId,
         boxId: it.boxId,
@@ -676,17 +594,12 @@ const doShipment = async () => {
       id: form.value.id,
       shipmentOrderNo: form.value.shipmentOrderNo,
       shipmentOrderType: form.value.shipmentOrderType,
-      merchantId: form.value.merchantId,
-      orderNo: form.value.orderNo,
       basisNo: form.value.basisNo,
       dispatchMode: form.value.dispatchMode,
       noticeOrg: form.value.noticeOrg,
       receiveUnit: form.value.receiveUnit,
       purchaseDate: form.value.purchaseDate,
       shipmentDate: form.value.shipmentDate,
-      purchaserName: form.value.purchaserName,
-      acceptorName: form.value.acceptorName,
-      keeperName: form.value.keeperName,
       remark: form.value.remark,
       receivableAmount: form.value.receivableAmount,
       totalQuantity: form.value.totalQuantity,
@@ -807,8 +720,6 @@ const addItemInstancesToShipment = async (items) => {
     const matchedInventory = matchInventoryDetail({
       skuId: item.skuId,
       areaId: item.areaId,
-      productionDate: item.productionDate,
-      expirationDate: item.expirationDate,
       quantity: 1
     }, extraUsage)
     if (!matchedInventory) {
@@ -821,18 +732,13 @@ const addItemInstancesToShipment = async (items) => {
       itemName: item.itemName,
       quantity: 1,
       remainQuantity: matchedInventory.remainQuantity,
-      productionDate: item.productionDate,
-      expirationDate: item.expirationDate,
       warehouseId: form.value.warehouseId,
       areaId: item.areaId,
       inventoryDetailId: matchedInventory.id,
       areaName: useWmsStore().areaMap.get(item.areaId)?.areaName,
       itemInstanceId: item.id,
       instanceCode: item.instanceCode,
-      detailSourceType: 'itemInstance',
-      equipmentCode: matchedInventory.equipmentCode ?? item.itemCode,
-      specModel: matchedInventory.specModel ?? item.specModel,
-      unitPrice: matchedInventory.unitPrice
+      detailSourceType: 'itemInstance'
     }))
   }
   form.value.details.push(...newRows.map(it => syncShipmentDetail(it)))

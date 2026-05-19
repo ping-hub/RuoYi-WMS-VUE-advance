@@ -45,13 +45,6 @@
       </el-form>
     </el-card>
 
-    <el-alert
-      class="mt20"
-      :closable="false"
-      type="info"
-      title="本页按调拨单展示，仅处理跨仓和单位间调拨；库内位置变化请走库内移库。"
-    />
-
     <el-card class="mt20">
 
       <el-row :gutter="10" class="mb8" type="flex" justify="space-between">
@@ -94,21 +87,14 @@
                     <div>{{ row.equipmentCode || row?.itemSku?.item?.itemCode || '-' }}</div>
                   </template>
                 </el-table-column>
-                <el-table-column label="规格型号" min-width="140">
-                  <template #default="{ row }">
-                    <div>{{ row.specModel || row?.itemSku?.specModel || '-' }}</div>
-                  </template>
-                </el-table-column>
                 <el-table-column label="源位置" min-width="220">
                   <template #default="{ row }">
                     <div>库区：{{ row.sourceAreaName || '-' }}</div>
-                    <div class="sub-text">货架：{{ wmsStore.rackMap.get(row.sourceRackId)?.rackName || row.sourceRackId || '-' }} / 货位：{{ wmsStore.locationMap.get(row.sourceLocationId)?.locationName || row.sourceLocationId || '-' }}</div>
                   </template>
                 </el-table-column>
                 <el-table-column label="目标位置" min-width="220">
                   <template #default="{ row }">
                     <div>库区：{{ row.targetAreaName || '-' }}</div>
-                    <div class="sub-text">货架：{{ wmsStore.rackMap.get(row.targetRackId)?.rackName || row.targetRackId || '-' }} / 货位：{{ wmsStore.locationMap.get(row.targetLocationId)?.locationName || row.targetLocationId || '-' }}</div>
                   </template>
                 </el-table-column>
                 <el-table-column label="单价(元)" align="right">
@@ -166,9 +152,7 @@
         <el-table-column label="调拨信息" align="left" min-width="240">
           <template #default="{ row }">
             <div v-if="row.movementType">类型：{{ proxy.selectDictLabel(wms_movement_type.value, row.movementType) }}</div>
-            <div v-if="row.movementScope">范围：{{ row.movementScope }}</div>
             <div v-if="row.dispatchMode">方式：{{ proxy.selectDictLabel(wms_dispatch_mode.value, row.dispatchMode) }}</div>
-            <div v-if="row.supportNo">保障号：{{ row.supportNo }}</div>
             <div v-if="row.dispatchDate">调拨日期：{{ parseTime(row.dispatchDate, '{y}-{m}-{d}') }}</div>
           </template>
         </el-table-column>

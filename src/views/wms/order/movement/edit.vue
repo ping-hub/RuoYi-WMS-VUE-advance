@@ -7,7 +7,7 @@
           <el-row :gutter="24">
             <el-col :span="11">
               <el-form-item label="调拨单号" prop="movementOrderNo">
-                <el-input class="w200" v-model="form.movementOrderNo" placeholder="调拨单号"
+                <el-input v-model="form.movementOrderNo" placeholder="调拨单号"
                           :disabled="form.id"></el-input>
               </el-form-item>
             </el-col>
@@ -46,10 +46,6 @@
                              :value="item.id"/>
                 </el-select>
               </el-form-item>
-              <el-form-item label="数量" prop="totalQuantity">
-                <el-input-number v-model="form.totalQuantity" :controls="false" :precision="0"
-                                 :disabled="true"></el-input-number>
-              </el-form-item>
             </el-col>
             <el-col :span="6">
               <el-form-item label="目标库区" prop="targetAreaId">
@@ -61,26 +57,9 @@
               </el-form-item>
             </el-col>
           </el-row>
-          <div class="form-tip">带 * 为必填项</div>
-          <el-alert
-            :closable="false"
-            type="info"
-            title="本页按调拨单处理，仅支持跨仓调拨和单位间调拨；库内位置变化不应在此页办理。"
-          />
           <el-row :gutter="24">
             <el-col :span="6">
-              <el-form-item prop="movementScope">
-                <template #label>
-                  <FormLabelHelp label="调拨范围" purpose="说明本单属于跨仓调拨还是单位间调拨，用于单据头口径确认。" example="跨仓调拨、单位间调拨" />
-                </template>
-                <el-input v-model="form.movementScope" placeholder="请输入跨仓或单位间" />
-              </el-form-item>
-            </el-col>
-            <el-col :span="6">
-              <el-form-item prop="dispatchBasis">
-                <template #label>
-                  <FormLabelHelp label="调拨依据" purpose="记录本次调拨所依据的文件或命令类型，便于纸单口径一致。" example="命令、计划、申请" />
-                </template>
+              <el-form-item label="调拨依据" prop="dispatchBasis">
                 <el-select v-model="form.dispatchBasis" placeholder="请选择调拨依据" clearable style="width: 100%">
                   <el-option v-for="item in wms_basis_type" :key="item.value" :label="item.label" :value="item.value" />
                 </el-select>
@@ -92,18 +71,7 @@
               </el-form-item>
             </el-col>
             <el-col :span="6">
-              <el-form-item prop="supportNo">
-                <template #label>
-                  <FormLabelHelp label="保障号" purpose="记录保障任务或保障批次编号，便于与纸单和外部任务单对照。" example="BZ-2026-015" />
-                </template>
-                <el-input v-model="form.supportNo" placeholder="请输入物资保障号"></el-input>
-              </el-form-item>
-            </el-col>
-            <el-col :span="6">
-              <el-form-item prop="dispatchMode">
-                <template #label>
-                  <FormLabelHelp label="调拨方式" purpose="表示本次调拨采用的组织或运输方式，便于表头信息完整。" example="通装、专装" />
-                </template>
+              <el-form-item label="调拨方式">
                 <el-select v-model="form.dispatchMode" placeholder="请选择调拨方式" clearable style="width: 100%">
                   <el-option v-for="item in wms_dispatch_mode" :key="item.value" :label="item.label" :value="item.value" />
                 </el-select>
@@ -156,29 +124,6 @@
           </el-row>
           <el-row :gutter="24">
             <el-col :span="6">
-              <el-form-item prop="targetRackId">
-                <template #label>
-                  <FormLabelHelp label="目标货架" purpose="指定调拨后所在货架，需先选目标仓库和目标库区。" example="A库区-01号架" />
-                </template>
-                <RackSelect v-model="form.targetRackId" :warehouse-id="form.targetWarehouseId" :area-id="form.targetAreaId" @update:model-value="handleHeaderTargetRackChange" />
-              </el-form-item>
-            </el-col>
-            <el-col :span="6">
-              <el-form-item prop="targetLocationId">
-                <template #label>
-                  <FormLabelHelp label="目标货位" purpose="指定调拨后落位货位，需与目标货架保持一致。" example="A01-03-02" />
-                </template>
-                <LocationSelect
-                  v-model="form.targetLocationId"
-                  :warehouse-id="form.targetWarehouseId"
-                  :area-id="form.targetAreaId"
-                  :rack-id="form.targetRackId"
-                />
-              </el-form-item>
-            </el-col>
-          </el-row>
-          <el-row :gutter="24">
-            <el-col :span="6">
               <el-form-item label="有效日期" prop="effectiveDate">
                 <el-date-picker v-model="form.effectiveDate" type="date" value-format="YYYY-MM-DD" format="YYYY-MM-DD" style="width: 100%" />
               </el-form-item>
@@ -186,16 +131,6 @@
             <el-col :span="6">
               <el-form-item label="发出日期" prop="issueDate">
                 <el-date-picker v-model="form.issueDate" type="date" value-format="YYYY-MM-DD" format="YYYY-MM-DD" style="width: 100%" />
-              </el-form-item>
-            </el-col>
-            <el-col :span="6">
-              <el-form-item label="发货经手人" prop="fromHandler">
-                <el-input v-model="form.fromHandler" placeholder="请输入发货经手人"></el-input>
-              </el-form-item>
-            </el-col>
-            <el-col :span="6">
-              <el-form-item label="收货经手人" prop="toHandler">
-                <el-input v-model="form.toHandler" placeholder="请输入收货经手人"></el-input>
               </el-form-item>
             </el-col>
           </el-row>
@@ -220,7 +155,6 @@
           <div class="flex-space-between mb8">
             <div>
               <el-tag v-if="form.movementType === 'special'" type="warning">专装调拨必须按物品码或箱码流转，且数量必须为 1</el-tag>
-              <el-tag v-else type="info">通装调拨按数量流转，箱码仅作为附加追踪信息</el-tag>
             </div>
             <el-popover
               placement="left"
@@ -278,16 +212,6 @@
               <template #default="{ row }">
                 <el-input v-model="row.instanceCode" placeholder="请输入物品码" :disabled="isViewMode" @blur="handleSpecialCodeBlur(row, 'item')" />
                 <el-input class="mt5" v-model="row.boxCode" placeholder="请输入箱码" :disabled="isViewMode" @blur="handleSpecialCodeBlur(row, 'box')" />
-              </template>
-            </el-table-column>
-            <el-table-column label="生产日期" prop="productionDate">
-              <template #default="{ row }">
-                <div v-if="row.productionDate">{{ row.productionDate.substring(0, 10) }}</div>
-              </template>
-            </el-table-column>
-            <el-table-column label="过期日期" prop="expirationDate">
-              <template #default="{ row }">
-                <div v-if="row.expirationDate">{{ row.expirationDate.substring(0, 10) }}</div>
               </template>
             </el-table-column>
             <el-table-column label="剩余库存" prop="remainQuantity" align="right" width="150">
@@ -390,10 +314,8 @@ const initFormData = {
   id: undefined,
   movementOrderNo: undefined,
   movementType: 'common',
-  movementScope: undefined,
   dispatchBasis: undefined,
   dispatchPurpose: undefined,
-  supportNo: undefined,
   dispatchMode: undefined,
   fromUnit: undefined,
   toUnit: undefined,
@@ -405,18 +327,12 @@ const initFormData = {
   dispatchDate: undefined,
   effectiveDate: undefined,
   issueDate: undefined,
-  fromHandler: undefined,
-  toHandler: undefined,
   shipmentOrderStatus: 0,
   remark: undefined,
   sourceWarehouseId: undefined,
   sourceAreaId: undefined,
-  sourceRackId: undefined,
-  sourceLocationId: undefined,
   targetWarehouseId: undefined,
   targetAreaId: undefined,
-  targetRackId: undefined,
-  targetLocationId: undefined,
   totalQuantity: 0,
   details: [],
 }
@@ -465,7 +381,6 @@ const syncMovementDetail = (detail) => {
   return {
     ...detail,
     equipmentCode: detail.equipmentCode ?? detail.itemSku?.item?.itemCode,
-    specModel: detail.specModel ?? detail.itemSku?.specModel,
     itemInstanceId: detail.itemInstanceId,
     instanceCode: detail.instanceCode,
     boxId: detail.boxId,
@@ -567,8 +482,6 @@ const handleOkClick = (item) => {
           skuId: it.skuId,
           quantity: undefined,
           remainQuantity: it.remainQuantity,
-          productionDate: it.productionDate,
-          expirationDate: it.expirationDate,
           sourceWarehouseId: form.value.sourceWarehouseId,
           sourceAreaId: form.value.sourceAreaId ?? it.areaId,
           sourceRackId: it.rackId,
@@ -580,7 +493,6 @@ const handleOkClick = (item) => {
           targetLocationId: form.value.targetLocationId,
           sourceAreaName: useWmsStore().areaMap.get(form.value.sourceAreaId ?? it.areaId)?.areaName,
           equipmentCode: it.equipmentCode ?? it.item?.itemCode,
-          specModel: it.specModel ?? it.itemSku?.specModel,
           unitPrice: it.unitPrice
         })
       )
@@ -624,12 +536,9 @@ const doSave = (movementOrderStatus = 0) => {
           skuId: it.skuId,
           quantity: it.quantity,
           equipmentCode: it.equipmentCode,
-          specModel: it.specModel,
           unitPrice: it.unitPrice,
           lineAmount: it.lineAmount,
           remark: it.remark,
-          productionDate: it.productionDate,
-          expirationDate: it.expirationDate,
           inventoryDetailId: it.inventoryDetailId,
           itemInstanceId: it.itemInstanceId,
           boxId: it.boxId,
@@ -649,10 +558,8 @@ const doSave = (movementOrderStatus = 0) => {
       id: form.value.id,
       movementOrderNo: form.value.movementOrderNo,
       movementType: form.value.movementType,
-      movementScope: form.value.movementScope,
       dispatchBasis: form.value.dispatchBasis,
       dispatchPurpose: form.value.dispatchPurpose,
-      supportNo: form.value.supportNo,
       dispatchMode: form.value.dispatchMode,
       fromUnit: form.value.fromUnit,
       toUnit: form.value.toUnit,
@@ -664,19 +571,13 @@ const doSave = (movementOrderStatus = 0) => {
       dispatchDate: form.value.dispatchDate,
       effectiveDate: form.value.effectiveDate,
       issueDate: form.value.issueDate,
-      fromHandler: form.value.fromHandler,
-      toHandler: form.value.toHandler,
       movementOrderStatus,
       remark: form.value.remark,
       totalQuantity: form.value.totalQuantity,
       sourceWarehouseId: form.value.sourceWarehouseId,
       sourceAreaId: form.value.sourceAreaId,
-      sourceRackId: form.value.sourceRackId,
-      sourceLocationId: form.value.sourceLocationId,
       targetWarehouseId: form.value.targetWarehouseId,
       targetAreaId: form.value.targetAreaId,
-      targetRackId: form.value.targetRackId,
-      targetLocationId: form.value.targetLocationId,
       details: details
     }
     if (params.id) {
@@ -731,8 +632,6 @@ const doMovement = async () => {
         movementOrderId: form.value.id,
         skuId: it.skuId,
         quantity: it.quantity,
-        productionDate: it.productionDate,
-        expirationDate: it.expirationDate,
         inventoryDetailId: it.inventoryDetailId,
         itemInstanceId: it.itemInstanceId,
         boxId: it.boxId,
@@ -752,10 +651,8 @@ const doMovement = async () => {
       id: form.value.id,
       movementOrderNo: form.value.movementOrderNo,
       movementType: form.value.movementType,
-      movementScope: form.value.movementScope,
       dispatchBasis: form.value.dispatchBasis,
       dispatchPurpose: form.value.dispatchPurpose,
-      supportNo: form.value.supportNo,
       dispatchMode: form.value.dispatchMode,
       fromUnit: form.value.fromUnit,
       toUnit: form.value.toUnit,
@@ -767,18 +664,12 @@ const doMovement = async () => {
       dispatchDate: form.value.dispatchDate,
       effectiveDate: form.value.effectiveDate,
       issueDate: form.value.issueDate,
-      fromHandler: form.value.fromHandler,
-      toHandler: form.value.toHandler,
       remark: form.value.remark,
       totalQuantity: form.value.totalQuantity,
       sourceWarehouseId: form.value.sourceWarehouseId,
       sourceAreaId: form.value.sourceAreaId,
-      sourceRackId: form.value.sourceRackId,
-      sourceLocationId: form.value.sourceLocationId,
       targetWarehouseId: form.value.targetWarehouseId,
       targetAreaId: form.value.targetAreaId,
-      targetRackId: form.value.targetRackId,
-      targetLocationId: form.value.targetLocationId,
       details: details
     }
     movement(params).then((res) => {
@@ -904,12 +795,6 @@ const handleDeleteDetail = (row, index) => {
     selectedInventory.value.splice(indexOfSelected, 1)
     handleChangeQuantity()
   }
-}
-const goSaasTip = () => {
-  ElMessageBox.alert('一物一码/SN模式请去Saas版本体验！', '系统提示', {
-    confirmButtonText: '确定'
-  })
-  return false
 }
 </script>
 

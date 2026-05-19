@@ -44,14 +44,6 @@
             @keyup.enter="handleQuery"
           />
         </el-form-item>
-        <el-form-item label="订单号" prop="orderNo">
-          <el-input
-            v-model="queryParams.orderNo"
-            placeholder="请输入订单号"
-            clearable
-            @keyup.enter="handleQuery"
-          />
-        </el-form-item>
         <el-form-item label="调拨根据" prop="basisNo">
           <el-input
             v-model="queryParams.basisNo"
@@ -91,21 +83,15 @@
       </el-row>
 
       <el-table v-loading="loading" :data="shipmentOrderList" border class="mt20" empty-text="暂无出库单">
-        <el-table-column label="单号/订单号" align="left" width="150">
+        <el-table-column label="单号" align="left" width="150">
           <template #default="{ row }">
             <div>单号：{{ row.shipmentOrderNo }}</div>
-            <div v-if="row.orderNo">订单号：{{ row.orderNo }}</div>
             <div v-if="row.basisNo">调拨根据：{{ row.basisNo }}</div>
           </template>
         </el-table-column>
         <el-table-column label="出库类型" width="95" align="left" prop="shipmentOrderType">
           <template #default="{ row }">
             <dict-tag :options="wms_shipment_type" :value="row.shipmentOrderType" />
-          </template>
-        </el-table-column>
-        <el-table-column label="客户" align="left" prop="merchantId">
-          <template #default="{ row }">
-            <div>{{ useWmsStore().merchantMap.get(row.merchantId)?.merchantName }}</div>
           </template>
         </el-table-column>
         <el-table-column label="仓库/库区" align="left" width="110">
@@ -223,8 +209,6 @@ const data = reactive({
     pageSize: 10,
     shipmentOrderNo: undefined,
     shipmentOrderType: -1,
-    merchantId: undefined,
-    orderNo: undefined,
     basisNo: undefined,
     receiveUnit: undefined,
     receivableAmount: undefined,
@@ -319,7 +303,6 @@ async function handlePrint(row) {
         areaName: useWmsStore().areaMap.get(detail.areaId)?.areaName,
         quantity: Number(detail.quantity).toFixed(0),
         equipmentCode: detail.equipmentCode,
-        specModel: detail.specModel,
         unitPrice: detail.unitPrice,
         productionDate: proxy.parseTime(detail.productionDate, '{y}-{m}-{d}'),
         expirationDate: proxy.parseTime(detail.expirationDate, '{y}-{m}-{d}'),
@@ -331,9 +314,6 @@ async function handlePrint(row) {
     shipmentOrderNo: shipmentOrder.shipmentOrderNo,
     shipmentOrderType: shipmentOrder.shipmentOrderType,
     shipmentOrderStatus: proxy.selectDictLabel(wms_shipment_status.value, shipmentOrder.shipmentOrderStatus),
-    merchantName: useWmsStore().merchantMap.get(shipmentOrder.merchantId)?.merchantName,
-    supplierName: useWmsStore().merchantMap.get(shipmentOrder.merchantId)?.merchantName,
-    orderNo: shipmentOrder.orderNo,
     basisNo: shipmentOrder.basisNo,
     dispatchMode: proxy.selectDictLabel(wms_dispatch_mode.value, shipmentOrder.dispatchMode),
     noticeOrg: shipmentOrder.noticeOrg,

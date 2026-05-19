@@ -190,11 +190,6 @@
                 <el-input v-model="skuForm.itemSkuList[0].skuName" placeholder="请输入器材规格名称" />
               </el-form-item>
             </el-col>
-            <el-col :span="12">
-              <el-form-item label="规格型号">
-                <el-input v-model="skuForm.itemSkuList[0].specModel" placeholder="请输入规格型号" />
-              </el-form-item>
-            </el-col>
           </el-row>
           <el-row :gutter="20">
             <el-col :span="12">
@@ -340,7 +335,6 @@ const createEmptySku = () => ({
   id: undefined,
   itemId: undefined,
   skuName: '',
-  specModel: '',
   status: '1'
 });
 

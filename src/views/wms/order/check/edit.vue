@@ -146,38 +146,6 @@
                 </template>
               </template>
             </el-table-column>
-            <el-table-column label="生产日期/过期日期" prop="productionDate" width="250">
-              <template #default="{ row }">
-                <template v-if="row.newInventoryDetail">
-                  <div class="flex-center">
-                    <span>生产日期：</span>
-                    <el-date-picker
-                      v-model="row.productionDate"
-                      type="date"
-                      format="YYYY-MM-DD"
-                      value-format="YYYY-MM-DD HH:mm:ss"
-                      :disabled="isViewMode"
-                      style="width: 150px!important;"
-                    />
-                  </div>
-                  <div class="flex-center mt5">
-                    <span>过期日期：</span>
-                    <el-date-picker
-                      v-model="row.expirationDate"
-                      type="date"
-                      format="YYYY-MM-DD"
-                      value-format="YYYY-MM-DD HH:mm:ss"
-                      :disabled="isViewMode"
-                      style="width: 150px!important;"
-                    />
-                  </div>
-                </template>
-                <template v-else>
-                  <div v-if="row.productionDate">生产日期：{{ row.productionDate.substring(0, 10) }}</div>
-                  <div v-if="row.expirationDate">过期日期：{{ row.expirationDate.substring(0, 10) }}</div>
-                </template>
-              </template>
-            </el-table-column>
             <el-table-column label="入库日期" prop="receiptTime" width="200">
               <template #default="{ row }">
                 <template v-if="row.newInventoryDetail">
@@ -342,10 +310,7 @@ const startCheck = () => {
             checkQuantity: Number(it.remainQuantity),
             areaName: useWmsStore().areaMap.get(it.areaId)?.areaName,
             equipmentCode: it.equipmentCode,
-            specModel: it.specModel,
             receiptOrderDetailId: it.receiptOrderDetailId,
-            productionDate: it.productionDate,
-            expirationDate: it.expirationDate,
             receiptTime: it.createTime,
             newInventoryDetail: false
           }
@@ -386,8 +351,6 @@ const doSave = (checkOrderStatus = 0) => {
           areaId: it.areaId,
           rackId: it.rackId,
           locationId: it.locationId,
-          productionDate: it.productionDate,
-          expirationDate: it.expirationDate,
           receiptTime: it.receiptTime
         }
       })
@@ -454,8 +417,6 @@ const doCheck = async () => {
         areaId: it.areaId,
         rackId: it.rackId,
         locationId: it.locationId,
-        productionDate: it.productionDate,
-        expirationDate: it.expirationDate,
         receiptTime: it.receiptTime,
         inventoryDetailId: it.inventoryDetailId
       }

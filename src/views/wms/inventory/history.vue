@@ -22,9 +22,6 @@
         <el-form-item label="器材编码" prop="equipmentCode">
           <el-input v-model="queryParams.equipmentCode" clearable placeholder="请输入器材编码" />
         </el-form-item>
-        <el-form-item label="规格型号" prop="specModel">
-          <el-input v-model="queryParams.specModel" clearable placeholder="请输入规格型号" />
-        </el-form-item>
         <el-form-item label="所在单位" prop="belongUnit">
           <el-input v-model="queryParams.belongUnit" clearable placeholder="请输入所在单位" />
         </el-form-item>
@@ -77,12 +74,6 @@
           <template #default="{ row }">
             <div>{{ row.itemName || row.item?.itemName || '-' }}</div>
             <div class="sub-text">器材编码：{{ row.equipmentCode || row.item?.itemCode || '-' }}</div>
-          </template>
-        </el-table-column>
-        <el-table-column label="规格信息" min-width="180">
-          <template #default="{ row }">
-            <div>{{ row.itemSku?.skuName || row.skuName || '-' }}</div>
-            <div class="sub-text">规格型号：{{ row.specModel || row.itemSku?.specModel || '-' }}</div>
           </template>
         </el-table-column>
         <el-table-column label="所在单位" min-width="140" show-overflow-tooltip>
@@ -174,7 +165,6 @@ const queryParams = ref({
   itemName: undefined,
   itemCode: undefined,
   equipmentCode: undefined,
-  specModel: undefined,
   belongUnit: undefined,
   skuName: undefined,
   skuCode: undefined,
@@ -283,7 +273,6 @@ const initFromRoute = () => {
   queryParams.value.orderNo = route.query.orderNo || undefined
   queryParams.value.itemName = route.query.itemName || undefined
   queryParams.value.equipmentCode = route.query.equipmentCode || undefined
-  queryParams.value.specModel = route.query.specModel || undefined
   queryParams.value.belongUnit = route.query.belongUnit || undefined
 }
 

@@ -48,18 +48,6 @@
                 </el-radio-group>
               </el-form-item>
             </el-col>
-            <el-col :span="6">
-              <el-form-item label="供应商" prop="merchantId">
-                <el-select v-model="form.merchantId" placeholder="请选择供应商" clearable filterable>
-                  <el-option v-for="item in useWmsStore().merchantList" :key="item.id" :label="item.merchantName" :value="item.id"/>
-                </el-select>
-              </el-form-item>
-            </el-col>
-            <el-col :span="6">
-              <el-form-item label="订单号" prop="orderNo">
-                <el-input v-model="form.orderNo" placeholder="请输入订单号"></el-input>
-              </el-form-item>
-            </el-col>
           </el-row>
           <el-row :gutter="24">
             <el-col :span="6">
@@ -96,36 +84,6 @@
                 <el-date-picker v-model="form.receiptDate" type="date" value-format="YYYY-MM-DD" format="YYYY-MM-DD" style="width: 100%" />
               </el-form-item>
             </el-col>
-            <el-col :span="6">
-              <el-form-item label="采购配发人" prop="purchaserName">
-                <el-input v-model="form.purchaserName" placeholder="请输入采购配发人"></el-input>
-              </el-form-item>
-            </el-col>
-            <el-col :span="6">
-              <el-form-item label="验收人" prop="acceptorName">
-                <el-input v-model="form.acceptorName" placeholder="请输入验收人"></el-input>
-              </el-form-item>
-            </el-col>
-          </el-row>
-          <el-row :gutter="24">
-            <el-col :span="6">
-              <el-form-item label="保管员" prop="keeperName">
-                <el-input v-model="form.keeperName" placeholder="请输入保管员"></el-input>
-              </el-form-item>
-            </el-col>
-            <el-col :span="6">
-              <div style="display: flex;align-items: start">
-                <el-form-item label="金额" prop="payableAmount">
-                  <el-input-number v-model="form.payableAmount" :precision="2" :min="0"></el-input-number>
-                </el-form-item>
-                <el-button v-if="!isViewMode" link type="primary" @click="handleAutoCalc" class="ml20" style="line-height: 32px">自动计算</el-button>
-              </div>
-            </el-col>
-            <el-col :span="6">
-              <el-form-item label="数量" prop="totalQuantity">
-                <el-input-number v-model="form.totalQuantity" :controls="false" :precision="0" :disabled="true"></el-input-number>
-              </el-form-item>
-            </el-col>
             <el-col :span="11">
               <el-form-item label="备注" prop="remark">
                 <el-input
@@ -146,7 +104,7 @@
           <div class="flex-space-between mb8 receipt-toolbar">
             <div>
               <div class="instance-tip">
-                入库按单品实例执行。支持“选择器材实例”或扫码枪直扫 `instance_code` 直接新增；箱码可直接录入，货位通过下拉选择。
+                入库按单品实例执行。支持“选择器材实例”或扫码枪扫二维码直接新增；箱码可直接录入，货位通过下拉选择。
               </div>
             </div>
             <div class="receipt-toolbar-actions">
@@ -318,10 +276,9 @@
           <el-table-column label="器材实例编码" prop="instanceCode" min-width="180" />
           <el-table-column label="器材" prop="itemName" min-width="160" />
           <el-table-column label="规格" prop="skuName" min-width="160" />
-          <el-table-column label="规格型号" prop="specModel" min-width="160" />
           <el-table-column label="状态" width="120">
             <template #default="{ row }">
-              <span>{{ row.locationName ? '已入库' : '未入库' }}</span>
+              <span>{{ row.locationName ? '已入库' : '待入库' }}</span>
             </template>
           </el-table-column>
         </el-table>
@@ -376,17 +333,12 @@ const initFormData = {
   id: undefined,
   receiptOrderNo: undefined,
   receiptOrderType: undefined,
-  merchantId: undefined,
-  orderNo: undefined,
   basisNo: undefined,
   dispatchMode: undefined,
   noticeOrg: undefined,
   receiveUnit: undefined,
   purchaseDate: undefined,
   receiptDate: undefined,
-  purchaserName: undefined,
-  acceptorName: undefined,
-  keeperName: undefined,
   payableAmount: undefined,
   receiptOrderStatus: 0,
   remark: undefined,
@@ -502,7 +454,6 @@ const createReceiptDetailFromInstance = (item = {}) => syncReceiptDetail({
   itemName: item.itemName,
   itemCode: item.itemCode,
   skuName: item.skuName,
-  specModel: item.specModel,
   quantity: 1,
   productionDate: item.productionDate,
   expirationDate: item.expirationDate,
@@ -535,7 +486,6 @@ const syncReceiptDetail = (detail) => {
     instanceCode: detail.instanceCode ?? firstReceiptInstance.instanceCode ?? '',
     boxCode: detail.boxCode ?? firstReceiptInstance.boxCode ?? '',
     equipmentCode: detail.equipmentCode ?? detail.itemSku?.item?.itemCode ?? detail.itemCode ?? firstReceiptInstance.instanceCode,
-    specModel: detail.specModel ?? detail.itemSku?.specModel,
     quantity: Number(detail.quantity || 1),
     generateItemInstance: 1,
     rackId: detail.rackId,
@@ -774,7 +724,6 @@ const doSave = async (receiptOrderStatus = 0) => {
         amount: it.lineAmount,
         quantity: 1,
         equipmentCode: it.equipmentCode,
-        specModel: it.specModel,
         unitPrice: it.unitPrice,
         lineAmount: it.lineAmount,
         productionDate: it.productionDate,
@@ -795,17 +744,12 @@ const doSave = async (receiptOrderStatus = 0) => {
       receiptOrderNo: form.value.receiptOrderNo,
       receiptOrderStatus,
       receiptOrderType: form.value.receiptOrderType,
-      merchantId: form.value.merchantId,
-      orderNo: form.value.orderNo,
       basisNo: form.value.basisNo,
       dispatchMode: form.value.dispatchMode,
       noticeOrg: form.value.noticeOrg,
       receiveUnit: form.value.receiveUnit,
       purchaseDate: form.value.purchaseDate,
       receiptDate: form.value.receiptDate,
-      purchaserName: form.value.purchaserName,
-      acceptorName: form.value.acceptorName,
-      keeperName: form.value.keeperName,
       remark: form.value.remark,
       payableAmount: form.value.payableAmount,
       totalQuantity: form.value.totalQuantity,
@@ -872,7 +816,6 @@ const doWarehousing = async () => {
         amount: it.lineAmount,
         quantity: 1,
         equipmentCode: it.equipmentCode,
-        specModel: it.specModel,
         unitPrice: it.unitPrice,
         lineAmount: it.lineAmount,
         productionDate: it.productionDate,
@@ -894,17 +837,12 @@ const doWarehousing = async () => {
       receiptOrderNo: form.value.receiptOrderNo,
       receiptOrderStatus: form.value.receiptOrderStatus,
       receiptOrderType: form.value.receiptOrderType,
-      merchantId: form.value.merchantId,
-      orderNo: form.value.orderNo,
       basisNo: form.value.basisNo,
       dispatchMode: form.value.dispatchMode,
       noticeOrg: form.value.noticeOrg,
       receiveUnit: form.value.receiveUnit,
       purchaseDate: form.value.purchaseDate,
       receiptDate: form.value.receiptDate,
-      purchaserName: form.value.purchaserName,
-      acceptorName: form.value.acceptorName,
-      keeperName: form.value.keeperName,
       remark: form.value.remark,
       payableAmount: form.value.payableAmount,
       totalQuantity: form.value.totalQuantity,

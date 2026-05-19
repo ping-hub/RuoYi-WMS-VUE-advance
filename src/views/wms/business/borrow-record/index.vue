@@ -18,7 +18,7 @@
         </el-form-item>
         <el-form-item prop="borrower">
           <template #label>
-            <FormLabelHelp label="借用人" purpose="记录本次借用责任人，用于单据查询、催还和责任追溯。" example="张三、器材保障班" />
+            <FormLabelHelp label="借用人" />
           </template>
           <el-input v-model="queryParams.borrower" placeholder="请输入借用人" clearable @keyup.enter="handleQuery" />
         </el-form-item>
@@ -181,7 +181,7 @@
           <el-col :span="12">
             <el-form-item prop="borrower">
               <template #label>
-                <FormLabelHelp label="借用人" purpose="记录本次借出责任主体，后续归还、超期预警和追踪都按此字段检索。" example="李四、通信保障组" />
+                <FormLabelHelp label="借用人"/>
               </template>
               <el-input v-model="borrowDialog.form.borrower" placeholder="请输入借用人" />
             </el-form-item>
