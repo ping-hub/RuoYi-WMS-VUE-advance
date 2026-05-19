@@ -63,12 +63,6 @@
           <div v-if="row.item.itemCode">编号：{{ row.item.itemCode }}</div>
         </template>
       </el-table-column>
-      <el-table-column label="生产日期/过期日期" align="left" width="180">
-        <template #default="{ row }">
-          <div v-if="row.productionDate">生产日期：{{ parseTime(row.productionDate, '{y}-{m}-{d}') }}</div>
-          <div v-if="row.expirationDate">过期日期：{{ parseTime(row.expirationDate, '{y}-{m}-{d}') }}</div>
-        </template>
-      </el-table-column>
       <el-table-column label="入库日期" align="left" prop="createTime" width="140">
         <template #default="{ row }">
           <div>{{ parseTime(row.createTime, '{y}-{m}-{d}') }}</div>

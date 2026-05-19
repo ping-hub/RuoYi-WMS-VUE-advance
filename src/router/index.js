@@ -168,7 +168,7 @@ export const dynamicRoutes = [
         path: 'index',
         component: () => import('@/views/wms/itemInstance/index.vue'),
         name: 'WmsItemInstance',
-        meta: { title: '器材编码' }
+        meta: { title: '器材实例编码' }
       }
     ]
   },
@@ -200,34 +200,6 @@ export const dynamicRoutes = [
       }
     ]
   },
-  {
-    path: '/wms-trace-item',
-    component: Layout,
-    hidden: true,
-    permissions: ['wms:itemInstance:list'],
-    children: [
-      {
-        path: 'index',
-        component: () => import('@/views/wms/trace/item/index.vue'),
-        name: 'WmsTraceItem',
-        meta: { title: '器材追踪' }
-      }
-    ]
-  },
-  {
-    path: '/wms-trace-box',
-    component: Layout,
-    hidden: true,
-    permissions: ['wms:box:list'],
-    children: [
-      {
-        path: 'index',
-        component: () => import('@/views/wms/trace/box/index.vue'),
-        name: 'WmsTraceBox',
-        meta: { title: '箱码追踪' }
-      }
-    ]
-  }
 ]
 
 const router = createRouter({

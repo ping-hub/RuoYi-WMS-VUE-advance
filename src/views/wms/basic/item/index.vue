@@ -2,6 +2,9 @@
   <div class="app-container">
     <el-card>
       <el-form ref="queryRef" :model="queryParams" :inline="true" label-width="80px">
+        <el-form-item label="器材编码" prop="itemCode">
+          <el-input v-model="queryParams.itemCode" placeholder="请输入器材编码" clearable @keyup.enter="handleQuery" />
+        </el-form-item>
         <el-form-item label="器材名称" prop="itemName">
           <el-input v-model="queryParams.itemName" placeholder="请输入器材名称" clearable @keyup.enter="handleQuery" />
         </el-form-item>
@@ -78,6 +81,7 @@
           </div>
 
           <el-table v-loading="loading" :data="itemList" border empty-text="暂无器材">
+            <el-table-column label="器材编码" prop="itemCode" min-width="140" show-overflow-tooltip />
             <el-table-column label="器材名称" prop="itemName" min-width="180" />
             <el-table-column label="器材类型" prop="equipmentType" min-width="140" show-overflow-tooltip />
             <el-table-column label="器材分类" min-width="140">
@@ -122,10 +126,17 @@
         <el-form ref="itemFormRef" :model="form" :rules="rules" label-width="108px">
           <el-row :gutter="20">
             <el-col :span="12">
+              <el-form-item label="器材编码" prop="itemCode">
+                <el-input v-model="form.itemCode" placeholder="请输入器材编码" />
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
               <el-form-item label="器材名称" prop="itemName">
                 <el-input v-model="form.itemName" placeholder="请输入器材名称" />
               </el-form-item>
             </el-col>
+          </el-row>
+          <el-row :gutter="20">
             <el-col :span="10">
               <el-form-item label="器材分类" prop="itemCategory">
                 <el-tree-select
@@ -145,11 +156,9 @@
           </el-row>
           <el-row :gutter="20">
             <el-col :span="12">
-              <el-form-item label="器材单位" prop="unit">
-                <el-input v-model="form.unit" placeholder="请输入器材单位" />
+              <el-form-item label="计量单位" prop="unit">
+                <el-input v-model="form.unit" placeholder="请输入计量单位 例:台/个/张/包" />
               </el-form-item>
-            </el-col>
-            <el-col :span="12">
             </el-col>
             <el-col :span="12">
               <el-form-item label="器材类型" prop="equipmentType">
@@ -190,8 +199,18 @@
                 <el-input v-model="skuForm.itemSkuList[0].skuName" placeholder="请输入器材规格名称" />
               </el-form-item>
             </el-col>
+            <el-col :span="12">
+              <el-form-item label="产品标识">
+                <el-input v-model="skuForm.itemSkuList[0].productIdentifier" placeholder="请输入产品标识" />
+              </el-form-item>
+            </el-col>
           </el-row>
           <el-row :gutter="20">
+            <el-col :span="12">
+              <el-form-item label="质量等级">
+                <el-input v-model="skuForm.itemSkuList[0].qualityGrade" placeholder="请输入质量等级" />
+              </el-form-item>
+            </el-col>
             <el-col :span="12">
               <el-form-item label="状态">
                 <el-select v-model="skuForm.itemSkuList[0].status" placeholder="请选择状态" style="width: 100%">
@@ -335,6 +354,8 @@ const createEmptySku = () => ({
   id: undefined,
   itemId: undefined,
   skuName: '',
+  productIdentifier: '',
+  qualityGrade: '',
   status: '1'
 });
 
@@ -349,6 +370,9 @@ const data = reactive({
     equipmentType: undefined
   },
   rules: {
+    itemCode: [
+      { required: true, message: '器材编码不能为空', trigger: 'blur' }
+    ],
     itemName: [
       { required: true, message: '器材名称不能为空', trigger: 'blur' }
     ],

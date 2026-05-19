@@ -123,11 +123,6 @@
                   </div>
                 </template>
             </el-table-column>
-            <el-table-column label="器材/标识" min-width="220">
-              <template #default="{ row }">
-                <div>器材编码：{{ row.equipmentCode || row.itemSku?.item?.itemCode || '-' }}</div>
-              </template>
-            </el-table-column>
             <el-table-column label="货位信息" min-width="220">
               <template #default="{ row }">
                 <template v-if="row.newInventoryDetail">
@@ -309,7 +304,6 @@ const startCheck = () => {
             quantity: Number(it.remainQuantity),
             checkQuantity: Number(it.remainQuantity),
             areaName: useWmsStore().areaMap.get(it.areaId)?.areaName,
-            equipmentCode: it.equipmentCode,
             receiptOrderDetailId: it.receiptOrderDetailId,
             receiptTime: it.createTime,
             newInventoryDetail: false

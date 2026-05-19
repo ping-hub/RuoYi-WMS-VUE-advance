@@ -106,14 +106,11 @@
             </div>
           </div>
           <el-table :data="form.details" border empty-text="暂无器材明细">
-            <el-table-column label="器材信息" prop="itemSku.itemName">
-              <template #default="{ row }">
-                <div>{{
-                    (row.itemSku?.item?.itemName || row.itemName || '-') + ((row.itemSku?.item?.itemCode || row.itemCode) ? ('(' + (row.itemSku?.item?.itemCode || row.itemCode) + ')') : '')
-                  }}
-                </div>
-              </template>
-            </el-table-column>
+            <el-table-column label="器材编码" prop="itemCode" min-width="120" show-overflow-tooltip />
+            <el-table-column label="器材名称" prop="itemName" min-width="140" show-overflow-tooltip />
+            <el-table-column label="规格型号" prop="skuName" min-width="140" show-overflow-tooltip />
+            <el-table-column label="计量单位" prop="unit" width="110" />
+            <el-table-column label="产品标识" prop="productIdentifier" min-width="140" show-overflow-tooltip />
             <el-table-column label="出库方式" width="120">
               <template #default="{ row }">
                 <dict-tag :options="shipmentDetailSourceOptions" :value="row.detailSourceType" />
@@ -121,7 +118,7 @@
             </el-table-column>
             <el-table-column label="追踪对象" min-width="180">
               <template #default="{ row }">
-                <div v-if="row.instanceCode">器材编码：{{ row.instanceCode }}</div>
+                <div v-if="row.instanceCode">器材实例编码：{{ row.instanceCode }}</div>
                 <div v-if="row.boxCode">箱码：{{ row.boxCode }}</div>
                 <div v-if="!row.instanceCode && !row.boxCode">-</div>
               </template>
@@ -174,6 +171,7 @@
                 <el-input-number v-model="row.lineAmount" :precision="2" :controls="false" :min="0" disabled></el-input-number>
               </template>
             </el-table-column>
+            <el-table-column label="质量等级" prop="qualityGrade" width="120" show-overflow-tooltip />
             <el-table-column label="备注" width="180">
               <template #default="{ row }">
                 <el-input v-model="row.remark" placeholder="请输入备注" :disabled="isViewMode" />
@@ -209,8 +207,8 @@
           <el-form-item label="货架">
             <RackSelect v-model="itemInstanceDialog.query.rackId" :warehouse-id="itemInstanceDialog.query.warehouseId" :area-id="itemInstanceDialog.query.areaId" placeholder="货架" style="width: 160px" />
           </el-form-item>
-          <el-form-item label="器材编码">
-            <el-input v-model="itemInstanceDialog.query.instanceCode" placeholder="请输入器材编码" clearable @keyup.enter="getItemInstanceList" />
+          <el-form-item label="器材实例编码">
+            <el-input v-model="itemInstanceDialog.query.instanceCode" placeholder="请输入器材实例编码" clearable @keyup.enter="getItemInstanceList" />
           </el-form-item>
           <el-form-item label="器材名称">
             <el-input v-model="itemInstanceDialog.query.itemName" placeholder="请输入器材名称" clearable @keyup.enter="getItemInstanceList" />
@@ -224,7 +222,7 @@
         </el-form>
         <el-table v-loading="itemInstanceDialog.loading" :data="itemInstanceDialog.list" @selection-change="handleItemInstanceSelectionChange" border row-key="id">
           <el-table-column type="selection" width="55" :selectable="isItemInstanceSelectable" />
-          <el-table-column label="器材编码" prop="instanceCode" min-width="160" />
+          <el-table-column label="器材实例编码" prop="instanceCode" min-width="160" />
           <el-table-column label="器材" prop="itemName" min-width="160" />
           <el-table-column label="器材规格" prop="skuName" min-width="160" />
           <el-table-column label="仓库" prop="warehouseName" width="120" />
@@ -289,7 +287,7 @@ const {wms_item_instance_status, wms_shipment_type, wms_dispatch_mode} = proxy.u
 const loading = ref(false)
 const shipmentDetailSourceOptions = computed(() => ([
   { label: '库存', value: 'inventory' },
-  { label: '器材编码', value: 'itemInstance' },
+  { label: '器材实例编码', value: 'itemInstance' },
   { label: '整箱', value: 'box' }
 ]))
 const initFormData = {
@@ -375,15 +373,19 @@ const calcLineAmount = (quantity, unitPrice) => {
 
 const syncShipmentDetail = (detail) => {
   const unitPrice = detail.unitPrice
-  const lineAmount = detail.lineAmount ?? detail.amount ?? calcLineAmount(detail.quantity, unitPrice)
+  const lineAmount = detail.lineAmount ?? calcLineAmount(detail.quantity, unitPrice)
   const detailSourceType = detail.detailSourceType ?? (detail.itemInstanceId ? (detail.boxId ? 'box' : 'itemInstance') : 'inventory')
   return {
     ...detail,
-    equipmentCode: detail.equipmentCode ?? detail.itemSku?.item?.itemCode ?? detail.itemCode,
+    itemCode: detail.itemCode ?? detail.itemSku?.item?.itemCode,
+    itemName: detail.itemName ?? detail.itemSku?.item?.itemName,
+    skuName: detail.skuName ?? detail.itemSku?.skuName,
+    unit: detail.unit ?? detail.itemSku?.item?.unit,
+    productIdentifier: detail.productIdentifier ?? detail.itemSku?.productIdentifier,
+    qualityGrade: detail.qualityGrade ?? detail.itemSku?.qualityGrade,
     detailSourceType,
     unitPrice,
-    lineAmount,
-    amount: lineAmount
+    lineAmount
   }
 }
 
@@ -400,7 +402,6 @@ const recalculateOrderSummary = () => {
 
 const handleDetailChange = (row) => {
   row.lineAmount = calcLineAmount(row.quantity, row.unitPrice)
-  row.amount = row.lineAmount
   recalculateOrderSummary()
 }
 
@@ -454,8 +455,10 @@ const createDetailRow = (payload) => {
     itemName: payload.itemName,
     itemCode: payload.itemCode,
     skuName: payload.skuName,
+    unit: payload.unit,
+    productIdentifier: payload.productIdentifier,
+    qualityGrade: payload.qualityGrade,
     skuId: payload.skuId,
-    amount: payload.lineAmount,
     quantity: payload.quantity,
     remainQuantity: payload.remainQuantity,
     warehouseId: payload.warehouseId,
@@ -499,7 +502,14 @@ const doSave = (shipmentOrderStatus = 0) => {
           id: it.id,
           shipmentOrderId: form.value.id,
           skuId: it.skuId,
-          amount: it.lineAmount,
+          itemCode: it.itemCode,
+          itemName: it.itemName,
+          skuName: it.skuName,
+          unit: it.unit,
+          productIdentifier: it.productIdentifier,
+          qualityGrade: it.qualityGrade,
+          unitPrice: it.unitPrice,
+          lineAmount: it.lineAmount,
           quantity: it.quantity,
           inventoryDetailId: it.inventoryDetailId,
           itemInstanceId: it.itemInstanceId,
@@ -579,7 +589,14 @@ const doShipment = async () => {
         id: it.id,
         shipmentOrderId: form.value.id,
         skuId: it.skuId,
-        amount: it.amount,
+        itemCode: it.itemCode,
+        itemName: it.itemName,
+        skuName: it.skuName,
+        unit: it.unit,
+        productIdentifier: it.productIdentifier,
+        qualityGrade: it.qualityGrade,
+        unitPrice: it.unitPrice,
+        lineAmount: it.lineAmount,
         quantity: it.quantity,
         inventoryDetailId: it.inventoryDetailId,
         itemInstanceId: it.itemInstanceId,
@@ -674,7 +691,6 @@ const handleChangeArea = (e) => {
 const handleChangeQuantity = () => {
   form.value.details.forEach(it => {
     it.lineAmount = calcLineAmount(it.quantity, it.unitPrice)
-    it.amount = it.lineAmount
   })
   recalculateOrderSummary()
 }
@@ -715,7 +731,7 @@ const addItemInstancesToShipment = async (items) => {
   const newRows = []
   for (const item of items) {
     if (form.value.details.some(detail => detail.itemInstanceId === item.id)) {
-      throw new Error(`器材编码 ${item.instanceCode} 已添加`)
+      throw new Error(`器材实例编码 ${item.instanceCode} 已添加`)
     }
     const matchedInventory = matchInventoryDetail({
       skuId: item.skuId,
@@ -723,13 +739,17 @@ const addItemInstancesToShipment = async (items) => {
       quantity: 1
     }, extraUsage)
     if (!matchedInventory) {
-      throw new Error(`器材编码 ${item.instanceCode} 未匹配到可用库存明细`)
+      throw new Error(`器材实例编码 ${item.instanceCode} 未匹配到可用库存明细`)
     }
     extraUsage[matchedInventory.id] = Number(extraUsage[matchedInventory.id] || 0) + 1
     newRows.push(createDetailRow({
       skuId: item.skuId,
       skuName: item.skuName,
       itemName: item.itemName,
+      itemCode: item.itemCode,
+      unit: item.unit,
+      productIdentifier: item.productIdentifier,
+      qualityGrade: item.qualityGrade,
       quantity: 1,
       remainQuantity: matchedInventory.remainQuantity,
       warehouseId: form.value.warehouseId,
@@ -819,7 +839,6 @@ const getItemInstanceList = () => {
     pageSize: itemInstanceDialog.pageSize,
     warehouseId: form.value.warehouseId,
     areaId: form.value.areaId,
-    borrowed: 0,
     instanceStatus: '在库',
     ...itemInstanceDialog.query
   }).then((res) => {
@@ -840,14 +859,14 @@ const isItemInstanceSelectable = (row) => {
 
 const handleConfirmItemInstance = async () => {
   if (!itemInstanceDialog.selection.length) {
-    ElMessage.error('请选择器材编码')
+    ElMessage.error('请选择器材实例编码')
     return
   }
   try {
     await addItemInstancesToShipment(itemInstanceDialog.selection)
     itemInstanceDialog.visible = false
   } catch (e) {
-    ElMessage.error(e?.message || '器材编码添加失败')
+    ElMessage.error(e?.message || '器材实例编码添加失败')
   }
 }
 </script>

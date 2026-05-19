@@ -154,7 +154,7 @@
         <div class="receipt-order-content">
           <div class="flex-space-between mb8">
             <div>
-              <el-tag v-if="form.movementType === 'special'" type="warning">专装调拨必须按物品码或箱码流转，且数量必须为 1</el-tag>
+              <el-tag v-if="form.movementType === 'special'" type="warning">专装调拨必须按器材实例编码或箱码流转，且数量必须为 1</el-tag>
             </div>
             <el-popover
               placement="left"
@@ -172,14 +172,11 @@
             </el-popover>
           </div>
             <el-table :data="form.details" border empty-text="暂无调拨明细">
-            <el-table-column label="器材信息" prop="itemSku.itemName">
-              <template #default="{ row }">
-                <div>{{
-                    row.itemSku.item.itemName + (row.itemSku.item.itemCode ? ('(' + row.itemSku.item.itemCode + ')') : '')
-                  }}
-                </div>
-              </template>
-            </el-table-column>
+            <el-table-column label="器材编码" prop="itemCode" min-width="120" show-overflow-tooltip />
+            <el-table-column label="器材名称" prop="itemName" min-width="140" show-overflow-tooltip />
+            <el-table-column label="规格型号" prop="skuName" min-width="140" show-overflow-tooltip />
+            <el-table-column label="计量单位" prop="unit" width="110" />
+            <el-table-column label="产品标识" prop="productIdentifier" min-width="140" show-overflow-tooltip />
             <el-table-column label="源位置" min-width="180">
               <template #default="{ row }">
                 <div>库区：{{ row.sourceAreaName || '-' }}</div>
@@ -208,9 +205,9 @@
                 </div>
               </template>
             </el-table-column>
-            <el-table-column v-if="form.movementType === 'special'" label="物品码/箱码" min-width="240">
+            <el-table-column v-if="form.movementType === 'special'" label="器材实例编码/箱码" min-width="240">
               <template #default="{ row }">
-                <el-input v-model="row.instanceCode" placeholder="请输入物品码" :disabled="isViewMode" @blur="handleSpecialCodeBlur(row, 'item')" />
+                <el-input v-model="row.instanceCode" placeholder="请输入器材实例编码" :disabled="isViewMode" @blur="handleSpecialCodeBlur(row, 'item')" />
                 <el-input class="mt5" v-model="row.boxCode" placeholder="请输入箱码" :disabled="isViewMode" @blur="handleSpecialCodeBlur(row, 'box')" />
               </template>
             </el-table-column>
@@ -242,6 +239,7 @@
                 ></el-input-number>
               </template>
             </el-table-column>
+            <el-table-column label="质量等级" prop="qualityGrade" width="120" show-overflow-tooltip />
             <el-table-column label="备注" width="180">
               <template #default="{ row }">
                 <el-input v-model="row.remark" placeholder="请输入备注" :disabled="isViewMode" />
@@ -380,7 +378,12 @@ const syncMovementDetail = (detail) => {
   const unitPrice = detail.unitPrice
   return {
     ...detail,
-    equipmentCode: detail.equipmentCode ?? detail.itemSku?.item?.itemCode,
+    itemCode: detail.itemCode ?? detail.itemSku?.item?.itemCode,
+    itemName: detail.itemName ?? detail.itemSku?.item?.itemName,
+    skuName: detail.skuName ?? detail.itemSku?.skuName,
+    unit: detail.unit ?? detail.itemSku?.item?.unit,
+    productIdentifier: detail.productIdentifier ?? detail.itemSku?.productIdentifier,
+    qualityGrade: detail.qualityGrade ?? detail.itemSku?.qualityGrade,
     itemInstanceId: detail.itemInstanceId,
     instanceCode: detail.instanceCode,
     boxId: detail.boxId,
@@ -417,7 +420,7 @@ const handleSpecialCodeBlur = async (row, mode) => {
       handleChangeQuantity()
     } catch (e) {
       row.itemInstanceId = undefined
-      proxy.$modal.msgError('物品码校验失败，请确认物品存在且可用于专装调拨')
+      proxy.$modal.msgError('器材实例编码校验失败，请确认器材实例存在且可用于专装调拨')
     }
     return
   }
@@ -447,11 +450,11 @@ const validateSpecialMovementDetails = (details) => {
     const hasItem = !!detail.itemInstanceId
     const hasBox = !!detail.boxId
     if (!hasItem && !hasBox) {
-      ElMessage.error('专装调拨必须录入物品码或箱码')
+      ElMessage.error('专装调拨必须录入器材实例编码或箱码')
       return false
     }
     if (hasItem && hasBox) {
-      ElMessage.error('专装调拨明细不能同时录入物品码和箱码')
+      ElMessage.error('专装调拨明细不能同时录入器材实例编码和箱码')
       return false
     }
     if (Number(detail.quantity) !== 1) {
@@ -479,6 +482,12 @@ const handleOkClick = (item) => {
             ...it.itemSku,
             item: it.item
           },
+          itemCode: it.itemCode ?? it.item?.itemCode,
+          itemName: it.itemName ?? it.item?.itemName,
+          skuName: it.skuName ?? it.itemSku?.skuName,
+          unit: it.unit ?? it.item?.unit,
+          productIdentifier: it.productIdentifier ?? it.itemSku?.productIdentifier,
+          qualityGrade: it.qualityGrade ?? it.itemSku?.qualityGrade,
           skuId: it.skuId,
           quantity: undefined,
           remainQuantity: it.remainQuantity,
@@ -492,7 +501,6 @@ const handleOkClick = (item) => {
           targetRackId: form.value.targetRackId,
           targetLocationId: form.value.targetLocationId,
           sourceAreaName: useWmsStore().areaMap.get(form.value.sourceAreaId ?? it.areaId)?.areaName,
-          equipmentCode: it.equipmentCode ?? it.item?.itemCode,
           unitPrice: it.unitPrice
         })
       )
@@ -534,8 +542,13 @@ const doSave = (movementOrderStatus = 0) => {
           id: it.id,
           movementOrderId: form.value.id,
           skuId: it.skuId,
+          itemCode: it.itemCode,
+          itemName: it.itemName,
+          skuName: it.skuName,
+          unit: it.unit,
+          productIdentifier: it.productIdentifier,
+          qualityGrade: it.qualityGrade,
           quantity: it.quantity,
-          equipmentCode: it.equipmentCode,
           unitPrice: it.unitPrice,
           lineAmount: it.lineAmount,
           remark: it.remark,
@@ -631,7 +644,15 @@ const doMovement = async () => {
         id: it.id,
         movementOrderId: form.value.id,
         skuId: it.skuId,
+        itemCode: it.itemCode,
+        itemName: it.itemName,
+        skuName: it.skuName,
+        unit: it.unit,
+        productIdentifier: it.productIdentifier,
+        qualityGrade: it.qualityGrade,
         quantity: it.quantity,
+        unitPrice: it.unitPrice,
+        lineAmount: it.lineAmount,
         inventoryDetailId: it.inventoryDetailId,
         itemInstanceId: it.itemInstanceId,
         boxId: it.boxId,

@@ -80,7 +80,6 @@
         <el-table-column label="操作" align="right" width="260">
           <template #default="{ row }">
             <el-button link type="primary" @click="handleView(row)">详情</el-button>
-            <el-button link type="primary" @click="handleTrace(row)" v-hasPermi="['wms:box:list']">追踪</el-button>
             <el-button link type="primary" @click="handleUpdate(row)" v-hasPermi="['wms:box:edit']">修改</el-button>
             <el-button link type="danger" @click="handleDelete(row)" v-hasPermi="['wms:box:edit']">删除</el-button>
           </template>
@@ -170,8 +169,8 @@
       <div class="detail-header">
         <span class="detail-title">当前装箱关系</span>
       </div>
-      <el-table :data="detailDialog.data.items || []" border empty-text="箱内暂无物品" cell-class-name="vertical-top-cell">
-        <el-table-column label="物品码" prop="instanceCode" min-width="180" />
+      <el-table :data="detailDialog.data.items || []" border empty-text="箱内暂无器材实例" cell-class-name="vertical-top-cell">
+        <el-table-column label="器材实例编码" prop="instanceCode" min-width="180" />
         <el-table-column label="器材/器材规格" min-width="220">
           <template #default="{ row }">
             <div>{{ row.itemName || '-' }}</div>
@@ -181,17 +180,6 @@
         <el-table-column label="状态" width="100">
           <template #default="{ row }">
             <dict-tag :options="itemInstanceStatusOptions" :value="row.instanceStatus" />
-          </template>
-        </el-table-column>
-        <el-table-column label="所在单位" min-width="180">
-          <template #default="{ row }">
-            <div>{{ displayBelongUnit(row) }}</div>
-          </template>
-        </el-table-column>
-        <el-table-column label="日期" min-width="180">
-          <template #default="{ row }">
-            <div v-if="row.productionDate" class="sub-text">生产：{{ parseTime(row.productionDate, '{y}-{m}-{d}') }}</div>
-            <div v-if="row.expirationDate" class="sub-text">过期：{{ parseTime(row.expirationDate, '{y}-{m}-{d}') }}</div>
           </template>
         </el-table-column>
         <el-table-column label="操作" width="100" align="right">
@@ -207,11 +195,11 @@
         :closable="false"
         type="info"
         class="mb16"
-        :title="packDialog.boxCode ? '当前箱体：' + packDialog.boxCode + '，仅维护当前装箱关系' : '请选择需要建立装箱关系的物品码'"
+        :title="packDialog.boxCode ? '当前箱体：' + packDialog.boxCode + '，仅维护当前装箱关系' : '请选择需要建立装箱关系的器材实例编码'"
       />
       <el-form :inline="true" :model="packDialog.query" label-width="80px">
-        <el-form-item label="物品码">
-          <el-input v-model="packDialog.query.instanceCode" placeholder="请输入物品码" clearable @keyup.enter="getPackCandidates" />
+        <el-form-item label="器材实例编码">
+          <el-input v-model="packDialog.query.instanceCode" placeholder="请输入器材实例编码" clearable @keyup.enter="getPackCandidates" />
         </el-form-item>
         <el-form-item label="器材">
           <el-select v-model="packDialog.query.itemId" placeholder="请选择器材" clearable filterable style="width: 180px" @change="handlePackItemChange">
@@ -245,11 +233,11 @@
         :data="packDialog.list"
         border
         class="mt20"
-        empty-text="暂无可装箱物品"
+        empty-text="暂无可装箱器材实例"
         @selection-change="handlePackSelectionChange"
       >
         <el-table-column type="selection" width="55" />
-        <el-table-column label="物品码" prop="instanceCode" min-width="180" />
+        <el-table-column label="器材实例编码" prop="instanceCode" min-width="180" />
         <el-table-column label="器材/器材规格" min-width="220">
           <template #default="{ row }">
             <div>{{ row.itemName || '-' }}</div>
@@ -284,18 +272,18 @@
         :closable="false"
         type="warning"
         class="mb16"
-        :title="unpackDialog.boxCode ? '当前箱体：' + unpackDialog.boxCode + '，仅解除当前装箱关系' : '请选择要解除装箱关系的物品码'"
+        :title="unpackDialog.boxCode ? '当前箱体：' + unpackDialog.boxCode + '，仅解除当前装箱关系' : '请选择要解除装箱关系的器材实例编码'"
       />
       <el-table
         ref="unpackTableRef"
         v-loading="unpackDialog.loading"
         :data="unpackDialog.list"
         border
-        empty-text="箱内暂无可拆出的物品"
+        empty-text="箱内暂无可拆出的器材实例"
         @selection-change="handleUnpackSelectionChange"
       >
         <el-table-column type="selection" width="55" />
-        <el-table-column label="物品码" prop="instanceCode" min-width="180" />
+        <el-table-column label="器材实例编码" prop="instanceCode" min-width="180" />
         <el-table-column label="器材/器材规格" min-width="220">
           <template #default="{ row }">
             <div>{{ row.itemName || '-' }}</div>
@@ -305,12 +293,6 @@
         <el-table-column label="状态" width="100">
           <template #default="{ row }">
             <dict-tag :options="itemInstanceStatusOptions" :value="row.instanceStatus" />
-          </template>
-        </el-table-column>
-        <el-table-column label="日期" min-width="180">
-          <template #default="{ row }">
-            <div v-if="row.productionDate" class="sub-text">生产：{{ parseTime(row.productionDate, '{y}-{m}-{d}') }}</div>
-            <div v-if="row.expirationDate" class="sub-text">过期：{{ parseTime(row.expirationDate, '{y}-{m}-{d}') }}</div>
           </template>
         </el-table-column>
       </el-table>
@@ -373,9 +355,7 @@ const packDialog = reactive({
   query: {
     instanceCode: undefined,
     itemId: undefined,
-    skuId: undefined,
-    inBox: 0,
-    borrowed: 0
+    skuId: undefined
   }
 });
 
@@ -423,7 +403,6 @@ const data = reactive({
 const { form, queryParams, rules } = toRefs(data);
 
 const itemInstanceStatusOptions = computed(() => wms_item_instance_status.value);
-const displayBelongUnit = (row = {}) => row.belongUnit ?? row?.item?.defaultBelongUnit ?? row?.itemSku?.item?.defaultBelongUnit ?? '-';
 
 const applyRouteQuery = () => {
   if (route.query.boxCode) {
@@ -610,10 +589,9 @@ const getPackCandidates = async () => {
       instanceCode: packDialog.query.instanceCode,
       itemId: packDialog.query.itemId,
       skuId: packDialog.query.skuId,
-      inBox: 0,
-      borrowed: 0
+      instanceStatus: '在库'
     });
-    packDialog.list = res.rows.filter(item => item.instanceStatus === '在库');
+    packDialog.list = (res.rows || []).filter(item => item.instanceStatus === '在库' && !item.boxId);
   } finally {
     packDialog.loading = false;
   }
@@ -625,7 +603,7 @@ const handlePackSelectionChange = (selection) => {
 
 const submitPack = async () => {
   if (!packDialog.selectedIds.length) {
-    proxy.$modal.msgError('请先选择要装箱的物品码');
+    proxy.$modal.msgError('请先选择要装箱的器材实例编码');
     return;
   }
   buttonLoading.value = true;
@@ -666,7 +644,7 @@ const handleUnpackSelectionChange = (selection) => {
 
 const submitUnpack = async () => {
   if (!unpackDialog.selectedIds.length) {
-    proxy.$modal.msgError('请先选择要拆出的物品码');
+    proxy.$modal.msgError('请先选择要拆出的器材实例编码');
     return;
   }
   buttonLoading.value = true;
@@ -692,10 +670,6 @@ const refreshDetailIfOpened = async (boxId) => {
 
 const handleOpenItemInstance = (row) => {
   router.push({ path: '/wms-item-instance/index', query: { instanceCode: row.instanceCode } });
-};
-
-const handleTrace = (row) => {
-  router.push({ path: '/wms-trace-box/index', query: { boxCode: row.boxCode } });
 };
 
 onMounted(async () => {

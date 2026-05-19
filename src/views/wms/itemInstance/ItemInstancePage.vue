@@ -2,8 +2,8 @@
   <div class="app-container">
     <el-card>
       <el-form ref="queryRef" :model="queryParams" :inline="true" label-width="88px">
-        <el-form-item label="器材编码" prop="instanceCode">
-          <el-input v-model="queryParams.instanceCode" placeholder="请输入器材编码" clearable @keyup.enter="handleQuery" />
+        <el-form-item label="器材实例编码" prop="instanceCode">
+          <el-input v-model="queryParams.instanceCode" placeholder="请输入器材实例编码" clearable @keyup.enter="handleQuery" />
         </el-form-item>
         <el-form-item label="器材" prop="itemId">
           <el-select v-model="queryParams.itemId" placeholder="请选择器材" clearable filterable style="width: 200px" @change="handleQueryItemChange">
@@ -29,9 +29,6 @@
           <el-select v-model="queryParams.instanceStatus" placeholder="请选择状态" clearable style="width: 160px">
             <el-option v-for="dict in wms_item_instance_status" :key="dict.value" :label="dict.label" :value="dict.value" />
           </el-select>
-        </el-form-item>
-        <el-form-item label="所在单位" prop="belongUnit">
-          <el-input v-model="queryParams.belongUnit" placeholder="请输入所在单位" clearable @keyup.enter="handleQuery" />
         </el-form-item>
         <el-form-item label="仓库" prop="warehouseId">
           <el-select v-model="queryParams.warehouseId" placeholder="请选择仓库" clearable filterable style="width: 180px" @change="handleQueryWarehouseChange">
@@ -80,8 +77,8 @@
         </el-col>
       </el-row>
 
-      <el-table v-loading="loading" :data="itemInstanceList" border empty-text="暂无器材编码" cell-class-name="vertical-top-cell">
-        <el-table-column label="器材编码" prop="instanceCode" min-width="180" />
+      <el-table v-loading="loading" :data="itemInstanceList" border empty-text="暂无器材实例编码" cell-class-name="vertical-top-cell">
+        <el-table-column label="器材实例编码" prop="instanceCode" min-width="180" />
         <el-table-column label="器材/器材规格" min-width="220">
           <template #default="{ row }">
             <div>{{ row.itemName || '-' }}</div>
@@ -93,11 +90,6 @@
             <dict-tag :options="wms_item_instance_status" :value="row.instanceStatus" />
           </template>
         </el-table-column>
-        <el-table-column label="所在单位" min-width="180">
-          <template #default="{ row }">
-            <div>{{ displayBelongUnit(row) }}</div>
-          </template>
-        </el-table-column>
         <el-table-column label="位置" min-width="220">
           <template #default="{ row }">
             <div v-if="row.warehouseName">仓库：{{ row.warehouseName }}</div>
@@ -107,34 +99,22 @@
             <div>箱码：{{ row.boxCode || '-' }}</div>
           </template>
         </el-table-column>
-        <el-table-column label="日期" min-width="180">
-          <template #default="{ row }">
-            <div v-if="row.productionDate" class="sub-text">生产：{{ parseTime(row.productionDate, '{y}-{m}-{d}') }}</div>
-            <div v-if="row.expirationDate" class="sub-text">过期：{{ parseTime(row.expirationDate, '{y}-{m}-{d}') }}</div>
-          </template>
-        </el-table-column>
         <el-table-column label="备注" prop="remark" min-width="160" show-overflow-tooltip />
         <el-table-column label="操作" align="right" width="240">
           <template #default="{ row }">
             <el-button link type="primary" @click="handleView(row)">详情</el-button>
             <el-button
-              link
-              type="primary"
-              @click="handleTrace(row)"
-              v-hasPermi="['wms:itemInstance:list']"
-            >追踪</el-button>
-            <el-button
-              v-if="row.borrowed !== 1 && row.inBox !== 1"
+              v-if="canBorrowRow(row)"
               link
               type="primary"
               @click="handleBorrow(row)"
               v-hasPermi="['wms:borrowRecord:edit']"
             >借出</el-button>
-            <el-tooltip v-else :content="row.inBox === 1 ? '器材编码在箱内，不能直接借出' : '器材编码已借出，请先归还'" placement="top">
+            <el-tooltip v-else :content="getBorrowDisabledReason(row)" placement="top">
               <el-button link type="info" disabled>借出</el-button>
             </el-tooltip>
             <el-button
-              v-if="row.borrowed === 1"
+              v-if="canReturnRow(row)"
               link
               type="success"
               @click="handleReturn(row)"
@@ -158,7 +138,7 @@
       <el-form ref="instanceFormRef" :model="form" :rules="rules" label-width="108px">
         <el-row :gutter="20">
           <el-col :span="12">
-            <el-form-item label="器材编码" prop="instanceCode">
+            <el-form-item label="器材实例编码" prop="instanceCode">
               <el-input v-model="form.instanceCode" disabled />
             </el-form-item>
           </el-col>
@@ -183,48 +163,14 @@
         <el-row :gutter="20">
           <el-col :span="12">
             <el-form-item label="箱码" prop="boxCode">
-              <el-input v-model="form.boxCode" placeholder="未绑箱时可录入箱码" :disabled="form.inBox === 1" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="所在单位" prop="belongUnit">
-              <el-input v-model="form.belongUnit" placeholder="请输入所在单位" />
+              <el-input v-model="form.boxCode" placeholder="未绑箱时可录入箱码" :disabled="hasBox(form)" />
             </el-form-item>
           </el-col>
         </el-row>
         <el-row :gutter="20">
-          <el-col :span="12">
-            <el-form-item label="当前责任单位" prop="currentOwnerUnit">
-              <el-input v-model="form.currentOwnerUnit" placeholder="请输入当前责任单位" />
-            </el-form-item>
-          </el-col>
           <el-col :span="12">
             <el-form-item label="位置">
               <el-input :model-value="`${form.warehouseName || '-'} / ${form.areaName || '-'} / ${form.rackName || '-'} / ${form.locationName || '-'}`" disabled />
-            </el-form-item>
-          </el-col>
-        </el-row>
-        <el-row :gutter="20">
-          <el-col :span="12">
-            <el-form-item label="生产日期" prop="productionDate">
-              <el-date-picker
-                v-model="form.productionDate"
-                type="date"
-                format="YYYY-MM-DD"
-                value-format="YYYY-MM-DD HH:mm:ss"
-                style="width: 100%"
-              />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="过期日期" prop="expirationDate">
-              <el-date-picker
-                v-model="form.expirationDate"
-                type="date"
-                format="YYYY-MM-DD"
-                value-format="YYYY-MM-DD HH:mm:ss"
-                style="width: 100%"
-              />
             </el-form-item>
           </el-col>
         </el-row>
@@ -240,16 +186,16 @@
       </template>
     </el-drawer>
 
-    <el-dialog title="器材编码详情" v-model="detailDialog.visible" width="720px" append-to-body>
+    <el-dialog title="器材实例编码详情" v-model="detailDialog.visible" width="720px" append-to-body>
       <el-descriptions :column="2" border>
-        <el-descriptions-item label="器材编码">{{ detailDialog.data.instanceCode || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="器材实例编码">{{ detailDialog.data.instanceCode || '-' }}</el-descriptions-item>
         <el-descriptions-item label="器材状态">
           <dict-tag :options="wms_item_instance_status" :value="detailDialog.data.instanceStatus" />
         </el-descriptions-item>
         <el-descriptions-item label="器材">{{ detailDialog.data.itemName || '-' }}</el-descriptions-item>
         <el-descriptions-item label="器材规格">{{ detailDialog.data.skuName || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="在箱状态">{{ detailDialog.data.inBox === 1 ? '在箱' : '不在箱' }}</el-descriptions-item>
-        <el-descriptions-item label="借出状态">{{ detailDialog.data.borrowed === 1 ? '已借出' : '未借出' }}</el-descriptions-item>
+        <el-descriptions-item label="在箱状态">{{ hasBox(detailDialog.data) ? '在箱' : '不在箱' }}</el-descriptions-item>
+        <el-descriptions-item label="借出状态">{{ isBorrowed(detailDialog.data) ? '已借出' : '未借出' }}</el-descriptions-item>
         <el-descriptions-item label="仓库">{{ detailDialog.data.warehouseName || '-' }}</el-descriptions-item>
         <el-descriptions-item label="库区">{{ detailDialog.data.areaName || '-' }}</el-descriptions-item>
         <el-descriptions-item label="货架">{{ detailDialog.data.rackName || '-' }}</el-descriptions-item>
@@ -257,11 +203,7 @@
         <el-descriptions-item label="箱码">{{ detailDialog.data.boxCode || '-' }}</el-descriptions-item>
         <el-descriptions-item label="来源类型">{{ formatSourceType(detailDialog.data.sourceType) }}</el-descriptions-item>
         <el-descriptions-item label="来源单号">{{ detailDialog.data.sourceOrderNo || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="所在单位">{{ displayBelongUnit(detailDialog.data) }}</el-descriptions-item>
-        <el-descriptions-item label="当前责任单位">{{ detailDialog.data.currentOwnerUnit || '-' }}</el-descriptions-item>
         <el-descriptions-item label="来源明细ID">{{ detailDialog.data.receiptOrderDetailId || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="生产日期">{{ detailDialog.data.productionDate ? parseTime(detailDialog.data.productionDate, '{y}-{m}-{d}') : '-' }}</el-descriptions-item>
-        <el-descriptions-item label="过期日期">{{ detailDialog.data.expirationDate ? parseTime(detailDialog.data.expirationDate, '{y}-{m}-{d}') : '-' }}</el-descriptions-item>
         <el-descriptions-item label="备注" :span="2">{{ detailDialog.data.remark || '-' }}</el-descriptions-item>
       </el-descriptions>
     </el-dialog>
@@ -353,17 +295,11 @@ const initFormData = () => ({
   itemName: undefined,
   skuName: undefined,
   instanceStatus: undefined,
-  inBox: 0,
-  borrowed: 0,
   warehouseName: undefined,
   areaName: undefined,
   rackName: undefined,
   locationName: undefined,
   boxCode: undefined,
-  belongUnit: undefined,
-  currentOwnerUnit: undefined,
-  productionDate: undefined,
-  expirationDate: undefined,
   remark: undefined
 });
 
@@ -380,7 +316,6 @@ const data = reactive({
     areaId: undefined,
     rackId: undefined,
     locationId: undefined,
-    belongUnit: undefined,
     receiptOrderDetailId: undefined
   },
   rules: {}
@@ -402,7 +337,23 @@ const formatSourceType = (value) => {
   return value || '-';
 };
 
-const displayBelongUnit = (row = {}) => row.belongUnit ?? row.item?.defaultBelongUnit ?? row.itemSku?.item?.defaultBelongUnit ?? '-';
+const hasBox = (row) => !!row?.boxId;
+
+const isBorrowed = (row) => row?.instanceStatus === '借出';
+
+const canBorrowRow = (row) => !hasBox(row) && !isBorrowed(row);
+
+const canReturnRow = (row) => isBorrowed(row);
+
+const getBorrowDisabledReason = (row) => {
+  if (hasBox(row)) {
+    return '器材实例编码在箱内，不能直接借出';
+  }
+  if (isBorrowed(row)) {
+    return '器材实例编码已借出，请先归还';
+  }
+  return '当前器材实例不可借出';
+};
 
 const loadItemOptions = async () => {
   const res = await listItem({});
@@ -464,9 +415,6 @@ const applyRouteQuery = () => {
   }
   if (skuId) {
     queryParams.value.skuId = Number(skuId);
-  }
-  if (route.query.belongUnit) {
-    queryParams.value.belongUnit = route.query.belongUnit;
   }
 };
 
@@ -542,15 +490,6 @@ const handleReturn = (row) => {
     query: {
       itemInstanceId: row.id,
       borrowStatus: 'borrowed'
-    }
-  });
-};
-
-const handleTrace = (row) => {
-  router.push({
-    path: '/wms-trace-item/index',
-    query: {
-      instanceCode: row.instanceCode
     }
   });
 };

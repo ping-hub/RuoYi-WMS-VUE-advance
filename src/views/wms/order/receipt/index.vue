@@ -309,11 +309,8 @@ async function handlePrint(row) {
       skuName: detail.itemSku?.skuName,
       areaName: useWmsStore().areaMap.get(detail.areaId)?.areaName,
       quantity: Number(detail.quantity || 0).toFixed(0),
-      equipmentCode: detail.equipmentCode,
       unitPrice: detail.unitPrice,
-      productionDate: proxy.parseTime(detail.productionDate, '{y}-{m}-{d}'),
-      expirationDate: proxy.parseTime(detail.expirationDate, '{y}-{m}-{d}'),
-      amount: detail.lineAmount ?? detail.amount
+      lineAmount: detail.lineAmount
     }))
   }
   const printData = {

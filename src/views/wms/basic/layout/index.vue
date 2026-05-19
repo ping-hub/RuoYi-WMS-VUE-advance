@@ -149,7 +149,7 @@
               <div class="summary-section mt16">
                 <div class="summary-section__title">器材列表</div>
                 <el-table :data="locationSummary.itemInstances || []" size="small" border empty-text="当前货位暂无器材实例" max-height="320">
-                  <el-table-column label="器材编码" prop="instanceCode" min-width="160" />
+                  <el-table-column label="器材实例编码" prop="instanceCode" min-width="160" />
                   <el-table-column label="器材" prop="itemName" min-width="120" />
                   <el-table-column label="规格" prop="skuName" min-width="120" />
                   <el-table-column label="箱码" prop="boxCode" min-width="120" />

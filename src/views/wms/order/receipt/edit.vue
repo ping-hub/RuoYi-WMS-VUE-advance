@@ -126,14 +126,7 @@
             :data="form.details"
             border
             empty-text="暂无入库明细"
-          >
-            <el-table-column label="器材信息" prop="itemSku.itemName" min-width="100">
-              <template #default="{ row }">
-                <div>{{ row.itemSku?.item?.itemName || row.itemName || '-' }}</div>
-                <div class="sub-text">规格：{{ row.itemSku?.skuName || row.skuName || '-' }}</div>
-              </template>
-            </el-table-column>
-            <el-table-column label="器材实例编码" min-width="150"> 
+          ><el-table-column label="器材实例编码" min-width="150"> 
               <template #default="{ row }">
                 <span>{{ row.instanceCode || row.receiptItemInstances?.[0]?.instanceCode || '-' }}</span>
               </template>
@@ -179,32 +172,12 @@
                 <el-input-number v-model="row.lineAmount" :precision="2" :min="0" :controls="false" disabled></el-input-number>
               </template>
             </el-table-column>
-            <el-table-column label="生产日期/过期日期" width="250">
-              <template #default="scope">
-                <div class="flex-center">
-                  <span>生产日期：</span>
-                  <el-date-picker
-                    v-model="scope.row.productionDate"
-                    type="date"
-                    format="YYYY-MM-DD"
-                    value-format="YYYY-MM-DD HH:mm:ss"
-                    :disabled="isViewMode"
-                    style="width: 150px!important;"
-                  />
-                </div>
-                <div class="flex-center mt5">
-                  <span>过期日期：</span>
-                  <el-date-picker
-                    v-model="scope.row.expirationDate"
-                    type="date"
-                    format="YYYY-MM-DD"
-                    value-format="YYYY-MM-DD HH:mm:ss"
-                    :disabled="isViewMode"
-                    style="width: 150px!important;"
-                  />
-                </div>
-              </template>
-            </el-table-column>
+            <el-table-column label="器材编码" prop="itemCode" min-width="120" show-overflow-tooltip />
+            <el-table-column label="器材名称" prop="itemName" min-width="140" show-overflow-tooltip />
+            <el-table-column label="规格型号" prop="skuName" min-width="140" show-overflow-tooltip />
+            <el-table-column label="计量单位" prop="unit" width="110" />
+            <el-table-column label="产品标识" prop="productIdentifier" min-width="140" show-overflow-tooltip />
+            <el-table-column label="质量等级" prop="qualityGrade" width="120" show-overflow-tooltip />
             <el-table-column label="备注" width="180">
               <template #default="{ row }">
                 <el-input v-model="row.remark" placeholder="请输入备注" :disabled="isViewMode" />
@@ -257,7 +230,7 @@
               />
             </el-select>
           </el-form-item>
-          <el-form-item label="实例编码">
+          <el-form-item label="器材实例编码">
             <el-input v-model="itemInstanceSelectDialog.query.instanceCode" placeholder="请输入器材实例编码" clearable @keyup.enter="getReceiptItemInstanceList" />
           </el-form-item>
           <el-form-item>
@@ -454,9 +427,10 @@ const createReceiptDetailFromInstance = (item = {}) => syncReceiptDetail({
   itemName: item.itemName,
   itemCode: item.itemCode,
   skuName: item.skuName,
+  unit: item.unit,
+  productIdentifier: item.productIdentifier,
+  qualityGrade: item.qualityGrade,
   quantity: 1,
-  productionDate: item.productionDate,
-  expirationDate: item.expirationDate,
   warehouseId: form.value.warehouseId,
   areaId: form.value.areaId,
   rackId: undefined,
@@ -474,7 +448,7 @@ const createReceiptDetailFromInstance = (item = {}) => syncReceiptDetail({
 const syncReceiptDetail = (detail) => {
   const firstReceiptInstance = detail.receiptItemInstances?.[0] || {}
   const unitPrice = detail.unitPrice
-  const lineAmount = detail.lineAmount ?? detail.amount ?? calcLineAmount(detail.quantity, unitPrice)
+  const lineAmount = detail.lineAmount ?? calcLineAmount(detail.quantity, unitPrice)
   return {
     ...detail,
     itemId: detail.itemId ?? detail.itemSku?.item?.id,
@@ -482,10 +456,12 @@ const syncReceiptDetail = (detail) => {
     itemName: detail.itemName ?? detail.itemSku?.item?.itemName,
     itemCode: detail.itemCode ?? detail.itemSku?.item?.itemCode,
     skuName: detail.skuName ?? detail.itemSku?.skuName,
+    unit: detail.unit ?? detail.itemSku?.item?.unit,
+    productIdentifier: detail.productIdentifier ?? detail.itemSku?.productIdentifier,
+    qualityGrade: detail.qualityGrade ?? detail.itemSku?.qualityGrade,
     itemInstanceId: detail.itemInstanceId ?? firstReceiptInstance.id,
     instanceCode: detail.instanceCode ?? firstReceiptInstance.instanceCode ?? '',
     boxCode: detail.boxCode ?? firstReceiptInstance.boxCode ?? '',
-    equipmentCode: detail.equipmentCode ?? detail.itemSku?.item?.itemCode ?? detail.itemCode ?? firstReceiptInstance.instanceCode,
     quantity: Number(detail.quantity || 1),
     generateItemInstance: 1,
     rackId: detail.rackId,
@@ -493,8 +469,7 @@ const syncReceiptDetail = (detail) => {
     receiptItemInstances: (detail.receiptItemInstances || []).map(it => normalizeReceiptInstance(it)),
     recommendTargets: detail.recommendTargets ?? [],
     unitPrice,
-    lineAmount,
-    amount: lineAmount
+    lineAmount
   }
 }
 
@@ -533,7 +508,6 @@ const recalculateOrderSummary = () => {
 
 const handleDetailChange = (row) => {
   row.lineAmount = calcLineAmount(row.quantity, row.unitPrice)
-  row.amount = row.lineAmount
   recalculateOrderSummary()
 }
 
@@ -721,13 +695,15 @@ const doSave = async (receiptOrderStatus = 0) => {
         id: it.id,
         receiptOrderId: form.value.id,
         skuId: it.skuId ?? it.itemSku?.id,
-        amount: it.lineAmount,
         quantity: 1,
-        equipmentCode: it.equipmentCode,
+        itemCode: it.itemCode,
+        itemName: it.itemName,
+        skuName: it.skuName,
+        unit: it.unit,
+        productIdentifier: it.productIdentifier,
+        qualityGrade: it.qualityGrade,
         unitPrice: it.unitPrice,
         lineAmount: it.lineAmount,
-        productionDate: it.productionDate,
-        expirationDate: it.expirationDate,
         warehouseId: form.value.warehouseId,
         areaId: it.areaId,
         rackId: it.rackId,
@@ -813,13 +789,15 @@ const doWarehousing = async () => {
         id: it.id,
         receiptOrderId: form.value.id,
         skuId: it.skuId ?? it.itemSku?.id,
-        amount: it.lineAmount,
         quantity: 1,
-        equipmentCode: it.equipmentCode,
+        itemCode: it.itemCode,
+        itemName: it.itemName,
+        skuName: it.skuName,
+        unit: it.unit,
+        productIdentifier: it.productIdentifier,
+        qualityGrade: it.qualityGrade,
         unitPrice: it.unitPrice,
         lineAmount: it.lineAmount,
-        productionDate: it.productionDate,
-        expirationDate: it.expirationDate,
         warehouseId: form.value.warehouseId,
         areaId: it.areaId,
         rackId: it.rackId,

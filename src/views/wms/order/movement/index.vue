@@ -82,11 +82,6 @@
                     <div>{{ row?.itemSku?.skuName }}</div>
                   </template>
                 </el-table-column>
-                <el-table-column label="器材编码" min-width="120">
-                  <template #default="{ row }">
-                    <div>{{ row.equipmentCode || row?.itemSku?.item?.itemCode || '-' }}</div>
-                  </template>
-                </el-table-column>
                 <el-table-column label="源位置" min-width="220">
                   <template #default="{ row }">
                     <div>库区：{{ row.sourceAreaName || '-' }}</div>
@@ -112,30 +107,18 @@
                     <el-statistic :value="Number(row.quantity)" :precision="0"/>
                   </template>
                 </el-table-column>
-                <el-table-column label="生产日期" prop="inventoryDetail.productionDate">
-                  <template #default="{ row }">
-                    <div v-if="row.productionDate">{{ parseTime(row.productionDate, '{y}-{m}-{d}') }}</div>
-                  </template>
-                </el-table-column>
-                <el-table-column label="过期日期" prop="inventoryDetail.expirationDate">
-                  <template #default="{ row }">
-                    <div v-if="row.expirationDate">{{ parseTime(row.expirationDate, '{y}-{m}-{d}') }}</div>
-                  </template>
-                </el-table-column>
                 <el-table-column label="专装对象" min-width="180">
                   <template #default="{ row }">
-                    <div v-if="row.instanceCode">物品码：{{ row.instanceCode }}</div>
+                    <div v-if="row.instanceCode">器材实例编码：{{ row.instanceCode }}</div>
                     <div v-if="row.boxCode" class="sub-text">箱码：{{ row.boxCode }}</div>
                     <div v-if="!row.instanceCode && !row.boxCode">-</div>
                   </template>
                 </el-table-column>
                 <el-table-column label="备注" prop="remark" min-width="140" show-overflow-tooltip />
-                <el-table-column label="追踪" min-width="180" align="center">
+                <el-table-column label="关联" min-width="180" align="center">
                   <template #default="{ row }">
                     <el-button v-if="row.instanceCode" link type="primary" @click="handleGoItem(row)">明细</el-button>
-                    <el-button v-if="row.instanceCode" link type="primary" @click="handleGoItemTrace(row)">明细追踪</el-button>
                     <el-button v-if="row.boxCode" link type="primary" @click="handleGoBox(row)">箱体</el-button>
-                    <el-button v-if="row.boxCode" link type="primary" @click="handleGoBoxTrace(row)">箱体追踪</el-button>
                     <span v-if="!row.instanceCode && !row.boxCode">-</span>
                   </template>
                 </el-table-column>
@@ -373,25 +356,11 @@ function handleGoItem(row) {
   router.push({ path: "/wms-item-instance/index", query: { instanceCode: row.instanceCode } });
 }
 
-function handleGoItemTrace(row) {
-  if (!row.instanceCode) {
-    return;
-  }
-  router.push({ path: "/wms-trace-item/index", query: { instanceCode: row.instanceCode } });
-}
-
 function handleGoBox(row) {
   if (!row.boxCode) {
     return;
   }
   router.push({ path: "/wms-box/index", query: { boxCode: row.boxCode } });
-}
-
-function handleGoBoxTrace(row) {
-  if (!row.boxCode) {
-    return;
-  }
-  router.push({ path: "/wms-trace-box/index", query: { boxCode: row.boxCode } });
 }
 
 function handleGoDetail(row) {

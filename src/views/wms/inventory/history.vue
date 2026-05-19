@@ -19,12 +19,6 @@
         <el-form-item label="器材名称" prop="itemName">
           <el-input v-model="queryParams.itemName" clearable placeholder="请输入器材名称" />
         </el-form-item>
-        <el-form-item label="器材编码" prop="equipmentCode">
-          <el-input v-model="queryParams.equipmentCode" clearable placeholder="请输入器材编码" />
-        </el-form-item>
-        <el-form-item label="所在单位" prop="belongUnit">
-          <el-input v-model="queryParams.belongUnit" clearable placeholder="请输入所在单位" />
-        </el-form-item>
         <el-form-item label="操作时间" prop="createTimeRange">
           <el-date-picker
             v-model="queryParams.createTimeRange"
@@ -73,12 +67,6 @@
         <el-table-column label="器材信息" min-width="200">
           <template #default="{ row }">
             <div>{{ row.itemName || row.item?.itemName || '-' }}</div>
-            <div class="sub-text">器材编码：{{ row.equipmentCode || row.item?.itemCode || '-' }}</div>
-          </template>
-        </el-table-column>
-        <el-table-column label="所在单位" min-width="140" show-overflow-tooltip>
-          <template #default="{ row }">
-            <span>{{ displayBelongUnit(row) }}</span>
           </template>
         </el-table-column>
         <el-table-column label="操作类型" align="center" width="100">
@@ -104,15 +92,8 @@
             </div>
             <div class="flex-space-between">
               <div>总价：</div>
-              <span>{{ formatMoney(row.lineAmount || row.amount) }}</span>
+              <span>{{ formatMoney(row.lineAmount) }}</span>
             </div>
-          </template>
-        </el-table-column>
-        <el-table-column label="生产日期/过期日期" min-width="200">
-          <template #default="{ row }">
-            <div v-if="resolveDateValue(row, 'productionDate')">生产日期：{{ parseTime(resolveDateValue(row, 'productionDate'), '{y}-{m}-{d}') }}</div>
-            <div v-if="resolveDateValue(row, 'expirationDate')">过期日期：{{ parseTime(resolveDateValue(row, 'expirationDate'), '{y}-{m}-{d}') }}</div>
-            <div v-if="!resolveDateValue(row, 'productionDate') && !resolveDateValue(row, 'expirationDate')">-</div>
           </template>
         </el-table-column>
         <el-table-column label="备注" prop="remark" min-width="140" show-overflow-tooltip />
@@ -164,8 +145,6 @@ const queryParams = ref({
   orderNo: undefined,
   itemName: undefined,
   itemCode: undefined,
-  equipmentCode: undefined,
-  belongUnit: undefined,
   skuName: undefined,
   skuCode: undefined,
   place: [],
@@ -179,7 +158,7 @@ const pageSummary = computed(() => {
   let lineAmount = 0
   inventoryHistoryList.value.forEach(item => {
     quantity += Number(item.quantity || 0)
-    lineAmount += Number(item.lineAmount || item.amount || 0)
+    lineAmount += Number(item.lineAmount || 0)
   })
   return {
     recordCount: inventoryHistoryList.value.length,
@@ -265,15 +244,12 @@ const handleGoOrder = (row) => {
   router.push({ path, query: { id: row.orderId, mode: 'view', returnFullPath: route.fullPath } })
 }
 
-const displayBelongUnit = (row = {}) => row.belongUnit ?? row.item?.defaultBelongUnit ?? row.itemSku?.item?.defaultBelongUnit ?? '-'
 const resolveDateValue = (row = {}, field) => row[field] ?? row.inventoryDetail?.[field] ?? row.itemInstance?.[field]
 const formatMoney = (value) => (value || value === 0) ? Number(value).toFixed(2) : '-'
 
 const initFromRoute = () => {
   queryParams.value.orderNo = route.query.orderNo || undefined
   queryParams.value.itemName = route.query.itemName || undefined
-  queryParams.value.equipmentCode = route.query.equipmentCode || undefined
-  queryParams.value.belongUnit = route.query.belongUnit || undefined
 }
 
 initFromRoute()
