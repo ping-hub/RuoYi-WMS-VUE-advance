@@ -9,7 +9,7 @@
           <el-input v-model="queryParams.itemName" placeholder="请输入器材名称" clearable @keyup.enter="handleQuery" />
         </el-form-item>
         <el-form-item label="器材类型" prop="equipmentType">
-          <el-select v-model="queryParams.equipmentType" placeholder="请选择器材类型" clearable style="width: 120px">
+          <el-select v-model="queryParams.equipmentType" placeholder="请选择器材类型" clearable style="width: 180px">
             <el-option v-for="item in equipmentTypeOptions" :key="item.value" :label="item.label" :value="item.value" />
           </el-select>
         </el-form-item>
@@ -81,21 +81,31 @@
           </div>
 
           <el-table v-loading="loading" :data="itemList" border empty-text="暂无器材">
-            <el-table-column label="器材编码" prop="itemCode" min-width="140" show-overflow-tooltip />
-            <el-table-column label="器材名称" prop="itemName" min-width="180" />
-            <el-table-column label="器材类型" prop="equipmentType" min-width="140" show-overflow-tooltip />
-            <el-table-column label="器材分类" min-width="140">
+            <el-table-column label="器材编码" prop="itemCode" :width="100" show-overflow-tooltip />
+            <el-table-column label="器材名称" prop="itemName" :width="111" show-overflow-tooltip />
+            <el-table-column label="规格信息" :width="120" show-overflow-tooltip >
               <template #default="{ row }">
-                {{ getCategoryName(resolveCategoryId(row)) }}
+                <div v-if="row.sku?.length" class="sku-summary-cell">
+                  <el-tag v-for="sku in row.sku" :key="sku.id || sku.skuName" class="mr6 mb6" type="info">
+                    {{ sku.skuName }}
+                  </el-tag>
+                </div>
+                <span v-else>-</span>
               </template>
             </el-table-column>
-            <el-table-column label="计量单位" prop="unit" width="100" />
-            <el-table-column label="启用状态" width="100">
+            <el-table-column label="器材类型" prop="equipmentType" :width="getTableHeaderWidth('器材类型')" show-overflow-tooltip />
+            <el-table-column label="器材分类" :width="getTableHeaderWidth('器材分类')" show-overflow-tooltip>
+              <template #default="{ row }">
+                <div class="cell-ellipsis" :title="getCategoryName(resolveCategoryId(row))">{{ getCategoryName(resolveCategoryId(row)) }}</div>
+              </template>
+            </el-table-column>
+            <el-table-column label="计量单位" prop="unit" :width="getTableHeaderWidth('计量单位')" show-overflow-tooltip />
+            <el-table-column label="启用状态" :width="getTableHeaderWidth('启用状态')">
               <template #default="{ row }">
                 <el-tag :type="row.status === '0' ? 'info' : 'success'">{{ row.status === '0' ? '停用' : '启用' }}</el-tag>
               </template>
             </el-table-column>
-            <el-table-column label="备注" prop="remark" min-width="180" show-overflow-tooltip />
+            <el-table-column label="备注" prop="remark" :width="60" show-overflow-tooltip />
             <el-table-column label="操作" align="right" width="260">
               <template #default="{ row }">
                 <el-button link type="primary" icon="Printer" @click="handleBatchPrintQrCode(row)">批量打印二维码</el-button>
@@ -190,35 +200,48 @@
         <template #header>
           <div class="panel-header">
             <span class="panel-title">器材规格信息</span>
+            <el-button type="primary" plain icon="Plus" @click="handleAddSku">新增规格</el-button>
           </div>
         </template>
         <el-form ref="skuFormRef" :model="skuForm" :rules="skuRules" :show-message="false" label-width="110px">
-          <el-row :gutter="20">
-            <el-col :span="12">
-              <el-form-item prop="itemSkuList.0.skuName" :rules="skuRules.skuName" label="器材规格名称">
-                <el-input v-model="skuForm.itemSkuList[0].skuName" placeholder="请输入器材规格名称" />
-              </el-form-item>
-            </el-col>
-            <el-col :span="12">
-              <el-form-item label="产品标识">
-                <el-input v-model="skuForm.itemSkuList[0].productIdentifier" placeholder="请输入产品标识" />
-              </el-form-item>
-            </el-col>
-          </el-row>
-          <el-row :gutter="20">
-            <el-col :span="12">
-              <el-form-item label="质量等级">
-                <el-input v-model="skuForm.itemSkuList[0].qualityGrade" placeholder="请输入质量等级" />
-              </el-form-item>
-            </el-col>
-            <el-col :span="12">
-              <el-form-item label="状态">
-                <el-select v-model="skuForm.itemSkuList[0].status" placeholder="请选择状态" style="width: 100%">
-                  <el-option v-for="item in statusOptions" :key="item.value" :label="item.label" :value="item.value" />
-                </el-select>
-              </el-form-item>
-            </el-col>
-          </el-row>
+          <div v-for="(sku, index) in skuForm.itemSkuList" :key="sku.id || `sku-${index}`" class="sku-edit-card">
+            <div class="sku-edit-card__header">
+              <span>规格{{ index + 1 }}</span>
+              <el-button
+                v-if="skuForm.itemSkuList.length > 1"
+                link
+                type="danger"
+                icon="Delete"
+                @click="handleRemoveSku(index)"
+              >删除规格</el-button>
+            </div>
+            <el-row :gutter="20">
+              <el-col :span="12">
+                <el-form-item :prop="`itemSkuList.${index}.skuName`" :rules="skuRules.skuName" label="器材规格名称">
+                  <el-input v-model="sku.skuName" placeholder="请输入器材规格名称" />
+                </el-form-item>
+              </el-col>
+              <el-col :span="12">
+                <el-form-item label="产品标识">
+                  <el-input v-model="sku.productIdentifier" placeholder="请输入产品标识" />
+                </el-form-item>
+              </el-col>
+            </el-row>
+            <el-row :gutter="20">
+              <el-col :span="12">
+                <el-form-item label="质量等级">
+                  <el-input v-model="sku.qualityGrade" placeholder="请输入质量等级" />
+                </el-form-item>
+              </el-col>
+              <el-col :span="12">
+                <el-form-item label="状态">
+                  <el-select v-model="sku.status" placeholder="请选择状态" style="width: 100%">
+                    <el-option v-for="item in statusOptions" :key="item.value" :label="item.label" :value="item.value" />
+                  </el-select>
+                </el-form-item>
+              </el-col>
+            </el-row>
+          </div>
         </el-form>
       </el-card>
 
@@ -256,8 +279,32 @@
       </template>
     </el-dialog>
 
-    <el-dialog v-model="printDialog.visible" title="选择打印机" width="520px" append-to-body :close-on-click-modal="false" @closed="handlePrintDialogClosed">
+    <el-dialog v-model="printDialog.visible" title="批量打印器材二维码" width="520px" append-to-body :close-on-click-modal="false" @closed="handlePrintDialogClosed">
       <el-form label-width="90px">
+        <el-form-item label="器材">
+          <span>{{ printDialog.itemName || '-' }}</span>
+        </el-form-item>
+        <el-form-item label="打印规格">
+          <el-select v-model="printDialog.skuId" placeholder="请选择规格" filterable style="width: 100%" :disabled="printDialog.loading || printDialog.sending">
+            <el-option
+              v-for="item in printDialog.skuOptions"
+              :key="item.id"
+              :label="formatPrintSkuLabel(item)"
+              :value="item.id"
+              :disabled="item.status === '0'"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="打印数量">
+          <el-input-number
+            v-model="printDialog.qrCodeCount"
+            :min="1"
+            :precision="0"
+            :step="1"
+            :disabled="printDialog.loading || printDialog.sending"
+            style="width: 100%"
+          />
+        </el-form-item>
         <el-form-item label="打印机">
           <el-select v-model="printDialog.printerId" placeholder="请选择打印机" filterable style="width: 100%" :disabled="printDialog.loading || printDialog.sending">
             <el-option v-for="item in printDialog.printers" :key="item.printerId" :label="item.printerId" :value="item.printerId" />
@@ -299,6 +346,17 @@ const statusOptions = [
   { label: '停用', value: '0' }
 ];
 
+const getTableHeaderWidth = (label) => {
+  return [...label].reduce((total, char) => total + (/[^\x00-\xff]/.test(char) ? 14 : 8), 24);
+};
+
+const getSkuSummary = (skuList = []) => {
+  if (!skuList?.length) {
+    return '-';
+  }
+  return skuList.map(item => item.skuName).filter(Boolean).join('，') || '-';
+};
+
 const itemList = ref([]);
 const loading = ref(true);
 const buttonLoading = ref(false);
@@ -322,6 +380,11 @@ const printDialog = reactive({
   visible: false,
   loading: false,
   sending: false,
+  row: null,
+  itemName: '',
+  skuId: undefined,
+  skuOptions: [],
+  qrCodeCount: 1,
   printers: [],
   printerId: '',
   total: 0,
@@ -479,7 +542,7 @@ const normalizeSkuItem = (item) => {
   };
 };
 
-const normalizeSkuList = () => skuForm.itemSkuList.slice(0, 1).map(item => normalizeSkuItem(item));
+const normalizeSkuList = () => skuForm.itemSkuList.map(item => normalizeSkuItem(item));
 
 const normalizeItemPayload = () => ({
   ...form.value,
@@ -578,6 +641,18 @@ const handleAdd = () => {
   dialog.title = '新增器材';
 };
 
+const handleAddSku = () => {
+  skuForm.itemSkuList.push(createEmptySku());
+};
+
+const handleRemoveSku = (index) => {
+  if (skuForm.itemSkuList.length <= 1) {
+    proxy.$modal.msgError('至少保留一个器材规格');
+    return;
+  }
+  skuForm.itemSkuList.splice(index, 1);
+};
+
 const handleUpdate = async (row) => {
   reset();
   const res = await getItem(row.id);
@@ -588,44 +663,34 @@ const handleUpdate = async (row) => {
     equipmentType: res.data.equipmentType || res.data.itemType,
     status: res.data.status || '1'
   };
-  skuForm.itemSkuList = res.data.sku?.length ? [normalizeSkuItem(res.data.sku[0])] : [createEmptySku()];
+  skuForm.itemSkuList = res.data.sku?.length ? res.data.sku.map(item => normalizeSkuItem(item)) : [createEmptySku()];
   dialog.visible = true;
   dialog.title = '修改器材';
 };
 
 const handleBatchPrintQrCode = async (row) => {
-  try {
-    const { value } = await ElMessageBox.prompt(
-      '请输入要打印的二维码个数',
-      '批量打印器材二维码',
-      {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        closeOnClickModal: false,
-        inputValue: '1',
-        inputPattern: /^[1-9]\d*$/,
-        inputErrorMessage: '请输入大于0的整数'
-      }
-    );
-    const payload = {
-      row: { ...row },
-      qrCodeCount: Number(value)
-    };
-    const res = await batchPrintItemQrCode(payload);
-    const details = res?.data?.details || [];
-    const codes = details.map(item => item.instanceCode).filter(Boolean);
-    if (!codes.length) {
-      proxy.$modal.msgError('后端未返回可打印的器材实例明细');
-      return;
-    }
-    printCodes.value = codes;
-    await openPrintDialog();
-  } catch (error) {
-    if (error === 'cancel' || error === 'close') {
-      return;
-    }
-    throw error;
+  let skuOptions = row.sku || [];
+  if (!skuOptions.length) {
+    const res = await getItem(row.id);
+    skuOptions = res.data?.sku || [];
   }
+  if (!skuOptions.length) {
+    proxy.$modal.msgError('当前器材未维护规格，无法批量打印二维码');
+    return;
+  }
+  const defaultSku = skuOptions.find(item => item.status !== '0') || skuOptions[0];
+  printDialog.row = {
+    id: row.id,
+    itemCode: row.itemCode,
+    itemName: row.itemName,
+    remark: row.remark
+  };
+  printDialog.itemName = row.itemName;
+  printDialog.skuOptions = skuOptions;
+  printDialog.skuId = defaultSku?.id;
+  printDialog.qrCodeCount = 1;
+  printDialog.visible = true;
+  await loadPrinters();
 };
 
 async function ensurePrintClient() {
@@ -665,8 +730,6 @@ async function openPrintDialog() {
   printDialog.total = printCodes.value.length;
   printDialog.current = 0;
   printDialog.errorMessage = '';
-  printDialog.visible = true;
-  await loadPrinters();
 }
 
 async function handleConfirmPrint() {
@@ -674,14 +737,32 @@ async function handleConfirmPrint() {
     proxy.$modal.msgError('请选择打印机');
     return;
   }
-  if (!printCodes.value.length) {
-    proxy.$modal.msgError('没有可打印的数据');
+  if (!printDialog.skuId) {
+    proxy.$modal.msgError('请选择打印规格');
+    return;
+  }
+  if (!Number.isInteger(Number(printDialog.qrCodeCount)) || Number(printDialog.qrCodeCount) <= 0) {
+    proxy.$modal.msgError('请输入正确的打印数量');
     return;
   }
   localStorage.setItem('wss_print_printer_id', printDialog.printerId);
   printDialog.sending = true;
   printDialog.errorMessage = '';
   try {
+    const payload = {
+      row: { ...printDialog.row },
+      skuId: printDialog.skuId,
+      qrCodeCount: Number(printDialog.qrCodeCount)
+    };
+    const res = await batchPrintItemQrCode(payload);
+    const details = res?.data?.details || [];
+    const codes = details.map(item => item.instanceCode).filter(Boolean);
+    if (!codes.length) {
+      proxy.$modal.msgError('后端未返回可打印的器材实例明细');
+      return;
+    }
+    printCodes.value = codes;
+    openPrintDialog();
     await ensurePrintClient();
     for (const code of printCodes.value) {
       const command = buildQrTscCommand(code);
@@ -715,9 +796,15 @@ function handlePrintDialogClosed() {
   printDialog.errorMessage = '';
   printDialog.loading = false;
   printDialog.sending = false;
+  printDialog.row = null;
+  printDialog.itemName = '';
+  printDialog.skuId = undefined;
+  printDialog.skuOptions = [];
+  printDialog.qrCodeCount = 1;
   printDialog.printers = [];
   printDialog.total = 0;
   printDialog.current = 0;
+  printCodes.value = [];
   try {
     printClient?.disconnect();
   } finally {
@@ -822,6 +909,14 @@ onMounted(async () => {
     handleAdd();
   }
 });
+
+const formatPrintSkuLabel = (sku) => {
+  if (!sku) {
+    return '';
+  }
+  const extras = [sku.productIdentifier, sku.qualityGrade].filter(Boolean).join(' / ');
+  return extras ? `${sku.skuName} (${extras})` : sku.skuName;
+};
 </script>
 
 <style scoped>
@@ -864,6 +959,29 @@ onMounted(async () => {
 
 .el-tree-node__content {
   height: 35px;
+}
+
+.sku-edit-card {
+  border: 1px solid var(--el-border-color-light);
+  border-radius: 6px;
+  padding: 16px 16px 0;
+}
+
+.sku-edit-card + .sku-edit-card {
+  margin-top: 16px;
+}
+
+.sku-edit-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.cell-ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 </style>
 

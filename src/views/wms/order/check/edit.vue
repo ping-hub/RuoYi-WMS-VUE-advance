@@ -121,6 +121,9 @@
                       scope.row.itemSku.item.itemName + (scope.row.itemSku.item.itemCode ? ('(' + scope.row.itemSku.item.itemCode + ')') : '')
                     }}
                   </div>
+                  <div>规格：{{ scope.row.skuName || scope.row.itemSku?.skuName || '-' }}</div>
+                  <div v-if="scope.row.productIdentifier || scope.row.itemSku?.productIdentifier">产品标识：{{ scope.row.productIdentifier || scope.row.itemSku?.productIdentifier }}</div>
+                  <div v-if="scope.row.qualityGrade || scope.row.itemSku?.qualityGrade">质量等级：{{ scope.row.qualityGrade || scope.row.itemSku?.qualityGrade }}</div>
                 </template>
             </el-table-column>
             <el-table-column label="货位信息" min-width="220">

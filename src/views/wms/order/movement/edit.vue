@@ -5,7 +5,7 @@
       <el-card header="调拨单基本信息">
         <el-form label-width="108px" :model="form" ref="movementForm" :rules="rules" :disabled="isViewMode">
           <el-row :gutter="24">
-            <el-col :span="11">
+            <el-col :span="12">
               <el-form-item label="调拨单号" prop="movementOrderNo">
                 <el-input v-model="form.movementOrderNo" placeholder="调拨单号"
                           :disabled="form.id"></el-input>
@@ -31,7 +31,7 @@
             </el-col>
           </el-row>
           <el-row :gutter="24">
-            <el-col :span="11">
+            <el-col :span="12">
               <el-form-item label="调拨类型" prop="movementType">
                 <el-radio-group v-model="form.movementType">
                   <el-radio-button v-for="item in wms_movement_type" :key="item.value" :label="item.value">{{ item.label }}</el-radio-button>
@@ -77,6 +77,11 @@
                 </el-select>
               </el-form-item>
             </el-col>
+            <el-col :span="6">
+              <el-form-item label="调拨日期" prop="dispatchDate">
+                <el-date-picker v-model="form.dispatchDate" type="date" value-format="YYYY-MM-DD" format="YYYY-MM-DD" style="width: 100%" />
+              </el-form-item>
+            </el-col>
           </el-row>
           <el-row :gutter="24">
             <el-col :span="6">
@@ -117,30 +122,23 @@
               </el-form-item>
             </el-col>
             <el-col :span="6">
-              <el-form-item label="调拨日期" prop="dispatchDate">
-                <el-date-picker v-model="form.dispatchDate" type="date" value-format="YYYY-MM-DD" format="YYYY-MM-DD" style="width: 100%" />
-              </el-form-item>
-            </el-col>
-          </el-row>
-          <el-row :gutter="24">
-            <el-col :span="6">
               <el-form-item label="有效日期" prop="effectiveDate">
                 <el-date-picker v-model="form.effectiveDate" type="date" value-format="YYYY-MM-DD" format="YYYY-MM-DD" style="width: 100%" />
               </el-form-item>
             </el-col>
+          </el-row>
+          <el-row :gutter="24">
             <el-col :span="6">
               <el-form-item label="发出日期" prop="issueDate">
                 <el-date-picker v-model="form.issueDate" type="date" value-format="YYYY-MM-DD" format="YYYY-MM-DD" style="width: 100%" />
               </el-form-item>
             </el-col>
-          </el-row>
-          <el-row :gutter="24">
-            <el-col :span="11">
+            <el-col :span="18">
               <el-form-item label="备注" prop="remark">
                 <el-input
                   v-model="form.remark"
                   placeholder="备注...100个字符以内"
-                  rows="4"
+                  rows="2"
                   maxlength="100"
                   type="textarea"
                   show-word-limit="show-word-limit"

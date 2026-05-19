@@ -35,6 +35,9 @@
                 <template #default="{ row }">
                   <div>{{ row.item.itemName }}</div>
                   <div v-if="row.item.itemCode">编号：{{ row.item.itemCode }}</div>
+                  <div>规格：{{ row.skuName || '-' }}</div>
+                  <div v-if="row.productIdentifier">产品标识：{{ row.productIdentifier }}</div>
+                  <div v-if="row.qualityGrade">质量等级：{{ row.qualityGrade }}</div>
                 </template>
               </el-table-column>
               <el-table-column label="操作" width="100" v-if="singleSelect" align="right">

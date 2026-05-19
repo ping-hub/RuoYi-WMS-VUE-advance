@@ -59,8 +59,11 @@
       <el-table-column label="库区" prop="areaName"/>
       <el-table-column label="器材信息" prop="itemId">
         <template #default="{ row }">
-          <div>{{ row.item.itemName }}</div>
-          <div v-if="row.item.itemCode">编号：{{ row.item.itemCode }}</div>
+          <div>{{ row.itemName || row.item?.itemName || '-' }}</div>
+          <div v-if="row.itemCode || row.item?.itemCode">编号：{{ row.itemCode || row.item?.itemCode }}</div>
+          <div>规格：{{ row.skuName || row.itemSku?.skuName || '-' }}</div>
+          <div v-if="row.productIdentifier || row.itemSku?.productIdentifier">产品标识：{{ row.productIdentifier || row.itemSku?.productIdentifier }}</div>
+          <div v-if="row.qualityGrade || row.itemSku?.qualityGrade">质量等级：{{ row.qualityGrade || row.itemSku?.qualityGrade }}</div>
         </template>
       </el-table-column>
       <el-table-column label="入库日期" align="left" prop="createTime" width="140">

@@ -33,6 +33,9 @@
         <template #default="{ row }">
           <div>{{ row.item.itemName }}</div>
           <div v-if="row.item.itemCode">编号：{{ row.item.itemCode }}</div>
+          <div>规格：{{ row.itemSku?.skuName || row.skuName || '-' }}</div>
+          <div v-if="row.itemSku?.productIdentifier || row.productIdentifier">产品标识：{{ row.itemSku?.productIdentifier || row.productIdentifier }}</div>
+          <div v-if="row.itemSku?.qualityGrade || row.qualityGrade">质量等级：{{ row.itemSku?.qualityGrade || row.qualityGrade }}</div>
         </template>
       </el-table-column>
       <el-table-column label="剩余库存" prop="quantity" align="right">

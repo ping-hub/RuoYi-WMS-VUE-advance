@@ -19,6 +19,12 @@
         <el-form-item label="器材名称" prop="itemName">
           <el-input v-model="queryParams.itemName" clearable placeholder="请输入器材名称" />
         </el-form-item>
+        <el-form-item label="器材编码" prop="itemCode">
+          <el-input v-model="queryParams.itemCode" clearable placeholder="请输入器材编码" />
+        </el-form-item>
+        <el-form-item label="规格型号" prop="skuName">
+          <el-input v-model="queryParams.skuName" clearable placeholder="请输入规格型号" />
+        </el-form-item>
         <el-form-item label="操作时间" prop="createTimeRange">
           <el-date-picker
             v-model="queryParams.createTimeRange"
@@ -67,6 +73,10 @@
         <el-table-column label="器材信息" min-width="200">
           <template #default="{ row }">
             <div>{{ row.itemName || row.item?.itemName || '-' }}</div>
+            <div v-if="row.item?.itemCode">器材编码：{{ row.item.itemCode }}</div>
+            <div>规格：{{ row.itemSku?.skuName || '-' }}</div>
+            <div v-if="row.itemSku?.productIdentifier">产品标识：{{ row.itemSku.productIdentifier }}</div>
+            <div v-if="row.itemSku?.qualityGrade">质量等级：{{ row.itemSku.qualityGrade }}</div>
           </template>
         </el-table-column>
         <el-table-column label="操作类型" align="center" width="100">

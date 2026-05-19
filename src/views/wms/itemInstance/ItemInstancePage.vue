@@ -1,96 +1,116 @@
 <template>
   <div class="app-container">
     <el-card>
-      <el-form ref="queryRef" :model="queryParams" :inline="true" label-width="88px">
-        <el-form-item label="器材实例编码" prop="instanceCode">
-          <el-input v-model="queryParams.instanceCode" placeholder="请输入器材实例编码" clearable @keyup.enter="handleQuery" />
-        </el-form-item>
-        <el-form-item label="器材" prop="itemId">
-          <el-select v-model="queryParams.itemId" placeholder="请选择器材" clearable filterable style="width: 200px" @change="handleQueryItemChange">
-            <el-option
-              v-for="item in itemOptions"
-              :key="item.id"
-              :label="item.itemCode ? item.itemName + ' (' + item.itemCode + ')' : item.itemName"
-              :value="item.id"
-            />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="器材规格" prop="skuId">
-          <el-select v-model="queryParams.skuId" placeholder="请选择器材规格" clearable filterable style="width: 180px">
-            <el-option
-              v-for="item in querySkuOptions"
-              :key="item.id"
-              :label="item.skuCode ? item.skuName + ' (' + item.skuCode + ')' : item.skuName"
-              :value="item.id"
-            />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="器材状态" prop="instanceStatus">
-          <el-select v-model="queryParams.instanceStatus" placeholder="请选择状态" clearable style="width: 160px">
-            <el-option v-for="dict in wms_item_instance_status" :key="dict.value" :label="dict.label" :value="dict.value" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="仓库" prop="warehouseId">
-          <el-select v-model="queryParams.warehouseId" placeholder="请选择仓库" clearable filterable style="width: 180px" @change="handleQueryWarehouseChange">
-            <el-option
-              v-for="item in wmsStore.warehouseList"
-              :key="item.id"
-              :label="item.warehouseName"
-              :value="item.id"
-            />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="库区" prop="areaId">
-          <el-select v-model="queryParams.areaId" placeholder="请选择库区" clearable filterable style="width: 180px" @change="handleQueryAreaChange">
-            <el-option
-              v-for="item in queryAreaOptions"
-              :key="item.id"
-              :label="item.areaName"
-              :value="item.id"
-            />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="货架" prop="rackId">
-          <RackSelect v-model="queryParams.rackId" :warehouse-id="queryParams.warehouseId" :area-id="queryParams.areaId" />
-        </el-form-item>
-        <el-form-item label="货位" prop="locationId">
-          <LocationSelect
-            v-model="queryParams.locationId"
-            :warehouse-id="queryParams.warehouseId"
-            :area-id="queryParams.areaId"
-            :rack-id="queryParams.rackId"
-          />
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" icon="Search" @click="handleQuery">搜索</el-button>
-          <el-button icon="Refresh" @click="resetQuery">重置</el-button>
-        </el-form-item>
+      <el-form ref="queryRef" :model="queryParams" label-width="112px" class="query-form">
+        <el-row :gutter="16">
+          <el-col :xl="8" :lg="12" :md="24" :sm="24" :xs="24">
+            <el-form-item label="器材实例编码" prop="instanceCode">
+              <el-input v-model="queryParams.instanceCode" placeholder="请输入器材实例编码" clearable @keyup.enter="handleQuery" />
+            </el-form-item>
+          </el-col>
+          <el-col :xl="6" :lg="8" :md="12" :sm="24" :xs="24">
+            <el-form-item label="器材" prop="itemId">
+              <el-select v-model="queryParams.itemId" placeholder="请选择器材" clearable filterable style="width: 100%" @change="handleQueryItemChange">
+                <el-option
+                  v-for="item in itemOptions"
+                  :key="item.id"
+                  :label="item.itemCode ? item.itemName + ' (' + item.itemCode + ')' : item.itemName"
+                  :value="item.id"
+                />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :xl="6" :lg="8" :md="12" :sm="24" :xs="24">
+            <el-form-item label="器材规格" prop="skuId">
+              <el-select v-model="queryParams.skuId" placeholder="请选择器材规格" clearable filterable style="width: 100%">
+                <el-option
+                  v-for="item in querySkuOptions"
+                  :key="item.id"
+                  :label="item.skuCode ? item.skuName + ' (' + item.skuCode + ')' : item.skuName"
+                  :value="item.id"
+                />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :xl="6" :lg="8" :md="12" :sm="24" :xs="24">
+            <el-form-item label="器材状态" prop="instanceStatus">
+              <el-select v-model="queryParams.instanceStatus" placeholder="请选择状态" clearable style="width: 100%">
+                <el-option v-for="dict in wms_item_instance_status" :key="dict.value" :label="dict.label" :value="dict.value" />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :xl="6" :lg="8" :md="12" :sm="24" :xs="24">
+            <el-form-item label="仓库" prop="warehouseId">
+              <el-select v-model="queryParams.warehouseId" placeholder="请选择仓库" clearable filterable style="width: 100%" @change="handleQueryWarehouseChange">
+                <el-option
+                  v-for="item in wmsStore.warehouseList"
+                  :key="item.id"
+                  :label="item.warehouseName"
+                  :value="item.id"
+                />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :xl="6" :lg="8" :md="12" :sm="24" :xs="24">
+            <el-form-item label="库区" prop="areaId">
+              <el-select v-model="queryParams.areaId" placeholder="请选择库区" clearable filterable style="width: 100%" @change="handleQueryAreaChange">
+                <el-option
+                  v-for="item in queryAreaOptions"
+                  :key="item.id"
+                  :label="item.areaName"
+                  :value="item.id"
+                />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :xl="6" :lg="8" :md="12" :sm="24" :xs="24">
+            <el-form-item label="货架" prop="rackId">
+              <RackSelect v-model="queryParams.rackId" :warehouse-id="queryParams.warehouseId" :area-id="queryParams.areaId" />
+            </el-form-item>
+          </el-col>
+          <el-col :xl="6" :lg="8" :md="12" :sm="24" :xs="24">
+            <el-form-item label="货位" prop="locationId">
+              <LocationSelect
+                v-model="queryParams.locationId"
+                :warehouse-id="queryParams.warehouseId"
+                :area-id="queryParams.areaId"
+                :rack-id="queryParams.rackId"
+              />
+            </el-form-item>
+          </el-col>
+          <el-col :span="24">
+            <div class="query-actions">
+              <el-button type="primary" icon="Search" @click="handleQuery">搜索</el-button>
+              <el-button icon="Refresh" @click="resetQuery">重置</el-button>
+              <el-button type="primary" plain icon="Upload" @click="handleImport" v-hasPermi="['wms:itemInstance:edit']">导入</el-button>
+              <el-button type="warning" plain icon="Download" @click="handleExport" v-hasPermi="['wms:itemInstance:list']">导出</el-button>
+            </div>
+          </el-col>
+        </el-row>
       </el-form>
     </el-card>
 
     <el-card class="mt20">
       <el-row :gutter="10" class="mb8" type="flex" justify="space-between">
-        <el-col :span="8"><span style="font-size: large">单品台账</span></el-col>
-        <el-col :span="8" class="toolbar-actions">
-          <el-button type="primary" plain icon="Upload" @click="handleImport" v-hasPermi="['wms:itemInstance:edit']">导入</el-button>
-          <el-button type="warning" plain icon="Download" @click="handleExport" v-hasPermi="['wms:itemInstance:list']">导出</el-button>
-        </el-col>
+        <el-col :span="8"><span style="font-size: large">器材台账</span></el-col>
       </el-row>
 
       <el-table v-loading="loading" :data="itemInstanceList" border empty-text="暂无器材实例编码" cell-class-name="vertical-top-cell">
         <el-table-column label="器材实例编码" prop="instanceCode" min-width="180" />
-        <el-table-column label="器材/器材规格" min-width="220">
+        <el-table-column label="器材编码" prop="itemCode" min-width="120" show-overflow-tooltip />
+        <el-table-column label="器材/器材规格" min-width="200">
           <template #default="{ row }">
             <div>{{ row.itemName || '-' }}</div>
             <div v-if="row.skuName" class="sub-text">器材规格：{{ row.skuName }}</div>
           </template>
         </el-table-column>
+        <el-table-column label="产品标识" prop="productIdentifier" min-width="140" show-overflow-tooltip />
         <el-table-column label="状态" width="100">
           <template #default="{ row }">
             <dict-tag :options="wms_item_instance_status" :value="row.instanceStatus" />
           </template>
         </el-table-column>
-        <el-table-column label="位置" min-width="220">
+        <el-table-column label="位置" min-width="240">
           <template #default="{ row }">
             <div v-if="row.warehouseName">仓库：{{ row.warehouseName }}</div>
             <div v-if="row.areaName">库区：{{ row.areaName }}</div>
@@ -99,20 +119,20 @@
             <div>箱码：{{ row.boxCode || '-' }}</div>
           </template>
         </el-table-column>
+        <el-table-column label="来源类型" min-width="110">
+          <template #default="{ row }">
+            {{ row.sourceType || '-' }}
+          </template>
+        </el-table-column>
+        <el-table-column label="来源单号" min-width="160" show-overflow-tooltip>
+          <template #default="{ row }">
+            {{ row.sourceOrderNo || '-' }}
+          </template>
+        </el-table-column>
         <el-table-column label="备注" prop="remark" min-width="160" show-overflow-tooltip />
         <el-table-column label="操作" align="right" width="240">
           <template #default="{ row }">
             <el-button link type="primary" @click="handleView(row)">详情</el-button>
-            <el-button
-              v-if="canBorrowRow(row)"
-              link
-              type="primary"
-              @click="handleBorrow(row)"
-              v-hasPermi="['wms:borrowRecord:edit']"
-            >借出</el-button>
-            <el-tooltip v-else :content="getBorrowDisabledReason(row)" placement="top">
-              <el-button link type="info" disabled>借出</el-button>
-            </el-tooltip>
             <el-button
               v-if="canReturnRow(row)"
               link
@@ -201,7 +221,7 @@
         <el-descriptions-item label="货架">{{ detailDialog.data.rackName || '-' }}</el-descriptions-item>
         <el-descriptions-item label="货位">{{ detailDialog.data.locationName || '-' }}</el-descriptions-item>
         <el-descriptions-item label="箱码">{{ detailDialog.data.boxCode || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="来源类型">{{ formatSourceType(detailDialog.data.sourceType) }}</el-descriptions-item>
+        <el-descriptions-item label="来源类型">{{ detailDialog.data.sourceType || '-' }}</el-descriptions-item>
         <el-descriptions-item label="来源单号">{{ detailDialog.data.sourceOrderNo || '-' }}</el-descriptions-item>
         <el-descriptions-item label="来源明细ID">{{ detailDialog.data.receiptOrderDetailId || '-' }}</el-descriptions-item>
         <el-descriptions-item label="备注" :span="2">{{ detailDialog.data.remark || '-' }}</el-descriptions-item>
@@ -283,7 +303,7 @@ const detailDialog = reactive({
 
 const upload = reactive({
   open: false,
-  title: '单品台账导入',
+  title: '器材台账导入',
   isUploading: false,
   headers: { Authorization: 'Bearer ' + getToken() },
   url: import.meta.env.VITE_APP_BASE_API + '/wms/itemInstance/importData'
@@ -330,30 +350,11 @@ const queryAreaOptions = computed(() => {
   return wmsStore.areaList.filter(item => item.warehouseId === queryParams.value.warehouseId);
 });
 
-const formatSourceType = (value) => {
-  if (value === 'receipt') {
-    return '入库单';
-  }
-  return value || '-';
-};
-
 const hasBox = (row) => !!row?.boxId;
 
 const isBorrowed = (row) => row?.instanceStatus === '借出';
 
-const canBorrowRow = (row) => !hasBox(row) && !isBorrowed(row);
-
 const canReturnRow = (row) => isBorrowed(row);
-
-const getBorrowDisabledReason = (row) => {
-  if (hasBox(row)) {
-    return '器材实例编码在箱内，不能直接借出';
-  }
-  if (isBorrowed(row)) {
-    return '器材实例编码已借出，请先归还';
-  }
-  return '当前器材实例不可借出';
-};
 
 const loadItemOptions = async () => {
   const res = await listItem({});
@@ -444,7 +445,7 @@ const handleUpdate = async (row) => {
   const res = await getItemInstance(row.id);
   form.value = { ...initFormData(), ...res.data };
   dialog.visible = true;
-  dialog.title = '修改单品台账';
+  dialog.title = '修改器材台账';
 };
 
 const submitForm = () => {
@@ -475,15 +476,6 @@ const handleView = async (row) => {
   detailDialog.visible = true;
 };
 
-const handleBorrow = (row) => {
-  router.push({
-    path: '/wms-borrow-record/index',
-    query: {
-      itemInstanceId: row.id
-    }
-  });
-};
-
 const handleReturn = (row) => {
   router.push({
     path: '/wms-borrow-record/index',
@@ -499,7 +491,7 @@ const handleExport = () => {
 };
 
 const handleImport = () => {
-  upload.title = '单品台账导入';
+  upload.title = '器材台账导入';
   upload.open = true;
 };
 
@@ -558,8 +550,18 @@ onMounted(async () => {
   font-size: 12px;
 }
 
-.toolbar-actions {
-  text-align: right;
+.query-form :deep(.el-form-item) {
+  margin-bottom: 16px;
+}
+
+.query-form :deep(.el-form-item__label) {
+  white-space: nowrap;
+}
+
+.query-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
 }
 
 .vertical-top-cell {

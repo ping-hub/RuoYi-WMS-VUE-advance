@@ -5,9 +5,9 @@
       <el-card header="出库单基本信息">
         <el-form label-width="108px" :model="form" ref="shipmentForm" :rules="rules" :disabled="isViewMode">
           <el-row :gutter="24">
-            <el-col :span="11">
+            <el-col :span="12">
               <el-form-item label="出库单号" prop="shipmentOrderNo">
-                <el-input class="w200" v-model="form.shipmentOrderNo" placeholder="出库单号"
+                <el-input v-model="form.shipmentOrderNo" placeholder="出库单号"
                           :disabled="form.id"></el-input>
               </el-form-item>
             </el-col>
@@ -31,7 +31,7 @@
             </el-col>
           </el-row>
           <el-row :gutter="24">
-            <el-col :span="11">
+            <el-col :span="12">
               <el-form-item label="出库类型" prop="shipmentOrderType">
                 <el-radio-group v-model="form.shipmentOrderType">
                   <el-radio-button
@@ -42,8 +42,6 @@
                 </el-radio-group>
               </el-form-item>
             </el-col>
-          </el-row>
-          <el-row :gutter="24">
             <el-col :span="6">
               <el-form-item label="调拨根据" prop="basisNo">
                 <el-input v-model="form.basisNo" placeholder="请输入调拨根据"></el-input>
@@ -78,12 +76,14 @@
                 <el-date-picker v-model="form.shipmentDate" type="date" value-format="YYYY-MM-DD" format="YYYY-MM-DD" style="width: 100%" />
               </el-form-item>
             </el-col>
-            <el-col :span="11">
+          </el-row>
+          <el-row :gutter="24">
+            <el-col :span="12">
               <el-form-item label="备注" prop="remark">
                 <el-input
                   v-model="form.remark"
                   placeholder="备注...100个字符以内"
-                  rows="4"
+                  rows="2"
                   maxlength="100"
                   type="textarea"
                   show-word-limit="show-word-limit"

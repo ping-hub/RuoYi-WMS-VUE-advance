@@ -5,9 +5,9 @@
       <el-card header="入库单基本信息">
         <el-form label-width="108px" :model="form" ref="receiptForm" :rules="rules" :disabled="isViewMode">
           <el-row :gutter="24">
-            <el-col :span="11">
+            <el-col :span="12">
               <el-form-item label="入库单号" prop="receiptOrderNo">
-                <el-input class="w200" v-model="form.receiptOrderNo" placeholder="入库单号" :disabled="form.id"></el-input>
+                <el-input v-model="form.receiptOrderNo" placeholder="入库单号" :disabled="form.id"></el-input>
               </el-form-item>
             </el-col>
             <el-col :span="6">
@@ -37,7 +37,7 @@
             </el-col>
           </el-row>
           <el-row :gutter="24">
-            <el-col :span="11">
+            <el-col :span="12">
               <el-form-item label="入库类型" prop="receiptOrderType">
                 <el-radio-group v-model="form.receiptOrderType">
                   <el-radio-button
@@ -48,8 +48,6 @@
                 </el-radio-group>
               </el-form-item>
             </el-col>
-          </el-row>
-          <el-row :gutter="24">
             <el-col :span="6">
               <el-form-item label="调拨根据" prop="basisNo">
                 <el-input v-model="form.basisNo" placeholder="请输入调拨根据"></el-input>
@@ -84,12 +82,14 @@
                 <el-date-picker v-model="form.receiptDate" type="date" value-format="YYYY-MM-DD" format="YYYY-MM-DD" style="width: 100%" />
               </el-form-item>
             </el-col>
-            <el-col :span="11">
+          </el-row>
+          <el-row :gutter="24">
+            <el-col :span="12">
               <el-form-item label="备注" prop="remark">
                 <el-input
                   v-model="form.remark"
                   placeholder="备注...100个字符以内"
-                  rows="4"
+                  rows="2"
                   maxlength="100"
                   type="textarea"
                   show-word-limit="show-word-limit"
@@ -104,7 +104,7 @@
           <div class="flex-space-between mb8 receipt-toolbar">
             <div>
               <div class="instance-tip">
-                入库按单品实例执行。支持“选择器材实例”或扫码枪扫二维码直接新增；箱码可直接录入，货位通过下拉选择。
+                入库按器材实例执行。支持“选择器材实例”或扫码枪扫二维码直接新增；箱码可直接录入，货位通过下拉选择。
               </div>
             </div>
             <div class="receipt-toolbar-actions">
@@ -646,7 +646,7 @@ const validateReceiptInstancesBeforeSubmit = () => {
   for (const detail of form.value.details) {
     const quantity = Number(detail.quantity || 0)
     if (quantity !== 1) {
-      return '当前入库模式按单品实例执行，明细数量必须为1'
+      return '当前入库模式按器材实例执行，明细数量必须为1'
     }
     const instanceId = detail.itemInstanceId ?? detail.receiptItemInstances?.[0]?.id
     const instanceCode = String(detail.instanceCode || detail.receiptItemInstances?.[0]?.instanceCode || '').trim()
