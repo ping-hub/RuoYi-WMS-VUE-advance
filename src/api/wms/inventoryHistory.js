@@ -42,12 +42,3 @@ export function delInventoryHistory(id) {
     method: 'delete'
   })
 }
-
-// 导出库存记录
-export function exportInventoryHistory(query) {
-  return request({
-    url: '/wms/inventoryHistory/export',
-    method: 'post',
-    params: query
-  })
-}

@@ -1,158 +1,227 @@
 <template>
   <div>
     <div class="receipt-order-edit-wrapper app-container" :class="{ 'is-view-mode': isViewMode }" style="margin-bottom: 60px" v-loading="loading">
-      <el-alert v-if="isViewMode" class="mb10" type="info" :closable="false" title="当前为联查查看模式，已禁用编辑、作废和完成调拨操作。" />
+      <el-alert v-if="isViewMode" class="mb10" type="info" :closable="false" title="当前为查看模式，已禁用编辑、作废和完成调拨操作。" />
       <el-card header="调拨单基本信息">
         <el-form label-width="108px" :model="form" ref="movementForm" :rules="rules" :disabled="isViewMode">
           <el-row :gutter="24">
-            <el-col :span="12">
+            <el-col :span="6">
               <el-form-item label="调拨单号" prop="movementOrderNo">
-                <el-input v-model="form.movementOrderNo" placeholder="调拨单号"
-                          :disabled="form.id"></el-input>
+                <el-input v-model="form.movementOrderNo" placeholder="调拨单号" style="width: 100%" :disabled="form.id"></el-input>
+              </el-form-item>
+            </el-col>
+            <el-col :span="6">
+              <el-form-item label="调拨类型" prop="movementType">
+                <el-select v-model="form.movementType" placeholder="请选择调拨类型" clearable style="width: 100%">
+                  <el-option v-for="item in wms_movement_type" :key="item.value" :label="item.label" :value="item.value" />
+                </el-select>
               </el-form-item>
             </el-col>
             <el-col :span="6">
               <el-form-item label="原仓库" prop="sourceWarehouseId">
-                <el-select v-model="form.sourceWarehouseId" placeholder="请选择源仓库" @change="handleChangeSourceWarehouse"
-                           filterable>
-                  <el-option v-for="item in useWmsStore().warehouseList" :key="item.id" :label="item.warehouseName"
-                             :value="item.id"/>
+                <el-select v-model="form.sourceWarehouseId" placeholder="请选择源仓库" @change="handleChangeSourceWarehouse" filterable>
+                  <el-option v-for="item in useWmsStore().warehouseList" :key="item.id" :label="item.warehouseName" :value="item.id"/>
                 </el-select>
               </el-form-item>
             </el-col>
             <el-col :span="6">
               <el-form-item label="原库区" prop="sourceAreaId">
-                <el-select v-model="form.sourceAreaId" placeholder="请选择原库区" :disabled="!form.sourceWarehouseId" clearable
-                           filterable @change="handleChangeSourceArea" style="width: 100%!important;">
-                  <el-option v-for="item in useWmsStore().areaList.filter(it => it.warehouseId === form.sourceWarehouseId)"
-                             :key="item.id" :label="item.areaName" :value="item.id"/>
+                <el-select
+                  v-model="form.sourceAreaId"
+                  placeholder="请选择原库区"
+                  :disabled="!form.sourceWarehouseId"
+                  clearable
+                  filterable
+                  @change="handleChangeSourceArea"
+                  style="width: 100%!important;"
+                >
+                  <el-option
+                    v-for="item in useWmsStore().areaList.filter(it => it.warehouseId === form.sourceWarehouseId)"
+                    :key="item.id"
+                    :label="item.areaName"
+                    :value="item.id"
+                  />
                 </el-select>
               </el-form-item>
             </el-col>
           </el-row>
           <el-row :gutter="24">
-            <el-col :span="12">
-              <el-form-item label="调拨类型" prop="movementType">
-                <el-radio-group v-model="form.movementType">
-                  <el-radio-button v-for="item in wms_movement_type" :key="item.value" :label="item.value">{{ item.label }}</el-radio-button>
-                </el-radio-group>
-              </el-form-item>
-            </el-col>
             <el-col :span="6">
               <el-form-item label="目标仓库" prop="targetWarehouseId">
-                <el-select v-model="form.targetWarehouseId" placeholder="请选择目标仓库" @change="handleChangeTargetWarehouse"
-                           filterable>
-                  <el-option v-for="item in useWmsStore().warehouseList" :key="item.id" :label="item.warehouseName"
-                             :value="item.id"/>
+                <el-select v-model="form.targetWarehouseId" placeholder="请选择目标仓库" @change="handleChangeTargetWarehouse" filterable>
+                  <el-option v-for="item in useWmsStore().warehouseList" :key="item.id" :label="item.warehouseName" :value="item.id"/>
                 </el-select>
               </el-form-item>
             </el-col>
             <el-col :span="6">
               <el-form-item label="目标库区" prop="targetAreaId">
-                <el-select v-model="form.targetAreaId" placeholder="请选择目标库区" :disabled="!form.targetWarehouseId" clearable
-                           filterable @change="handleChangeTargetArea" style="width: 100%!important;">
-                  <el-option v-for="item in useWmsStore().areaList.filter(it => it.warehouseId === form.targetWarehouseId)"
-                             :key="item.id" :label="item.areaName" :value="item.id"/>
+                <el-select
+                  v-model="form.targetAreaId"
+                  placeholder="请选择目标库区"
+                  :disabled="!form.targetWarehouseId"
+                  clearable
+                  filterable
+                  @change="handleChangeTargetArea"
+                  style="width: 100%!important;"
+                >
+                  <el-option
+                    v-for="item in useWmsStore().areaList.filter(it => it.warehouseId === form.targetWarehouseId)"
+                    :key="item.id"
+                    :label="item.areaName"
+                    :value="item.id"
+                  />
                 </el-select>
               </el-form-item>
             </el-col>
           </el-row>
-          <el-row :gutter="24">
-            <el-col :span="6">
-              <el-form-item label="调拨依据" prop="dispatchBasis">
-                <el-select v-model="form.dispatchBasis" placeholder="请选择调拨依据" clearable style="width: 100%">
-                  <el-option v-for="item in wms_basis_type" :key="item.value" :label="item.label" :value="item.value" />
-                </el-select>
-              </el-form-item>
-            </el-col>
-            <el-col :span="6">
-              <el-form-item label="调拨目的" prop="dispatchPurpose">
-                <el-input v-model="form.dispatchPurpose" placeholder="请输入调拨目的"></el-input>
-              </el-form-item>
-            </el-col>
-            <el-col :span="6">
-              <el-form-item label="调拨方式">
-                <el-select v-model="form.dispatchMode" placeholder="请选择调拨方式" clearable style="width: 100%">
-                  <el-option v-for="item in wms_dispatch_mode" :key="item.value" :label="item.label" :value="item.value" />
-                </el-select>
-              </el-form-item>
-            </el-col>
-            <el-col :span="6">
-              <el-form-item label="调拨日期" prop="dispatchDate">
-                <el-date-picker v-model="form.dispatchDate" type="date" value-format="YYYY-MM-DD" format="YYYY-MM-DD" style="width: 100%" />
-              </el-form-item>
-            </el-col>
-          </el-row>
-          <el-row :gutter="24">
-            <el-col :span="6">
-              <el-form-item label="发货单位" prop="fromUnit">
-                <el-input v-model="form.fromUnit" placeholder="请输入发货单位"></el-input>
-              </el-form-item>
-            </el-col>
-            <el-col :span="6">
-              <el-form-item label="收货单位" prop="toUnit">
-                <el-input v-model="form.toUnit" placeholder="请输入收货单位"></el-input>
-              </el-form-item>
-            </el-col>
-            <el-col :span="6">
-              <el-form-item label="发站" prop="fromStation">
-                <el-input v-model="form.fromStation" placeholder="请输入发站"></el-input>
-              </el-form-item>
-            </el-col>
-            <el-col :span="6">
-              <el-form-item label="到站" prop="toStation">
-                <el-input v-model="form.toStation" placeholder="请输入到站"></el-input>
-              </el-form-item>
-            </el-col>
-          </el-row>
-          <el-row :gutter="24">
-            <el-col :span="6">
-              <el-form-item label="发货地址" prop="fromAddress">
-                <el-input v-model="form.fromAddress" placeholder="请输入发货地址"></el-input>
-              </el-form-item>
-            </el-col>
-            <el-col :span="6">
-              <el-form-item label="收货地址" prop="toAddress">
-                <el-input v-model="form.toAddress" placeholder="请输入收货地址"></el-input>
-              </el-form-item>
-            </el-col>
-            <el-col :span="6">
-              <el-form-item label="通信地址" prop="contactAddress">
-                <el-input v-model="form.contactAddress" placeholder="请输入通信地址"></el-input>
-              </el-form-item>
-            </el-col>
-            <el-col :span="6">
-              <el-form-item label="有效日期" prop="effectiveDate">
-                <el-date-picker v-model="form.effectiveDate" type="date" value-format="YYYY-MM-DD" format="YYYY-MM-DD" style="width: 100%" />
-              </el-form-item>
-            </el-col>
-          </el-row>
-          <el-row :gutter="24">
-            <el-col :span="6">
-              <el-form-item label="发出日期" prop="issueDate">
-                <el-date-picker v-model="form.issueDate" type="date" value-format="YYYY-MM-DD" format="YYYY-MM-DD" style="width: 100%" />
-              </el-form-item>
-            </el-col>
-            <el-col :span="18">
-              <el-form-item label="备注" prop="remark">
-                <el-input
-                  v-model="form.remark"
-                  placeholder="备注...100个字符以内"
-                  rows="2"
-                  maxlength="100"
-                  type="textarea"
-                  show-word-limit="show-word-limit"
-                ></el-input>
-              </el-form-item>
-            </el-col>
-          </el-row>
+
+          <template v-if="form.movementType === '通装'">
+            <el-row :gutter="24">
+              <el-col :span="6">
+                <el-form-item label="调拨根据" prop="dispatchBasis">
+                  <el-input v-model="form.dispatchBasis" placeholder="请输入调拨根据" />
+                </el-form-item>
+              </el-col>
+              <el-col :span="6">
+                <el-form-item label="调拨目的" prop="dispatchPurpose">
+                  <el-input v-model="form.dispatchPurpose" placeholder="请输入调拨目的"></el-input>
+                </el-form-item>
+              </el-col>
+              <el-col :span="6">
+                <el-form-item label="发物单位" prop="fromUnit">
+                  <el-input v-model="form.fromUnit" placeholder="请输入发物单位"></el-input>
+                </el-form-item>
+              </el-col>
+              <el-col :span="6">
+                <el-form-item label="收物单位" prop="toUnit">
+                  <el-input v-model="form.toUnit" placeholder="请输入收物单位"></el-input>
+                </el-form-item>
+              </el-col>
+            </el-row>
+            <el-row :gutter="24">
+              <el-col :span="6">
+                <el-form-item label="到站" prop="toStation">
+                  <el-input v-model="form.toStation" placeholder="请输入到站"></el-input>
+                </el-form-item>
+              </el-col>
+              <el-col :span="6">
+                <el-form-item label="通信地址" prop="contactAddress">
+                  <el-input v-model="form.contactAddress" placeholder="请输入通信地址"></el-input>
+                </el-form-item>
+              </el-col>
+              <el-col :span="6">
+                <el-form-item label="调拨方式" prop="dispatchMode">
+                  <el-select v-model="form.dispatchMode" placeholder="请选择调拨方式" clearable style="width: 100%">
+                    <el-option v-for="item in wms_dispatch_mode" :key="item.value" :label="item.label" :value="item.value" />
+                  </el-select>
+                </el-form-item>
+              </el-col>
+              <el-col :span="6">
+                <el-form-item label="有效日期" prop="effectiveDate">
+                  <el-date-picker v-model="form.effectiveDate" type="date" value-format="YYYY-MM-DD" format="YYYY-MM-DD" style="width: 100%" />
+                </el-form-item>
+              </el-col>
+            </el-row>
+            <el-row :gutter="24">
+              <el-col :span="6">
+                <el-form-item label="发出日期" prop="issueDate">
+                  <el-date-picker v-model="form.issueDate" type="date" value-format="YYYY-MM-DD" format="YYYY-MM-DD" style="width: 100%" />
+                </el-form-item>
+              </el-col>
+              <el-col :span="18">
+                <el-form-item label="备注" prop="remark">
+                  <el-input
+                    v-model="form.remark"
+                    placeholder="备注...100个字符以内"
+                    rows="2"
+                    maxlength="100"
+                    type="textarea"
+                    show-word-limit="show-word-limit"
+                  ></el-input>
+                </el-form-item>
+              </el-col>
+            </el-row>
+          </template>
+
+          <template v-if="form.movementType === '专装'">
+            <el-row :gutter="24">
+              <el-col :span="6">
+                <el-form-item label="调拨依据" prop="dispatchBasis">
+                  <el-input v-model="form.dispatchBasis" placeholder="请输入调拨依据" />
+                </el-form-item>
+              </el-col>
+              <el-col :span="6">
+                <el-form-item label="调拨方式" prop="dispatchMode">
+                  <el-select v-model="form.dispatchMode" placeholder="请选择调拨方式" clearable style="width: 100%">
+                    <el-option v-for="item in wms_dispatch_mode" :key="item.value" :label="item.label" :value="item.value" />
+                  </el-select>
+                </el-form-item>
+              </el-col>
+              <el-col :span="6">
+                <el-form-item label="发货单位" prop="fromUnit">
+                  <el-input v-model="form.fromUnit" placeholder="请输入发货单位"></el-input>
+                </el-form-item>
+              </el-col>
+              <el-col :span="6">
+                <el-form-item label="收货单位" prop="toUnit">
+                  <el-input v-model="form.toUnit" placeholder="请输入收货单位"></el-input>
+                </el-form-item>
+              </el-col>
+            </el-row>
+            <el-row :gutter="24">
+              <el-col :span="6">
+                <el-form-item label="发站" prop="fromStation">
+                  <el-input v-model="form.fromStation" placeholder="请输入发站"></el-input>
+                </el-form-item>
+              </el-col>
+              <el-col :span="6">
+                <el-form-item label="到站" prop="toStation">
+                  <el-input v-model="form.toStation" placeholder="请输入到站"></el-input>
+                </el-form-item>
+              </el-col>
+              <el-col :span="6">
+                <el-form-item label="发货地址" prop="fromAddress">
+                  <el-input v-model="form.fromAddress" placeholder="请输入发货地址"></el-input>
+                </el-form-item>
+              </el-col>
+              <el-col :span="6">
+                <el-form-item label="收货地址" prop="toAddress">
+                  <el-input v-model="form.toAddress" placeholder="请输入收货地址"></el-input>
+                </el-form-item>
+              </el-col>
+            </el-row>
+            <el-row :gutter="24">
+              <el-col :span="6">
+                <el-form-item label="调拨日期" prop="dispatchDate">
+                  <el-date-picker v-model="form.dispatchDate" type="date" value-format="YYYY-MM-DD" format="YYYY-MM-DD" style="width: 100%" />
+                </el-form-item>
+              </el-col>
+              <el-col :span="6">
+                <el-form-item label="有效日期" prop="effectiveDate">
+                  <el-date-picker v-model="form.effectiveDate" type="date" value-format="YYYY-MM-DD" format="YYYY-MM-DD" style="width: 100%" />
+                </el-form-item>
+              </el-col>
+              <el-col :span="12">
+                <el-form-item label="备注" prop="remark">
+                  <el-input
+                    v-model="form.remark"
+                    placeholder="备注...100个字符以内"
+                    rows="2"
+                    maxlength="100"
+                    type="textarea"
+                    show-word-limit="show-word-limit"
+                  ></el-input>
+                </el-form-item>
+              </el-col>
+            </el-row>
+          </template>
         </el-form>
       </el-card>
       <el-card header="调拨明细" class="mt10">
         <div class="receipt-order-content">
           <div class="flex-space-between mb8">
             <div>
-              <el-tag v-if="form.movementType === 'special'" type="warning">专装调拨必须按器材实例编码或箱码流转，且数量必须为 1</el-tag>
+              <el-tag type="info">仅支持选择当前源仓库/源库区下的在库器材实例</el-tag>
             </div>
             <el-popover
               placement="left"
@@ -169,29 +238,27 @@
               </template>
             </el-popover>
           </div>
-            <el-table :data="form.details" border empty-text="暂无调拨明细">
-            <el-table-column label="器材编码" prop="itemCode" min-width="120" show-overflow-tooltip />
-            <el-table-column label="器材名称" prop="itemName" min-width="140" show-overflow-tooltip />
-            <el-table-column label="规格型号" prop="skuName" min-width="140" show-overflow-tooltip />
-            <el-table-column label="计量单位" prop="unit" width="110" />
-            <el-table-column label="产品标识" prop="productIdentifier" min-width="140" show-overflow-tooltip />
+          <el-table :data="form.details" border empty-text="暂无调拨明细">
+            <el-table-column label="器材实例编码" prop="instanceCode" min-width="180" show-overflow-tooltip />
+            <el-table-column label="器材信息" min-width="150">
+              <template #default="scope">
+                <div>{{ scope.row.itemName || scope.row.itemSku?.item?.itemName || '-' }}</div>
+                <div v-if="scope.row.itemCode || scope.row.itemSku?.item?.itemCode" class="sub-text">器材编码：{{ scope.row.itemCode || scope.row.itemSku?.item?.itemCode }}</div>
+                <div v-if="scope.row.skuName || scope.row.itemSku?.skuName" class="sub-text">规格型号：{{ scope.row.skuName || scope.row.itemSku?.skuName }}</div>
+                <div v-if="scope.row.productIdentifier || scope.row.itemSku?.productIdentifier" class="sub-text">产品标识：{{ scope.row.productIdentifier || scope.row.itemSku?.productIdentifier }}</div>
+                <div v-if="scope.row.qualityGrade || scope.row.itemSku?.qualityGrade" class="sub-text">质量等级：{{ scope.row.qualityGrade || scope.row.itemSku?.qualityGrade }}</div>
+              </template>
+            </el-table-column>
             <el-table-column label="源位置" min-width="180">
               <template #default="{ row }">
                 <div>库区：{{ row.sourceAreaName || '-' }}</div>
-                <div class="table-tip">货架：{{ row.sourceRackId || '-' }} / 货位：{{ row.sourceLocationId || '-' }}</div>
+                <div class="table-tip">货架：{{ row.sourceRackName || '-' }}</div>
+                <div class="table-tip">货位：{{ row.sourceLocationName || '-' }}</div>
               </template>
             </el-table-column>
             <el-table-column label="目标位置" min-width="260">
               <template #default="{ row }">
                 <div class="target-place-edit">
-                  <el-select v-model="row.targetAreaId" placeholder="目标库区" filterable :disabled="isViewMode || !!form.targetAreaId" style="width: 110px">
-                    <el-option
-                      v-for="item in useWmsStore().areaList.filter(it => it.warehouseId === form.targetWarehouseId)"
-                      :key="item.id"
-                      :label="item.areaName"
-                      :value="item.id"
-                    />
-                  </el-select>
                   <RackSelect v-model="row.targetRackId" :warehouse-id="form.targetWarehouseId" :area-id="row.targetAreaId || form.targetAreaId" :disabled="isViewMode" />
                   <LocationSelect
                     v-model="row.targetLocationId"
@@ -203,18 +270,7 @@
                 </div>
               </template>
             </el-table-column>
-            <el-table-column v-if="form.movementType === 'special'" label="器材实例编码/箱码" min-width="240">
-              <template #default="{ row }">
-                <el-input v-model="row.instanceCode" placeholder="请输入器材实例编码" :disabled="isViewMode" @blur="handleSpecialCodeBlur(row, 'item')" />
-                <el-input class="mt5" v-model="row.boxCode" placeholder="请输入箱码" :disabled="isViewMode" @blur="handleSpecialCodeBlur(row, 'box')" />
-              </template>
-            </el-table-column>
-            <el-table-column label="剩余库存" prop="remainQuantity" align="right" width="150">
-              <template #default="{ row }">
-                <el-statistic :value="Number(row.remainQuantity)" :precision="0"/>
-              </template>
-            </el-table-column>
-            <el-table-column label="单价" prop="unitPrice" width="160">
+            <el-table-column label="单价" prop="unitPrice" width="180">
               <template #default="{ row }">
                 <el-input-number v-model="row.unitPrice" :precision="2" :min="0" :controls="false" :disabled="isViewMode" @change="handleDetailChange(row)" />
               </template>
@@ -224,20 +280,11 @@
                 <el-input-number v-model="row.lineAmount" :precision="2" :controls="false" disabled />
               </template>
             </el-table-column>
-            <el-table-column label="调拨数量" prop="quantity" width="180">
-              <template #default="scope">
-                <el-input-number
-                  v-model="scope.row.quantity"
-                  placeholder="调拨数量"
-                  :min="1"
-                  :precision="0"
-                  :max="scope.row.remainQuantity"
-                  :disabled="isViewMode"
-                  @change="handleChangeQuantity"
-                ></el-input-number>
+            <el-table-column label="调拨数量" prop="quantity" align="right" width="110">
+              <template #default="{ row }">
+                <el-statistic :value="Number(row.quantity || 0)" :precision="0"/>
               </template>
             </el-table-column>
-            <el-table-column label="质量等级" prop="qualityGrade" width="120" show-overflow-tooltip />
             <el-table-column label="备注" width="180">
               <template #default="{ row }">
                 <el-input v-model="row.remark" placeholder="请输入备注" :disabled="isViewMode" />
@@ -253,18 +300,80 @@
           </el-table>
         </div>
       </el-card>
-      <InventoryDetailSelect
-        ref="inventorySelectRef"
-        :model-value="inventorySelectShow"
-        @handleOkClick="handleOkClick"
-        @handleCancelClick="inventorySelectShow = false"
-        :size="'90%'"
-        :select-warehouse-disable="false"
-        :select-area-disable="!!form?.sourceAreaId"
-        :warehouse-id="form.sourceWarehouseId"
-        :area-id="form.sourceAreaId"
-        :selected-inventory="selectedInventory"
-      />
+      <el-dialog v-model="itemInstanceDialog.visible" title="选择器材实例" width="1100px" append-to-body>
+        <el-form :inline="true" :model="itemInstanceDialog.query" label-width="76px" class="item-instance-search-form">
+          <el-form-item label="器材名称">
+            <el-input
+              v-model="itemInstanceDialog.query.itemName"
+              placeholder="请输入器材名称"
+              clearable
+              style="width: 140px"
+              @keyup.enter="getItemInstanceList"
+            />
+          </el-form-item>
+          <el-form-item label="货架">
+            <RackSelect
+              v-model="itemInstanceDialog.query.rackId"
+              :warehouse-id="form.sourceWarehouseId"
+              :area-id="form.sourceAreaId"
+              placeholder="货架"
+              style="width: 140px"
+            />
+          </el-form-item>
+          <el-form-item label="器材规格">
+            <el-input
+              v-model="itemInstanceDialog.query.skuName"
+              placeholder="请输入器材规格"
+              clearable
+              style="width: 150px"
+              @keyup.enter="getItemInstanceList"
+            />
+          </el-form-item>
+          <el-form-item label="器材实例编码" label-width="100px">
+            <el-input
+              v-model="itemInstanceDialog.query.instanceCode"
+              placeholder="请输入器材实例编码"
+              clearable
+              style="width: 150px"
+              @keyup.enter="getItemInstanceList"
+            />
+          </el-form-item>
+          <el-form-item class="item-instance-search-form__action">
+            <el-button type="primary" @click="getItemInstanceList">查询</el-button>
+          </el-form-item>
+        </el-form>
+        <el-table
+          v-loading="itemInstanceDialog.loading"
+          :data="itemInstanceDialog.list"
+          @selection-change="handleItemInstanceSelectionChange"
+          border
+          row-key="id"
+        >
+          <el-table-column type="selection" width="55" :selectable="isItemInstanceSelectable" />
+          <el-table-column label="器材实例编码" prop="instanceCode" min-width="160" />
+          <el-table-column label="器材名称" prop="itemName" min-width="160" />
+          <el-table-column label="器材规格" prop="skuName" min-width="160" />
+          <el-table-column label="库区" prop="areaName" width="140" />
+          <el-table-column label="货架" prop="rackName" width="120" />
+          <el-table-column label="货位" prop="locationName" width="120" />
+          <el-table-column label="状态" width="100">
+            <template #default="{ row }">
+              <span>{{ row.instanceStatus || '-' }}</span>
+            </template>
+          </el-table-column>
+        </el-table>
+        <pagination
+          v-show="itemInstanceDialog.total > 0"
+          :total="itemInstanceDialog.total"
+          v-model:page="itemInstanceDialog.pageNum"
+          v-model:limit="itemInstanceDialog.pageSize"
+          @pagination="getItemInstanceList"
+        />
+        <template #footer>
+          <el-button @click="itemInstanceDialog.visible = false">取消</el-button>
+          <el-button type="primary" @click="handleConfirmItemInstance">确认添加</el-button>
+        </template>
+      </el-dialog>
     </div>
     <div class="footer-global">
       <div class="btn-box">
@@ -285,31 +394,28 @@
 import {computed, getCurrentInstance, onMounted, reactive, ref, toRef, toRefs, watch} from "vue";
 import {addMovementOrder, getMovementOrder, updateMovementOrder, movement} from "@/api/wms/movementOrder";
 import {delMovementOrderDetail} from "@/api/wms/movementOrderDetail";
-import {getItemInstanceByCode} from "@/api/wms/itemInstance";
-import {getBoxByCode} from "@/api/wms/box";
-import {ElMessage, ElMessageBox} from "element-plus";
+import {ElMessage} from "element-plus";
 import {useRoute} from "vue-router";
 import {useWmsStore} from '@/store/modules/wms'
 import {numSub, generateNo} from '@/utils/ruoyi'
-import InventoryDetailSelect from "@/views/components/InventoryDetailSelect.vue";
+import {listInventoryDetailNoPage} from "@/api/wms/inventoryDetail";
+import {listItemInstance} from "@/api/wms/itemInstance";
 import RackSelect from "@/views/components/RackSelect.vue";
 import LocationSelect from "@/views/components/LocationSelect.vue";
-import FormLabelHelp from '@/views/components/FormLabelHelp.vue'
 
 const {proxy} = getCurrentInstance();
 const route = useRoute();
 const isViewMode = computed(() => route.query.mode === 'view');
-const {wms_movement_type, wms_dispatch_mode, wms_basis_type} = proxy.useDict(
+const {wms_movement_type, wms_dispatch_mode} = proxy.useDict(
   "wms_movement_type",
-  "wms_dispatch_mode",
-  "wms_basis_type"
+  "wms_dispatch_mode"
 );
 
 const loading = ref(false)
 const initFormData = {
   id: undefined,
   movementOrderNo: undefined,
-  movementType: 'common',
+  movementType: undefined,
   dispatchBasis: undefined,
   dispatchPurpose: undefined,
   dispatchMode: undefined,
@@ -323,7 +429,7 @@ const initFormData = {
   dispatchDate: undefined,
   effectiveDate: undefined,
   issueDate: undefined,
-  shipmentOrderStatus: 0,
+  movementOrderStatus: 0,
   remark: undefined,
   sourceWarehouseId: undefined,
   sourceAreaId: undefined,
@@ -332,8 +438,23 @@ const initFormData = {
   totalQuantity: 0,
   details: [],
 }
-const inventorySelectRef = ref(null)
-const selectedInventory = ref([])
+const inventoryDetailOptions = ref([])
+const itemInstanceDialog = reactive({
+  visible: false,
+  loading: false,
+  list: [],
+  total: 0,
+  pageNum: 1,
+  pageSize: 10,
+  selection: [],
+  query: {
+    unshippedOnly: true,
+    rackId: undefined,
+    instanceCode: undefined,
+    itemName: undefined,
+    skuName: undefined
+  }
+})
 const data = reactive({
   form: {...initFormData},
   rules: {
@@ -345,6 +466,9 @@ const data = reactive({
     ],
     targetWarehouseId: [
       {required: true, message: "请选择目标仓库", trigger: ['blur', 'change']}
+    ],
+    movementType: [
+      {required: true, message: "请选择调拨类型", trigger: ['blur', 'change']}
     ],
   }
 });
@@ -364,7 +488,6 @@ const close = () => {
   }
   proxy?.$tab.closePage();
 }
-const inventorySelectShow = ref(false)
 
 const calcLineAmount = (quantity, unitPrice) => {
   const qty = Number(quantity || 0)
@@ -382,14 +505,15 @@ const syncMovementDetail = (detail) => {
     unit: detail.unit ?? detail.itemSku?.item?.unit,
     productIdentifier: detail.productIdentifier ?? detail.itemSku?.productIdentifier,
     qualityGrade: detail.qualityGrade ?? detail.itemSku?.qualityGrade,
-    itemInstanceId: detail.itemInstanceId,
-    instanceCode: detail.instanceCode,
-    boxId: detail.boxId,
-    boxCode: detail.boxCode,
-    sourceRackId: detail.sourceRackId,
-    sourceLocationId: detail.sourceLocationId,
+    itemInstanceId: detail.itemInstanceId ?? detail.inventoryDetail?.itemInstanceId,
+    instanceCode: detail.instanceCode ?? detail.itemInstance?.instanceCode ?? detail.inventoryDetail?.instanceCode,
+    sourceRackId: detail.sourceRackId ?? detail.inventoryDetail?.rackId,
+    sourceRackName: detail.sourceRackName ?? detail.rackName,
+    sourceLocationId: detail.sourceLocationId ?? detail.inventoryDetail?.locationId,
+    sourceLocationName: detail.sourceLocationName ?? detail.locationName,
     targetRackId: detail.targetRackId,
     targetLocationId: detail.targetLocationId,
+    remainQuantity: detail.remainQuantity ?? detail.inventoryDetail?.remainQuantity,
     unitPrice,
     lineAmount: detail.lineAmount ?? calcLineAmount(detail.quantity, unitPrice)
   }
@@ -399,115 +523,122 @@ const handleDetailChange = (row) => {
   row.lineAmount = calcLineAmount(row.quantity, row.unitPrice)
 }
 
-const handleSpecialCodeBlur = async (row, mode) => {
-  if (form.value.movementType !== 'special') {
-    return
-  }
-  if (mode === 'item') {
-    if (!row.instanceCode) {
-      row.itemInstanceId = undefined
-      return
-    }
-    try {
-      const res = await getItemInstanceByCode(row.instanceCode)
-      const data = res.data
-      row.itemInstanceId = data?.id
-      row.boxId = undefined
-      row.boxCode = undefined
-      row.quantity = 1
-      handleChangeQuantity()
-    } catch (e) {
-      row.itemInstanceId = undefined
-      proxy.$modal.msgError('器材实例编码校验失败，请确认器材实例存在且可用于专装调拨')
-    }
-    return
-  }
-  if (!row.boxCode) {
-    row.boxId = undefined
-    return
-  }
-  try {
-    const res = await getBoxByCode(row.boxCode)
-    const data = res.data
-    row.boxId = data?.id
-    row.itemInstanceId = undefined
-    row.instanceCode = undefined
-    row.quantity = 1
-    handleChangeQuantity()
-  } catch (e) {
-    row.boxId = undefined
-    proxy.$modal.msgError('箱码校验失败，请确认箱体存在且可用于专装调拨')
-  }
-}
-
-const validateSpecialMovementDetails = (details) => {
-  if (form.value.movementType !== 'special') {
-    return true
-  }
-  for (const detail of details) {
-    const hasItem = !!detail.itemInstanceId
-    const hasBox = !!detail.boxId
-    if (!hasItem && !hasBox) {
-      ElMessage.error('专装调拨必须录入器材实例编码或箱码')
-      return false
-    }
-    if (hasItem && hasBox) {
-      ElMessage.error('专装调拨明细不能同时录入器材实例编码和箱码')
-      return false
-    }
-    if (Number(detail.quantity) !== 1) {
-      ElMessage.error('专装调拨数量必须为 1')
-      return false
-    }
-  }
-  return true
-}
-
 // 选择器材 start
-const showAddItem = () => {
-  inventorySelectRef.value.getList()
-  inventorySelectShow.value = true
+const refreshInventoryOptions = async () => {
+  if (!form.value.sourceWarehouseId) {
+    inventoryDetailOptions.value = []
+    return
+  }
+  const res = await listInventoryDetailNoPage({
+    warehouseId: form.value.sourceWarehouseId,
+    areaId: form.value.sourceAreaId
+  })
+  inventoryDetailOptions.value = res.data || []
 }
-// 选择成功
-const handleOkClick = (item) => {
-  inventorySelectShow.value = false
-  selectedInventory.value = [...item]
-  item.forEach(it => {
-    if (!form.value.details.find(detail => detail.inventoryDetailId === it.id)) {
-      form.value.details.push(
-        syncMovementDetail({
-          itemSku: {
-            ...it.itemSku,
-            item: it.item
-          },
-          itemCode: it.itemCode ?? it.item?.itemCode,
-          itemName: it.itemName ?? it.item?.itemName,
-          skuName: it.skuName ?? it.itemSku?.skuName,
-          unit: it.unit ?? it.item?.unit,
-          productIdentifier: it.productIdentifier ?? it.itemSku?.productIdentifier,
-          qualityGrade: it.qualityGrade ?? it.itemSku?.qualityGrade,
-          skuId: it.skuId,
-          quantity: undefined,
-          remainQuantity: it.remainQuantity,
-          sourceWarehouseId: form.value.sourceWarehouseId,
-          sourceAreaId: form.value.sourceAreaId ?? it.areaId,
-          sourceRackId: it.rackId,
-          sourceLocationId: it.locationId,
-          inventoryDetailId: it.id,
-          targetWarehouseId: form.value.targetWarehouseId,
-          targetAreaId: form.value.targetAreaId,
-          targetRackId: form.value.targetRackId,
-          targetLocationId: form.value.targetLocationId,
-          sourceAreaName: useWmsStore().areaMap.get(form.value.sourceAreaId ?? it.areaId)?.areaName,
-          unitPrice: it.unitPrice
-        })
-      )
-    }
+
+const matchInventoryDetailByItemInstance = (item) => {
+  return inventoryDetailOptions.value.find(detail => {
+    return detail.itemInstanceId === item.id
+      && detail.warehouseId === form.value.sourceWarehouseId
+      && (!form.value.sourceAreaId || detail.areaId === form.value.sourceAreaId)
+      && Number(detail.remainQuantity || 0) > 0
   })
 }
 
-const getPlaceAndSkuKey = (row) => {
-  return row.warehouseId + '_' + row.areaId + '_' + row.skuId
+const addItemInstancesToMovement = async (items) => {
+  if (!items?.length) {
+    return
+  }
+  await refreshInventoryOptions()
+  const newRows = []
+  for (const item of items) {
+    if (form.value.details.some(detail => detail.itemInstanceId === item.id)) {
+      throw new Error(`器材实例编码 ${item.instanceCode} 已添加`)
+    }
+    const matchedInventory = matchInventoryDetailByItemInstance(item)
+    if (!matchedInventory) {
+      throw new Error(`器材实例编码 ${item.instanceCode} 未匹配到当前源位置的可用库存明细`)
+    }
+    newRows.push(createMovementDetailRow(item, matchedInventory))
+  }
+  form.value.details.push(...newRows.map(it => syncMovementDetail(it)))
+  handleChangeQuantity()
+}
+
+const createMovementDetailRow = (item, matchedInventory) => {
+  return {
+    skuId: item.skuId,
+    itemCode: item.itemCode,
+    itemName: item.itemName,
+    skuName: item.skuName,
+    unit: item.unit,
+    productIdentifier: item.productIdentifier,
+    qualityGrade: item.qualityGrade,
+    itemInstanceId: item.id,
+    instanceCode: item.instanceCode,
+    quantity: 1,
+    remainQuantity: matchedInventory.remainQuantity,
+    sourceWarehouseId: form.value.sourceWarehouseId,
+    sourceAreaId: matchedInventory.areaId,
+    sourceAreaName: item.areaName ?? useWmsStore().areaMap.get(matchedInventory.areaId)?.areaName,
+    sourceRackId: matchedInventory.rackId,
+    sourceRackName: matchedInventory.rackName ?? item.rackName,
+    sourceLocationId: matchedInventory.locationId,
+    sourceLocationName: matchedInventory.locationName ?? item.locationName,
+    inventoryDetailId: matchedInventory.id,
+    targetWarehouseId: form.value.targetWarehouseId,
+    targetAreaId: form.value.targetAreaId,
+    targetRackId: undefined,
+    targetLocationId: undefined,
+    unitPrice: matchedInventory.unitPrice
+  }
+}
+
+const showAddItem = async () => {
+  await refreshInventoryOptions()
+  itemInstanceDialog.query.rackId = undefined
+  itemInstanceDialog.pageNum = 1
+  itemInstanceDialog.visible = true
+  itemInstanceDialog.selection = []
+  getItemInstanceList()
+}
+
+const getItemInstanceList = () => {
+  itemInstanceDialog.loading = true
+  listItemInstance({
+    pageNum: itemInstanceDialog.pageNum,
+    pageSize: itemInstanceDialog.pageSize,
+    warehouseId: form.value.sourceWarehouseId,
+    areaId: form.value.sourceAreaId,
+    instanceStatus: '在库',
+    ...itemInstanceDialog.query
+  }).then((res) => {
+    itemInstanceDialog.list = res.rows || []
+    itemInstanceDialog.total = res.total || 0
+  }).finally(() => {
+    itemInstanceDialog.loading = false
+  })
+}
+
+const handleItemInstanceSelectionChange = (selection) => {
+  itemInstanceDialog.selection = selection
+}
+
+const isItemInstanceSelectable = (row) => {
+  return !form.value.details.some(detail => detail.itemInstanceId === row.id)
+}
+
+const handleConfirmItemInstance = async () => {
+  if (!itemInstanceDialog.selection.length) {
+    ElMessage.error('请选择器材实例编码')
+    return
+  }
+  try {
+    await addItemInstancesToMovement(itemInstanceDialog.selection)
+    itemInstanceDialog.visible = false
+  } catch (e) {
+    ElMessage.error(e?.message || '器材实例编码添加失败')
+  }
 }
 // 选择器材 end
 
@@ -531,15 +662,13 @@ const doSave = (movementOrderStatus = 0) => {
       if (invalidQuantityList?.length) {
         return ElMessage.error('请选择数量')
       }
-      if (!validateSpecialMovementDetails(form.value.details)) {
-        return
-      }
       // 构建参数
       details = form.value.details.map(it => {
         return {
           id: it.id,
           movementOrderId: form.value.id,
           skuId: it.skuId,
+          itemInstanceId: it.itemInstanceId,
           itemCode: it.itemCode,
           itemName: it.itemName,
           skuName: it.skuName,
@@ -551,8 +680,6 @@ const doSave = (movementOrderStatus = 0) => {
           lineAmount: it.lineAmount,
           remark: it.remark,
           inventoryDetailId: it.inventoryDetailId,
-          itemInstanceId: it.itemInstanceId,
-          boxId: it.boxId,
           sourceWarehouseId: form.value.sourceWarehouseId,
           sourceAreaId: it.sourceAreaId,
           sourceRackId: it.sourceRackId,
@@ -633,15 +760,13 @@ const doMovement = async () => {
     if (invalidQuantityList?.length) {
       return ElMessage.error('请选择调拨数量')
     }
-    if (!validateSpecialMovementDetails(form.value.details)) {
-      return
-    }
     // 构建参数
     const details = form.value.details.map(it => {
       return {
         id: it.id,
         movementOrderId: form.value.id,
         skuId: it.skuId,
+        itemInstanceId: it.itemInstanceId,
         itemCode: it.itemCode,
         itemName: it.itemName,
         skuName: it.skuName,
@@ -652,8 +777,6 @@ const doMovement = async () => {
         unitPrice: it.unitPrice,
         lineAmount: it.lineAmount,
         inventoryDetailId: it.inventoryDetailId,
-        itemInstanceId: it.itemInstanceId,
-        boxId: it.boxId,
         sourceWarehouseId: form.value.sourceWarehouseId,
         sourceAreaId: it.sourceAreaId,
         sourceRackId: it.sourceRackId,
@@ -722,17 +845,10 @@ const loadDetail = (id) => {
         detail.sourceAreaName = useWmsStore().areaMap.get(detail.sourceAreaId)?.areaName
         detail.targetAreaName = useWmsStore().areaMap.get(detail.targetAreaId)?.areaName
       })
-      selectedInventory.value = response.data.details.map(it => {
-        return {
-          id: it.inventoryDetailId,
-          areaId: it.sourceAreaId
-        }
-      })
     }
     form.value = {...response.data}
     form.value.details = (response.data.details || []).map(detail => syncMovementDetail(detail))
-    inventorySelectRef.value.setWarehouseIdAndAreaId(form.value.sourceWarehouseId, form.value.sourceAreaId)
-    Promise.resolve();
+    return refreshInventoryOptions()
   }).then(() => {
   }).finally(() => {
     loading.value = false
@@ -742,13 +858,12 @@ const loadDetail = (id) => {
 const handleChangeSourceWarehouse = (e) => {
   form.value.sourceAreaId = undefined
   form.value.details = []
-  inventorySelectRef.value.setWarehouseIdAndAreaId(form.value.sourceWarehouseId, form.value.sourceAreaId)
+  refreshInventoryOptions()
 }
 
 const handleChangeSourceArea = (e) => {
-  inventorySelectRef.value.setWarehouseIdAndAreaId(form.value.sourceWarehouseId, form.value.sourceAreaId)
-  form.value.details = form.value.details.filter(it => it.sourceAreaId === e)
-  selectedInventory.value = selectedInventory.value.filter(selected => selected.areaId === e)
+  form.value.details = e ? form.value.details.filter(it => it.sourceAreaId === e) : form.value.details
+  refreshInventoryOptions()
 }
 
 const handleChangeTargetWarehouse = (e) => {
@@ -810,8 +925,6 @@ const handleDeleteDetail = (row, index) => {
     })
   } else {
     form.value.details.splice(index, 1)
-    const indexOfSelected = selectedInventory.value.findIndex(it => it.id === row.inventoryDetailId)
-    selectedInventory.value.splice(indexOfSelected, 1)
     handleChangeQuantity()
   }
 }
@@ -841,6 +954,33 @@ const handleDeleteDetail = (row, index) => {
 
 .form-tip {
   margin: 0 0 12px;
+}
+
+.sub-text {
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.item-instance-search-form {
+  margin-bottom: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+.item-instance-search-form :deep(.el-form-item) {
+  margin-right: 8px;
+  margin-bottom: 12px;
+}
+
+.item-instance-search-form :deep(.el-form-item__label) {
+  padding-right: 6px;
+}
+
+.item-instance-search-form__action {
+  margin-left: auto !important;
+  margin-right: 0 !important;
 }
 
 </style>

@@ -1,19 +1,27 @@
 <template>
   <div class="app-container">
     <el-card>
-      <el-form ref="queryRef" :model="queryParams" :inline="true" label-width="80px">
-        <el-form-item label="库区名称" prop="areaName">
-          <el-input v-model="queryParams.areaName" placeholder="请输入库区名称" clearable @keyup.enter="handleQuery" />
-        </el-form-item>
-        <el-form-item label="所属仓库" prop="warehouseId">
-          <el-select v-model="queryParams.warehouseId" placeholder="请选择所属仓库" clearable filterable style="width: 220px">
-            <el-option v-for="item in wmsStore.warehouseList" :key="item.id" :label="item.warehouseName" :value="item.id" />
-          </el-select>
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" icon="Search" @click="handleQuery">搜索</el-button>
-          <el-button icon="Refresh" @click="resetQuery">重置</el-button>
-        </el-form-item>
+      <el-form ref="queryRef" :model="queryParams" label-width="88px" class="query-form">
+        <el-row :gutter="16">
+          <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
+            <el-form-item label="库区名称" prop="areaName">
+              <el-input v-model="queryParams.areaName" placeholder="请输入库区名称" clearable @keyup.enter="handleQuery" />
+            </el-form-item>
+          </el-col>
+          <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
+            <el-form-item label="所属仓库" prop="warehouseId">
+              <el-select v-model="queryParams.warehouseId" placeholder="请选择所属仓库" clearable filterable style="width: 100%">
+                <el-option v-for="item in wmsStore.warehouseList" :key="item.id" :label="item.warehouseName" :value="item.id" />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
+            <div class="query-actions">
+              <el-button type="primary" icon="Search" @click="handleQuery">搜索</el-button>
+              <el-button icon="Refresh" @click="resetQuery">重置</el-button>
+            </div>
+          </el-col>
+        </el-row>
       </el-form>
     </el-card>
 
@@ -51,10 +59,7 @@
     <el-drawer :title="title" v-model="open" append-to-body size="40%" :close-on-click-modal="false">
       <div class="form-tip">带 * 为必填项</div>
       <el-form ref="areaRef" :model="form" :rules="rules" label-width="110px">
-        <el-form-item prop="areaName">
-          <template #label>
-            <FormLabelHelp label="库区名称" purpose="标识仓库下的业务分区，便于货架和货位归属管理。" example="器材待检区、成品存放区" />
-          </template>
+        <el-form-item label="库区名称" prop="areaName">
           <el-input v-model="form.areaName" placeholder="请输入库区名称" />
         </el-form-item>
         <el-form-item label="所属仓库" prop="warehouseId">
@@ -81,7 +86,6 @@ import { getCurrentInstance, onMounted, reactive, ref, toRefs } from 'vue'
 import { ElMessageBox } from 'element-plus'
 import { addArea, delArea, getArea, listArea, updateArea } from '@/api/wms/area'
 import { useWmsStore } from '@/store/modules/wms'
-import FormLabelHelp from '@/views/components/FormLabelHelp.vue'
 
 const { proxy } = getCurrentInstance()
 const wmsStore = useWmsStore()
@@ -250,5 +254,12 @@ onMounted(async () => {
   display: flex;
   justify-content: flex-end;
   align-items: flex-start;
+}
+
+.query-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 </style>

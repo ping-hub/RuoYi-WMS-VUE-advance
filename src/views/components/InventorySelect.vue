@@ -1,5 +1,5 @@
 <template>
-  <el-drawer :model-value="show" title="选择库存" @close="handleCancelClick" :size="size" :close-on-click-modal="false"
+  <el-drawer :model-value="show" title="选择器材实例" @close="handleCancelClick" :size="size" :close-on-click-modal="false"
              append-to-body>
     <el-form :inline="true" label-width="68px">
       <el-form-item label="器材名称">
@@ -31,11 +31,11 @@
       <el-table-column label="库区" prop="areaName"/>
       <el-table-column label="器材信息" prop="itemId">
         <template #default="{ row }">
-          <div>{{ row.item.itemName }}</div>
-          <div v-if="row.item.itemCode">编号：{{ row.item.itemCode }}</div>
-          <div>规格：{{ row.itemSku?.skuName || row.skuName || '-' }}</div>
-          <div v-if="row.itemSku?.productIdentifier || row.productIdentifier">产品标识：{{ row.itemSku?.productIdentifier || row.productIdentifier }}</div>
-          <div v-if="row.itemSku?.qualityGrade || row.qualityGrade">质量等级：{{ row.itemSku?.qualityGrade || row.qualityGrade }}</div>
+          <div class="item-title">{{ row.item.itemName }}</div>
+          <div v-if="row.item.itemCode" class="sub-text">器材编码：{{ row.item.itemCode }}</div>
+          <div v-if="row.itemSku?.skuName || row.skuName" class="sub-text">规格型号：{{ row.itemSku?.skuName || row.skuName }}</div>
+          <div v-if="row.itemSku?.productIdentifier || row.productIdentifier" class="sub-text">产品标识：{{ row.itemSku?.productIdentifier || row.productIdentifier }}</div>
+          <div v-if="row.itemSku?.qualityGrade || row.qualityGrade" class="sub-text">质量等级：{{ row.itemSku?.qualityGrade || row.qualityGrade }}</div>
         </template>
       </el-table-column>
       <el-table-column label="剩余库存" prop="quantity" align="right">
@@ -222,6 +222,19 @@ onMounted(() => {
 })
 </script>
 <style lang="scss">
+.item-title {
+  color: var(--el-text-color-primary);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.sub-text {
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 .el-table .my-cell {
   vertical-align: top
 }

@@ -1,47 +1,62 @@
 <template>
   <div class="app-container">
     <el-card>
-      <el-form :model="queryParams" ref="queryRef" :inline="true" label-width="80px">
-        <el-form-item label="操作类型" prop="orderType">
-          <el-radio-group v-model="queryParams.orderType" @change="handleQuery">
-            <el-radio-button :label="-1">全部</el-radio-button>
-            <el-radio-button v-for="item in wms_inventory_history_type" :key="item.value" :label="item.value">
-              {{ item.label }}
-            </el-radio-button>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="操作单号" prop="orderNo">
-          <el-input v-model="queryParams.orderNo" clearable placeholder="请输入操作单号" />
-        </el-form-item>
-        <el-form-item label="仓库库区" prop="place">
-          <WarehouseCascader v-model:value="queryParams.place" :show-all-levels="true" size="default" />
-        </el-form-item>
-        <el-form-item label="器材名称" prop="itemName">
-          <el-input v-model="queryParams.itemName" clearable placeholder="请输入器材名称" />
-        </el-form-item>
-        <el-form-item label="器材编码" prop="itemCode">
-          <el-input v-model="queryParams.itemCode" clearable placeholder="请输入器材编码" />
-        </el-form-item>
-        <el-form-item label="规格型号" prop="skuName">
-          <el-input v-model="queryParams.skuName" clearable placeholder="请输入规格型号" />
-        </el-form-item>
-        <el-form-item label="操作时间" prop="createTimeRange">
-          <el-date-picker
-            v-model="queryParams.createTimeRange"
-            type="datetimerange"
-            range-separator="至"
-            value-format="YYYY-MM-DD HH:mm:ss"
-            format="YYYY-MM-DD HH:mm:ss"
-            :default-time="defaultTime"
-            start-placeholder="开始时间"
-            end-placeholder="结束时间"
-          />
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" icon="Search" @click="handleQuery">搜索</el-button>
-          <el-button icon="Refresh" @click="resetQuery">重置</el-button>
-          <el-button type="warning" plain icon="Download" @click="handleExport" v-hasPermi="['wms:inventoryHistory:all']">导出</el-button>
-        </el-form-item>
+      <el-form :model="queryParams" ref="queryRef" label-width="88px" class="query-form">
+        <el-row :gutter="16">
+          <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
+            <el-form-item label="操作类型" prop="orderType">
+              <el-select v-model="queryParams.orderType" clearable placeholder="请选择操作类型" style="width: 100%" @change="handleQuery">
+                <el-option v-for="item in wms_inventory_history_type" :key="item.value" :label="item.label" :value="item.value" />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
+            <el-form-item label="操作单号" prop="orderNo">
+              <el-input v-model="queryParams.orderNo" clearable placeholder="请输入操作单号" @keyup.enter="handleQuery" />
+            </el-form-item>
+          </el-col>
+          <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
+            <el-form-item label="仓库库区" prop="place">
+              <WarehouseCascader v-model:value="queryParams.place" :show-all-levels="true" size="default" />
+            </el-form-item>
+          </el-col>
+          <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
+            <el-form-item label="器材名称" prop="itemName">
+              <el-input v-model="queryParams.itemName" clearable placeholder="请输入器材名称" @keyup.enter="handleQuery" />
+            </el-form-item>
+          </el-col>
+          <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
+            <el-form-item label="器材编码" prop="itemCode">
+              <el-input v-model="queryParams.itemCode" clearable placeholder="请输入器材编码" @keyup.enter="handleQuery" />
+            </el-form-item>
+          </el-col>
+          <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
+            <el-form-item label="规格型号" prop="skuName">
+              <el-input v-model="queryParams.skuName" clearable placeholder="请输入规格型号" @keyup.enter="handleQuery" />
+            </el-form-item>
+          </el-col>
+          <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
+            <el-form-item label="操作时间" prop="createTimeRange">
+              <el-date-picker
+                v-model="queryParams.createTimeRange"
+                type="datetimerange"
+                range-separator="至"
+                value-format="YYYY-MM-DD HH:mm:ss"
+                format="YYYY-MM-DD HH:mm:ss"
+                :default-time="defaultTime"
+                start-placeholder="开始时间"
+                end-placeholder="结束时间"
+                style="width: 100%"
+              />
+            </el-form-item>
+          </el-col>
+          <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
+            <div class="query-actions">
+              <el-button type="primary" icon="Search" @click="handleQuery">搜索</el-button>
+              <el-button icon="Refresh" @click="resetQuery">重置</el-button>
+            </div>
+          </el-col>
+        </el-row>
       </el-form>
     </el-card>
 
@@ -69,14 +84,14 @@
         <div class="table-tip">支持按操作类型与总账核心字段追溯库存变化</div>
       </div>
       <el-table v-loading="loading" :data="inventoryHistoryList" border class="mt20" empty-text="暂无库存流水" cell-class-name="vertical-top-cell">
-        <el-table-column label="操作单号" prop="orderNo" min-width="160" show-overflow-tooltip />
+        <el-table-column label="操作单号" prop="orderNo" min-width="200" show-overflow-tooltip />
         <el-table-column label="器材信息" min-width="200">
           <template #default="{ row }">
-            <div>{{ row.itemName || row.item?.itemName || '-' }}</div>
-            <div v-if="row.item?.itemCode">器材编码：{{ row.item.itemCode }}</div>
-            <div>规格：{{ row.itemSku?.skuName || '-' }}</div>
-            <div v-if="row.itemSku?.productIdentifier">产品标识：{{ row.itemSku.productIdentifier }}</div>
-            <div v-if="row.itemSku?.qualityGrade">质量等级：{{ row.itemSku.qualityGrade }}</div>
+            <div >{{ row.itemName || row.item?.itemName || '-' }}</div>
+            <div v-if="row.item?.itemCode" class="sub-text">器材编码：{{ row.item.itemCode }}</div>
+            <div v-if="row.itemSku?.skuName" class="sub-text">规格型号：{{ row.itemSku.skuName }}</div>
+            <div v-if="row.itemSku?.productIdentifier" class="sub-text">产品标识：{{ row.itemSku.productIdentifier }}</div>
+            <div v-if="row.itemSku?.qualityGrade" class="sub-text">质量等级：{{ row.itemSku.qualityGrade }}</div>
           </template>
         </el-table-column>
         <el-table-column label="操作类型" align="center" width="100">
@@ -151,7 +166,7 @@ const total = ref(0)
 const queryParams = ref({
   pageNum: 1,
   pageSize: 10,
-  orderType: -1,
+  orderType: undefined,
   orderNo: undefined,
   itemName: undefined,
   itemCode: undefined,
@@ -182,9 +197,6 @@ const buildQuery = (includePage = true) => {
   if (!includePage) {
     delete query.pageNum
     delete query.pageSize
-  }
-  if (query.orderType === -1) {
-    delete query.orderType
   }
   if (query.place?.length) {
     query.warehouseId = query.place[0]
@@ -225,12 +237,8 @@ function resetQuery() {
   queryParams.value.pageSize = 10
   queryParams.value.createTimeRange = []
   queryParams.value.place = []
-  queryParams.value.orderType = -1
+  queryParams.value.orderType = undefined
   getList()
-}
-
-const handleExport = () => {
-  proxy.download('wms/inventoryHistory/export', buildQuery(false), `inventory_history_${new Date().getTime()}.xlsx`)
 }
 
 const handleGoOrder = (row) => {
@@ -238,13 +246,17 @@ const handleGoOrder = (row) => {
     1: { preferredPaths: ['/receiptOrderEdit'], titleKeywords: ['入库'] },
     2: { preferredPaths: ['/shipmentOrderEdit'], titleKeywords: ['出库'] },
     3: { preferredPaths: ['/movementOrderEdit'], titleKeywords: ['调拨'] },
-    4: { preferredPaths: ['/checkOrderEdit'], titleKeywords: ['盘点'] }
+    4: { preferredPaths: ['/checkOrderEdit'], titleKeywords: ['盘点'] },
+    5: { preferredPaths: ['/wms-borrow-record/index'], titleKeywords: ['借用'] },
+    6: { preferredPaths: ['/wms-borrow-record/index'], titleKeywords: ['借用'] }
   }
   const fallbackPathMap = {
     1: '/receiptOrderEdit',
     2: '/shipmentOrderEdit',
     3: '/movementOrderEdit',
-    4: '/checkOrderEdit'
+    4: '/checkOrderEdit',
+    5: '/wms-borrow-record/index',
+    6: '/wms-borrow-record/index'
   }
   const path = resolveRoutePath(router, orderRouteResolverMap[row.orderType] || {}) || fallbackPathMap[row.orderType]
   if (!path || !row.orderId) {
@@ -283,5 +295,20 @@ getList()
 .sub-text {
   color: var(--el-text-color-secondary);
   font-size: 12px;
+  line-height: 1.5;
+}
+
+.item-title {
+  color: var(--el-text-color-primary);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.query-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 </style>

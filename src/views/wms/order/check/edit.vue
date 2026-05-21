@@ -4,19 +4,21 @@
       <el-form>
         <el-form-item label="仓库" prop="warehouseId">
           <el-select v-model="form.warehouseId" placeholder="请选择仓库" :disabled="checking"
+                     @change="handleWarehouseChange"
                      filterable>
             <el-option v-for="item in useWmsStore().warehouseList" :key="item.id" :label="item.warehouseName"
                        :value="item.id"/>
           </el-select>
         </el-form-item>
         <el-form-item label="库区" prop="areaId">
-          <el-select v-model="form.areaId" placeholder="请选择库区" :disabled="!form.warehouseId || checking" clearable filterable>
+          <el-select v-model="form.areaId" placeholder="请选择库区" :disabled="!form.warehouseId || checking" clearable filterable
+                     @change="handleAreaChange">
             <el-option v-for="item in useWmsStore().areaList.filter(it => it.warehouseId === form.warehouseId)"
                        :key="item.id" :label="item.areaName" :value="item.id"/>
           </el-select>
         </el-form-item>
         <el-form-item label="货架" prop="rackId">
-          <RackSelect v-model="form.rackId" :warehouse-id="form.warehouseId" :area-id="form.areaId" />
+          <RackSelect v-model="form.rackId" :warehouse-id="form.warehouseId" :area-id="form.areaId" :disabled="!form.areaId || checking" />
         </el-form-item>
         <el-form-item>
           <el-button type="primary" plain="plain" size="default" @click="startCheck"  style="width: 100%!important;">开始盘点</el-button>
@@ -30,15 +32,14 @@
       <el-card header="盘点单基本信息">
         <el-form label-width="108px" :model="form" ref="checkForm" :rules="rules" :disabled="isViewMode">
           <el-row :gutter="24">
-            <el-col :span="11">
+            <el-col :span="6">
               <el-form-item label="盘点单号" prop="checkOrderNo">
-                <el-input class="w200" v-model="form.checkOrderNo" placeholder="盘点单号"
-                          :disabled="form.id"></el-input>
+                <el-input v-model="form.checkOrderNo" placeholder="盘点单号" :disabled="form.id" style="width: 100%"></el-input>
               </el-form-item>
             </el-col>
             <el-col :span="6">
               <el-form-item label="仓库" prop="warehouseId">
-                <el-select v-model="form.warehouseId" placeholder="请选择仓库" :disabled="checking"
+                <el-select v-model="form.warehouseId" placeholder="请选择仓库" :disabled="true"
                            filterable>
                   <el-option v-for="item in useWmsStore().warehouseList" :key="item.id" :label="item.warehouseName"
                              :value="item.id"/>
@@ -47,7 +48,7 @@
             </el-col>
             <el-col :span="6">
               <el-form-item label="库区" prop="areaId">
-                <el-select v-model="form.areaId" placeholder="请选择库区" :disabled="!form.warehouseId || checking" clearable filterable>
+                <el-select v-model="form.areaId" placeholder="请选择库区" :disabled="true" clearable filterable>
                   <el-option v-for="item in useWmsStore().areaList.filter(it => it.warehouseId === form.warehouseId)"
                              :key="item.id" :label="item.areaName" :value="item.id"/>
                 </el-select>
@@ -55,43 +56,21 @@
             </el-col>
             <el-col :span="6">
               <el-form-item label="货架" prop="rackId">
-                <RackSelect v-model="form.rackId" :warehouse-id="form.warehouseId" :area-id="form.areaId" />
-              </el-form-item>
-            </el-col>
-          </el-row>
-          <el-row :gutter="24">
-            <el-col :span="11">
-              <el-form-item label="备注" prop="remark">
-                <el-input
-                  v-model="form.remark"
-                  placeholder="备注...100个字符以内"
-                  rows="4"
-                  maxlength="100"
-                  type="textarea"
-                  show-word-limit="show-word-limit"
-                ></el-input>
-              </el-form-item>
-            </el-col>
-            <el-col :span="6">
-              <el-form-item label="盈亏数" prop="checkOrderTotal">
-                <el-input-number v-model="form.checkOrderTotal" :controls="false" :precision="0"
-                                 :disabled="true"></el-input-number>
-              </el-form-item>
-            </el-col>
-            <el-col :span="6">
-              <el-form-item label="盘点日期" prop="checkDate">
-                <el-date-picker v-model="form.checkDate" type="datetime" value-format="YYYY-MM-DD HH:mm:ss" style="width: 100%" />
+                <RackSelect v-model="form.rackId" :warehouse-id="form.warehouseId" :area-id="form.areaId" :disabled="true" />
               </el-form-item>
             </el-col>
           </el-row>
           <el-row :gutter="24">
             <el-col :span="6">
               <el-form-item label="范围类型" prop="checkScopeType">
-                <el-select v-model="form.checkScopeType" placeholder="请选择盘点范围" style="width: 100%">
-                  <el-option label="仓库" value="warehouse" />
-                  <el-option label="库区" value="area" />
-                  <el-option label="货架" value="rack" />
+                <el-select v-model="form.checkScopeType" placeholder="请选择盘点范围" style="width: 100%" :disabled="true">
+                  <el-option v-for="item in wms_check_scope_type" :key="item.value" :label="item.label" :value="item.value" />
                 </el-select>
+              </el-form-item>
+            </el-col>
+            <el-col :span="6">
+              <el-form-item label="盘点日期" prop="checkDate">
+                <el-date-picker v-model="form.checkDate" type="datetime" value-format="YYYY-MM-DD HH:mm:ss" style="width: 100%" />
               </el-form-item>
             </el-col>
             <el-col :span="6">
@@ -105,6 +84,20 @@
               </el-form-item>
             </el-col>
           </el-row>
+          <el-row :gutter="24">
+            <el-col :span="12">
+              <el-form-item label="备注" prop="remark">
+                <el-input
+                  v-model="form.remark"
+                  placeholder="备注...100个字符以内"
+                  rows="4"
+                  maxlength="100"
+                  type="textarea"
+                  show-word-limit="show-word-limit"
+                ></el-input>
+              </el-form-item>
+            </el-col>
+          </el-row>
         </el-form>
       </el-card>
       <el-card header="盘点明细" class="mt10">
@@ -115,36 +108,29 @@
             </div>
           </div>
           <el-table :data="form.details" border empty-text="暂无盘点明细">
-            <el-table-column label="器材信息" prop="itemSku.itemName">
-              <template #default="scope">
-                  <div>{{
-                      scope.row.itemSku.item.itemName + (scope.row.itemSku.item.itemCode ? ('(' + scope.row.itemSku.item.itemCode + ')') : '')
-                    }}
-                  </div>
-                  <div>规格：{{ scope.row.skuName || scope.row.itemSku?.skuName || '-' }}</div>
-                  <div v-if="scope.row.productIdentifier || scope.row.itemSku?.productIdentifier">产品标识：{{ scope.row.productIdentifier || scope.row.itemSku?.productIdentifier }}</div>
-                  <div v-if="scope.row.qualityGrade || scope.row.itemSku?.qualityGrade">质量等级：{{ scope.row.qualityGrade || scope.row.itemSku?.qualityGrade }}</div>
-                </template>
-            </el-table-column>
-            <el-table-column label="货位信息" min-width="220">
+            <el-table-column label="器材实例编码" min-width="180">
               <template #default="{ row }">
-                <template v-if="row.newInventoryDetail">
-                  <div class="target-place-edit">
-                    <el-select v-model="row.areaId" placeholder="库区" :disabled="isViewMode || form.areaId" filterable style="width: 100px">
-                      <el-option v-for="item in useWmsStore().areaList.filter(it => it.warehouseId === form.warehouseId)"
-                                 :key="item.id" :label="item.areaName" :value="item.id"/>
-                    </el-select>
-                    <RackSelect v-model="row.rackId" :warehouse-id="form.warehouseId" :area-id="row.areaId || form.areaId" :disabled="isViewMode" />
-                    <LocationSelect v-model="row.locationId" :warehouse-id="form.warehouseId" :area-id="row.areaId || form.areaId" :rack-id="row.rackId" :disabled="isViewMode" />
-                  </div>
-                </template>
-                <template v-else>
-                  <div>库区：{{ row.areaName }}</div>
-                  <div class="hover-text">货架：{{ row.rackId || '-' }} / 货位：{{ row.locationId || '-' }}</div>
-                </template>
+                <span>{{ row.instanceCode || '-' }}</span>
               </template>
             </el-table-column>
-            <el-table-column label="入库日期" prop="receiptTime" width="200">
+            <el-table-column label="器材信息" prop="itemSku.itemName" min-width="240">
+              <template #default="scope">
+                <div>{{ scope.row.itemSku.item.itemName || '-' }}</div>
+                <div v-if="scope.row.itemSku.item.itemCode" class="sub-text">器材编码：{{ scope.row.itemSku.item.itemCode }}</div>
+                <div v-if="scope.row.skuName || scope.row.itemSku?.skuName" class="sub-text">规格型号：{{ scope.row.skuName || scope.row.itemSku?.skuName }}</div>
+                <div v-if="scope.row.productIdentifier || scope.row.itemSku?.productIdentifier" class="sub-text">产品标识：{{ scope.row.productIdentifier || scope.row.itemSku?.productIdentifier }}</div>
+                <div v-if="scope.row.qualityGrade || scope.row.itemSku?.qualityGrade" class="sub-text">质量等级：{{ scope.row.qualityGrade || scope.row.itemSku?.qualityGrade }}</div>
+              </template>
+            </el-table-column>
+            <el-table-column label="货位信息" min-width="150">
+              <template #default="{ row }">
+                <div v-if="getWarehouseName(row.warehouseId)">仓库：{{ getWarehouseName(row.warehouseId) }}</div>
+                <div v-if="getAreaName(row.areaId, row.areaName)">库区：{{ getAreaName(row.areaId, row.areaName) }}</div>
+                <div v-if="getRackName(row.rackId, row.rackName)">货架：{{ getRackName(row.rackId, row.rackName) }}</div>
+                <div v-if="getLocationName(row.locationId, row.locationName)">货位：{{ getLocationName(row.locationId, row.locationName) }}</div>
+              </template>
+            </el-table-column>
+            <el-table-column label="入库日期" prop="receiptTime" width="140">
               <template #default="{ row }">
                 <template v-if="row.newInventoryDetail">
                   <el-date-picker
@@ -161,17 +147,17 @@
                 </div>
               </template>
             </el-table-column>
-            <el-table-column label="账面库存" align="right" width="150">
+            <el-table-column label="账面库存" align="right" width="110">
               <template #default="{ row }">
                 <el-statistic :value="Number(row.quantity)" :precision="0"/>
               </template>
             </el-table-column>
-            <el-table-column label="盈亏数" prop="remainQuantity" align="right" width="150">
+            <el-table-column label="盈亏数" prop="remainQuantity" align="right" width="110">
               <template #default="{ row }">
                 <el-statistic :value="Number(row.checkQuantity) - Number(row.quantity)" :precision="0"/>
               </template>
             </el-table-column>
-            <el-table-column label="实际库存" prop="checkQuantity" width="180">
+            <el-table-column label="实际库存" prop="checkQuantity" width="160">
               <template #default="scope">
                 <el-input-number
                   v-model="scope.row.checkQuantity"
@@ -181,22 +167,6 @@
                   :disabled="isViewMode"
                   @change="handleChangeQuantity"
                 ></el-input-number>
-              </template>
-            </el-table-column>
-            <el-table-column label="操作" width="140" align="right" fixed="right">
-              <template #default="scope">
-                <el-button
-                  v-if="scope.row.receiptOrderDetailId"
-                  icon="View"
-                  type="primary"
-                  plain
-                  size="small"
-                  @click="handleGoInstances(scope.row)"
-                  link
-                >实例</el-button>
-                <el-button icon="Delete" type="danger" plain size="small" v-if="scope.row.newInventoryDetail && !isViewMode"
-                           @click="handleDeleteDetail(scope.row, scope.$index)" link>删除
-                </el-button>
               </template>
             </el-table-column>
           </el-table>
@@ -221,21 +191,25 @@
 <script setup name="CheckOrderEdit">
 import {computed, getCurrentInstance, onMounted, reactive, ref, toRef, toRefs, watch} from "vue";
 import {addCheckOrder, getCheckOrder, updateCheckOrder, check} from "@/api/wms/checkOrder";
-import {delCheckOrderDetail} from "@/api/wms/checkOrderDetail";
 import {listInventoryDetailNoPage} from "@/api/wms/inventoryDetail";
 import {ElMessage, ElMessageBox} from "element-plus";
 import {useRoute, useRouter} from "vue-router";
 import {useWmsStore} from '@/store/modules/wms'
 import {numSub, generateNo} from '@/utils/ruoyi'
 import RackSelect from "@/views/components/RackSelect.vue";
-import LocationSelect from "@/views/components/LocationSelect.vue";
+import { listRackNoPage } from "@/api/wms/rack";
+import { listLocationNoPage } from "@/api/wms/location";
 
 const {proxy} = getCurrentInstance();
 const router = useRouter();
 const route = useRoute();
+const wmsStore = useWmsStore();
 const isViewMode = computed(() => route.query.mode === 'view');
+const {wms_check_scope_type} = proxy.useDict("wms_check_scope_type");
 const checkGreaterThanZero = ref(false)
 const loading = ref(false)
+const rackMap = ref(new Map())
+const locationMap = ref(new Map())
 const initFormData = {
   id: undefined,
   checkOrderNo: undefined,
@@ -281,11 +255,72 @@ const close = () => {
 // 盘点中标识
 const checking = ref(false)
 
+const syncCheckScopeType = () => {
+  if (form.value.rackId) {
+    form.value.checkScopeType = 'rack'
+    return
+  }
+  if (form.value.areaId) {
+    form.value.checkScopeType = 'area'
+    return
+  }
+  form.value.checkScopeType = 'warehouse'
+}
+
+const handleWarehouseChange = () => {
+  form.value.areaId = undefined
+  form.value.rackId = undefined
+  syncCheckScopeType()
+}
+
+const handleAreaChange = () => {
+  form.value.rackId = undefined
+  syncCheckScopeType()
+}
+
+watch(() => form.value.rackId, () => {
+  syncCheckScopeType()
+})
+
+const buildIdNameMap = (list, idKey, nameKey) => {
+  const map = new Map()
+  (list || []).forEach(item => {
+    map.set(item[idKey], item[nameKey])
+  })
+  return map
+}
+
+const loadPlaceNameMap = async () => {
+  const [rackRes, locationRes] = await Promise.all([
+    listRackNoPage({}),
+    listLocationNoPage({})
+  ])
+  rackMap.value = buildIdNameMap(rackRes.data, 'id', 'rackName')
+  locationMap.value = buildIdNameMap(locationRes.data, 'id', 'locationName')
+}
+
+const getWarehouseName = (warehouseId) => {
+  return wmsStore.warehouseMap.get(warehouseId)?.warehouseName || ''
+}
+
+const getAreaName = (areaId, areaName) => {
+  return areaName || wmsStore.areaMap.get(areaId)?.areaName || ''
+}
+
+const getRackName = (rackId, rackName) => {
+  return rackName || rackMap.value.get(rackId) || ''
+}
+
+const getLocationName = (locationId, locationName) => {
+  return locationName || locationMap.value.get(locationId) || ''
+}
+
 // 选择器材 start
 const startCheck = () => {
   if (!form.value.warehouseId) {
     return ElMessage.error('请先选择仓库！')
   }
+  syncCheckScopeType()
   const query = {
     warehouseId: form.value.warehouseId,
     areaId: form.value.areaId,
@@ -300,13 +335,17 @@ const startCheck = () => {
             itemSku: it.itemSku,
             inventoryDetailId: it.id,
             skuId: it.itemSku.id,
+            itemInstanceId: it.itemInstanceId,
+            instanceCode: it.instanceCode,
             warehouseId: it.warehouseId,
             areaId: it.areaId,
             rackId: it.rackId,
             locationId: it.locationId,
             quantity: Number(it.remainQuantity),
             checkQuantity: Number(it.remainQuantity),
-            areaName: useWmsStore().areaMap.get(it.areaId)?.areaName,
+            areaName: wmsStore.areaMap.get(it.areaId)?.areaName,
+            rackName: getRackName(it.rackId, it.rackName),
+            locationName: getLocationName(it.locationId, it.locationName),
             receiptOrderDetailId: it.receiptOrderDetailId,
             receiptTime: it.createTime,
             newInventoryDetail: false
@@ -446,6 +485,7 @@ const doCheck = async () => {
 
 onMounted(() => {
   const id = route.query && route.query.id;
+  loadPlaceNameMap()
   if (id) {
     checking.value = true
     loadDetail(id)
@@ -461,30 +501,20 @@ const loadDetail = (id) => {
   getCheckOrder(id).then((response) => {
     if (response.data.details?.length) {
       response.data.details.forEach(detail => {
-        detail.areaName = useWmsStore().areaMap.get(detail.areaId)?.areaName
-        detail.newInventoryDetail = !detail.inventoryDetailId
+        detail.areaName = wmsStore.areaMap.get(detail.areaId)?.areaName
+        detail.rackName = getRackName(detail.rackId, detail.rackName)
+        detail.locationName = getLocationName(detail.locationId, detail.locationName)
+        detail.newInventoryDetail = false
         detail.quantity = detail.remainQuantity
       })
     }
+    response.data.checkScopeType = response.data.checkScopeType || (response.data.rackId ? 'rack' : (response.data.areaId ? 'area' : 'warehouse'))
     form.value = {...response.data}
     Promise.resolve();
   }).then(() => {
   }).finally(() => {
     loading.value = false
   })
-}
-
-const handleDeleteDetail = (row, index) => {
-  if (row.id) {
-    proxy.$modal.confirm('确认删除本条器材明细吗？如确认会立即执行！').then(function () {
-      return delCheckOrderDetail(row.id);
-    }).then(() => {
-      form.value.details.splice(index, 1)
-      proxy.$modal.msgSuccess("删除成功");
-    })
-  } else {
-    form.value.details.splice(index, 1)
-  }
 }
 
 const handleChangeQuantity = () => {
@@ -495,15 +525,6 @@ const handleChangeQuantity = () => {
     }
   })
   form.value.checkOrderTotal = checkOrderTotal
-}
-
-const handleGoInstances = (row) => {
-  router.push({
-    path: '/wms-item-instance/index',
-    query: {
-      receiptOrderDetailId: row.receiptOrderDetailId
-    }
-  })
 }
 
 </script>
@@ -522,6 +543,20 @@ const handleGoInstances = (row) => {
 .el-statistic__content {
   font-size: 14px;
 }
+
+.item-title {
+  color: var(--el-text-color-primary);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.sub-text {
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 .hover-text {
   color: black; /* 初始文字颜色 */
   text-decoration: none; /* 初始没有下划线 */

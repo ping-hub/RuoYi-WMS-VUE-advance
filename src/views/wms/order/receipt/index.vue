@@ -1,77 +1,44 @@
 <template>
   <div class="app-container">
     <el-card>
-      <el-form :model="queryParams" ref="queryRef" :inline="true" label-width="68px">
-        <el-form-item label="入库状态" prop="receiptOrderStatus">
-          <el-radio-group v-model="queryParams.receiptOrderStatus" @change="handleQuery">
-            <el-radio-button
-              :key="-2"
-              :label="-2"
-            >
-              全部
-            </el-radio-button>
-            <el-radio-button
-              v-for="item in wms_receipt_status"
-              :key="item.value"
-              :label="item.value"
-            >
-              {{ item.label }}
-            </el-radio-button>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="入库类型" prop="receiptOrderType">
-          <el-radio-group v-model="queryParams.receiptOrderType" @change="handleQuery">
-            <el-radio-button
-              :key="-1"
-              :label="-1"
-            >
-              全部
-            </el-radio-button>
-            <el-radio-button
-              v-for="item in wms_receipt_type"
-              :key="item.value"
-              :label="item.value"
-            >
-              {{ item.label }}
-            </el-radio-button>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="入库单号" prop="receiptOrderNo">
-          <el-input
-            v-model="queryParams.receiptOrderNo"
-            placeholder="请输入入库单号"
-            clearable
-            @keyup.enter="handleQuery"
-          />
-        </el-form-item>
-        <el-form-item label="订单号" prop="orderNo">
-          <el-input
-            v-model="queryParams.orderNo"
-            placeholder="请输入订单号"
-            clearable
-            @keyup.enter="handleQuery"
-          />
-        </el-form-item>
-        <el-form-item label="调拨根据" prop="basisNo">
-          <el-input
-            v-model="queryParams.basisNo"
-            placeholder="请输入调拨根据"
-            clearable
-            @keyup.enter="handleQuery"
-          />
-        </el-form-item>
-        <el-form-item label="收物单位" prop="receiveUnit">
-          <el-input
-            v-model="queryParams.receiveUnit"
-            placeholder="请输入收物单位"
-            clearable
-            @keyup.enter="handleQuery"
-          />
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" icon="Search" @click="handleQuery">搜索</el-button>
-          <el-button icon="Refresh" @click="resetQuery">重置</el-button>
-        </el-form-item>
+      <el-form :model="queryParams" ref="queryRef" label-width="88px" class="query-form">
+        <el-row :gutter="16">
+          <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
+            <el-form-item label="入库状态" prop="receiptOrderStatus">
+              <el-select v-model="queryParams.receiptOrderStatus" placeholder="请选择入库状态" clearable style="width: 100%" @change="handleQuery">
+                <el-option v-for="item in wms_receipt_status" :key="item.value" :label="item.label" :value="item.value" />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
+            <el-form-item label="入库类型" prop="receiptOrderType">
+              <el-select v-model="queryParams.receiptOrderType" placeholder="请选择入库类型" clearable style="width: 100%" @change="handleQuery">
+                <el-option v-for="item in wms_receipt_type" :key="item.value" :label="item.label" :value="item.value" />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
+            <el-form-item label="入库单号" prop="receiptOrderNo">
+              <el-input v-model="queryParams.receiptOrderNo" placeholder="请输入入库单号" clearable @keyup.enter="handleQuery" />
+            </el-form-item>
+          </el-col>
+          <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
+            <el-form-item label="调拨根据" prop="basisNo">
+              <el-input v-model="queryParams.basisNo" placeholder="请输入调拨根据" clearable @keyup.enter="handleQuery" />
+            </el-form-item>
+          </el-col>
+          <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
+            <el-form-item label="收物单位" prop="receiveUnit">
+              <el-input v-model="queryParams.receiveUnit" placeholder="请输入收物单位" clearable @keyup.enter="handleQuery" />
+            </el-form-item>
+          </el-col>
+          <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
+            <div class="query-actions">
+              <el-button type="primary" icon="Search" @click="handleQuery">搜索</el-button>
+              <el-button icon="Refresh" @click="resetQuery">重置</el-button>
+            </div>
+          </el-col>
+        </el-row>
       </el-form>
     </el-card>
 
@@ -91,11 +58,9 @@
       </el-row>
 
       <el-table v-loading="loading" :data="receiptOrderList" border class="mt20" empty-text="暂无入库单">
-        <el-table-column label="单号/订单号" align="left" width="150">
+        <el-table-column label="单号" align="left" width="150">
           <template #default="{ row }">
             <div>单号：{{ row.receiptOrderNo }}</div>
-            <div v-if="row.orderNo">订单号：{{ row.orderNo }}</div>
-            <div v-if="row.basisNo">调拨根据：{{ row.basisNo }}</div>
           </template>
         </el-table-column>
         <el-table-column label="入库类型" width="90"  align="left" prop="receiptOrderType">
@@ -111,9 +76,10 @@
         </el-table-column>
         <el-table-column label="单据信息" align="left" min-width="150">
           <template #default="{ row }">
+            <div v-if="row.basisNo">调拨根据：{{ row.basisNo }}</div>
             <div v-if="row.receiveUnit">收物单位：{{ row.receiveUnit }}</div>
             <div v-if="row.noticeOrg">通知机关：{{ row.noticeOrg }}</div>
-            <div v-if="row.dispatchMode">调拨方式：{{ proxy.selectDictLabel(wms_dispatch_mode.value, row.dispatchMode) }}</div>
+            <div v-if="row.dispatchMode">调拨方式：{{ proxy.selectDictLabel(wms_dispatch_mode, row.dispatchMode) }}</div>
             <div v-if="row.receiptDate">入库日期：{{ parseTime(row.receiptDate, '{y}-{m}-{d}') }}</div>
           </template>
         </el-table-column>
@@ -217,11 +183,11 @@ const data = reactive({
     pageNum: 1,
     pageSize: 10,
     receiptOrderNo: undefined,
-    receiptOrderType: -1,
+    receiptOrderType: undefined,
     basisNo: undefined,
     receiveUnit: undefined,
     payableAmount: undefined,
-    receiptOrderStatus: -2,
+    receiptOrderStatus: undefined,
   },
 });
 
@@ -231,12 +197,11 @@ const { queryParams } = toRefs(data);
 function getList() {
   loading.value = true;
   const query = {...queryParams.value}
-  if (query.receiptOrderStatus === -2) {
-    query.receiptOrderStatus = null
-  }
-  if (query.receiptOrderType === -1) {
-    query.receiptOrderType = null
-  }
+  Object.keys(query).forEach(key => {
+    if (query[key] === '' || query[key] === null || typeof query[key] === 'undefined') {
+      delete query[key]
+    }
+  })
   listReceiptOrder(query).then(response => {
     receiptOrderList.value = response.rows;
     total.value = response.total;
@@ -300,20 +265,45 @@ function handleView(row) {
 }
 
 async function handlePrint(row) {
+  const topValueFields = new Set(['basisNo', 'dispatchMode', 'noticeOrg', 'receiveUnit', 'purchaseDate', 'receiptDate'])
   const res = await getReceiptOrder(row.id)
   const receiptOrder = res.data
   let table = []
   if (receiptOrder.details?.length) {
-    table = receiptOrder.details.map(detail => ({
+    table = receiptOrder.details.map((detail, index) => ({
+      serialNo: String(index + 1),
       itemName: detail.itemSku?.item?.itemName,
       skuName: detail.itemSku?.skuName,
-      areaName: useWmsStore().areaMap.get(detail.areaId)?.areaName,
-      quantity: Number(detail.quantity || 0).toFixed(0),
+      unitName: detail.itemSku?.item?.unitOfMeasure || detail.itemSku?.item?.unit || '',
+      dispatchLevel: '',
+      dispatchQuantity: '',
+      receiptLevel: detail.qualityLevel || '',
+      receiptQuantity: Number(detail.quantity || 0).toFixed(0),
       unitPrice: detail.unitPrice,
-      lineAmount: detail.lineAmount
+      lineAmount: detail.lineAmount,
+      remark: detail.remark || ''
     }))
   }
+  if (table.length < 6) {
+    const startIndex = table.length
+    table.push(
+      ...Array.from({ length: 6 - table.length }, (_, index) => ({
+        serialNo: String(startIndex + index + 1),
+        itemName: '',
+        skuName: '',
+        unitName: '',
+        dispatchLevel: '',
+        dispatchQuantity: '',
+        receiptLevel: '',
+        receiptQuantity: '',
+        unitPrice: '',
+        lineAmount: '',
+        remark: ''
+      }))
+    )
+  }
   const printData = {
+    attachmentLabel: '附件 24',
     receiptOrderNo: receiptOrder.receiptOrderNo,
     receiptOrderType: receiptOrder.receiptOrderType,
     receiptOrderStatus: proxy.selectDictLabel(wms_receipt_status.value, receiptOrder.receiptOrderStatus),
@@ -339,7 +329,18 @@ async function handlePrint(row) {
     remark: receiptOrder.remark,
     table
   }
-  let printTemplate = new proxy.$hiprint.PrintTemplate({template: receiptPanel})
+  const template = JSON.parse(JSON.stringify(receiptPanel))
+  template.panels?.forEach(panel => {
+    panel.printElements?.forEach(element => {
+      const field = element?.options?.field
+      if (field && topValueFields.has(field)) {
+        element.options.title = printData[field] || ''
+        delete element.options.field
+        delete element.options.fields
+      }
+    })
+  })
+  let printTemplate = new proxy.$hiprint.PrintTemplate({template})
   printTemplate.print(printData, {}, {
     styleHandler: () => {
       let css = '<link href="https://cyl-press.oss-cn-shenzhen.aliyuncs.com/print-lock.css" media="print" rel="stylesheet">';
@@ -355,5 +356,12 @@ getList();
 }
 .el-table .vertical-top-cell {
   vertical-align: top
+}
+
+.query-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 </style>

@@ -5,10 +5,17 @@
       <el-card header="出库单基本信息">
         <el-form label-width="108px" :model="form" ref="shipmentForm" :rules="rules" :disabled="isViewMode">
           <el-row :gutter="24">
-            <el-col :span="12">
+            <el-col :span="6">
               <el-form-item label="出库单号" prop="shipmentOrderNo">
-                <el-input v-model="form.shipmentOrderNo" placeholder="出库单号"
+                <el-input v-model="form.shipmentOrderNo" placeholder="出库单号" style="width: 100%"
                           :disabled="form.id"></el-input>
+              </el-form-item>
+            </el-col>
+            <el-col :span="6">
+              <el-form-item label="出库类型" prop="shipmentOrderType">
+                <el-select v-model="form.shipmentOrderType" placeholder="请选择出库类型" clearable style="width: 100%">
+                  <el-option v-for="item in wms_shipment_type" :key="item.value" :label="item.label" :value="item.value" />
+                </el-select>
               </el-form-item>
             </el-col>
             <el-col :span="6">
@@ -31,17 +38,6 @@
             </el-col>
           </el-row>
           <el-row :gutter="24">
-            <el-col :span="12">
-              <el-form-item label="出库类型" prop="shipmentOrderType">
-                <el-radio-group v-model="form.shipmentOrderType">
-                  <el-radio-button
-                    v-for="item in wms_shipment_type"
-                    :key="item.value"
-                    :label="item.value"
-                  >{{ item.label }}</el-radio-button>
-                </el-radio-group>
-              </el-form-item>
-            </el-col>
             <el-col :span="6">
               <el-form-item label="调拨根据" prop="basisNo">
                 <el-input v-model="form.basisNo" placeholder="请输入调拨根据"></el-input>
@@ -76,8 +72,6 @@
                 <el-date-picker v-model="form.shipmentDate" type="date" value-format="YYYY-MM-DD" format="YYYY-MM-DD" style="width: 100%" />
               </el-form-item>
             </el-col>
-          </el-row>
-          <el-row :gutter="24">
             <el-col :span="12">
               <el-form-item label="备注" prop="remark">
                 <el-input
@@ -111,18 +105,7 @@
             <el-table-column label="规格型号" prop="skuName" min-width="140" show-overflow-tooltip />
             <el-table-column label="计量单位" prop="unit" width="110" />
             <el-table-column label="产品标识" prop="productIdentifier" min-width="140" show-overflow-tooltip />
-            <el-table-column label="出库方式" width="120">
-              <template #default="{ row }">
-                <dict-tag :options="shipmentDetailSourceOptions" :value="row.detailSourceType" />
-              </template>
-            </el-table-column>
-            <el-table-column label="追踪对象" min-width="180">
-              <template #default="{ row }">
-                <div v-if="row.instanceCode">器材实例编码：{{ row.instanceCode }}</div>
-                <div v-if="row.boxCode">箱码：{{ row.boxCode }}</div>
-                <div v-if="!row.instanceCode && !row.boxCode">-</div>
-              </template>
-            </el-table-column>
+            <el-table-column label="器材实例编码" prop="instanceCode" min-width="180" show-overflow-tooltip />
             <el-table-column label="库区" prop="areaName" width="200"/>
             <el-table-column label="剩余库存" prop="remainQuantity" align="right" width="150">
               <template #default="{ row }">
@@ -131,25 +114,13 @@
             </el-table-column>
             <el-table-column label="出库数量" prop="quantity" width="180">
               <template #default="scope">
-                <div v-if="scope.row.detailSourceType !== 'inventory'">
-                  <el-input-number
-                    v-model="scope.row.quantity"
-                    placeholder="出库数量"
-                    :min="1"
-                    :precision="0"
-                    :max="scope.row.remainQuantity"
-                    :disabled="true"
-                  ></el-input-number>
-                </div>
                 <el-input-number
-                  v-else
                   v-model="scope.row.quantity"
                   placeholder="出库数量"
                   :min="1"
                   :precision="0"
                   :max="scope.row.remainQuantity"
-                  :disabled="isViewMode"
-                  @change="handleChangeQuantity"
+                  :disabled="true"
                 ></el-input-number>
               </template>
             </el-table-column>
@@ -188,45 +159,52 @@
         </div>
       </el-card>
       <el-dialog v-model="itemInstanceDialog.visible" title="选择器材实例" width="1100px" append-to-body>
-        <el-form :inline="true" :model="itemInstanceDialog.query" label-width="88px">
-          <el-form-item label="仓库">
-            <el-select v-model="itemInstanceDialog.query.warehouseId" placeholder="仓库" disabled filterable style="width: 160px">
-              <el-option v-for="item in useWmsStore().warehouseList" :key="item.id" :label="item.warehouseName" :value="item.id" />
-            </el-select>
-          </el-form-item>
-          <el-form-item label="库区">
-            <el-select v-model="itemInstanceDialog.query.areaId" placeholder="库区" disabled filterable style="width: 160px">
-              <el-option
-                v-for="item in useWmsStore().areaList.filter(it => it.warehouseId === itemInstanceDialog.query.warehouseId)"
-                :key="item.id"
-                :label="item.areaName"
-                :value="item.id"
-              />
-            </el-select>
+        <el-form :inline="true" :model="itemInstanceDialog.query" label-width="76px" class="item-instance-search-form">
+          <el-form-item label="器材名称">
+            <el-input
+              v-model="itemInstanceDialog.query.itemName"
+              placeholder="请输入器材名称"
+              clearable
+              style="width: 140px"
+              @keyup.enter="getItemInstanceList"
+            />
           </el-form-item>
           <el-form-item label="货架">
-            <RackSelect v-model="itemInstanceDialog.query.rackId" :warehouse-id="itemInstanceDialog.query.warehouseId" :area-id="itemInstanceDialog.query.areaId" placeholder="货架" style="width: 160px" />
-          </el-form-item>
-          <el-form-item label="器材实例编码">
-            <el-input v-model="itemInstanceDialog.query.instanceCode" placeholder="请输入器材实例编码" clearable @keyup.enter="getItemInstanceList" />
-          </el-form-item>
-          <el-form-item label="器材名称">
-            <el-input v-model="itemInstanceDialog.query.itemName" placeholder="请输入器材名称" clearable @keyup.enter="getItemInstanceList" />
+            <RackSelect
+              v-model="itemInstanceDialog.query.rackId"
+              :warehouse-id="itemInstanceDialog.query.warehouseId"
+              :area-id="itemInstanceDialog.query.areaId"
+              placeholder="货架"
+              style="width: 140px"
+            />
           </el-form-item>
           <el-form-item label="器材规格">
-            <el-input v-model="itemInstanceDialog.query.skuName" placeholder="请输入器材规格" clearable @keyup.enter="getItemInstanceList" />
+            <el-input
+              v-model="itemInstanceDialog.query.skuName"
+              placeholder="请输入器材规格"
+              clearable
+              style="width: 150px"
+              @keyup.enter="getItemInstanceList"
+            />
           </el-form-item>
-          <el-form-item>
+          <el-form-item label="器材实例编码" label-width="100px">
+            <el-input
+              v-model="itemInstanceDialog.query.instanceCode"
+              placeholder="请输入器材实例编码"
+              clearable
+              style="width: 150px"
+              @keyup.enter="getItemInstanceList"
+            />
+          </el-form-item>
+          <el-form-item class="item-instance-search-form__action">
             <el-button type="primary" @click="getItemInstanceList">查询</el-button>
           </el-form-item>
         </el-form>
         <el-table v-loading="itemInstanceDialog.loading" :data="itemInstanceDialog.list" @selection-change="handleItemInstanceSelectionChange" border row-key="id">
           <el-table-column type="selection" width="55" :selectable="isItemInstanceSelectable" />
           <el-table-column label="器材实例编码" prop="instanceCode" min-width="160" />
-          <el-table-column label="器材" prop="itemName" min-width="160" />
+          <el-table-column label="器材名称" prop="itemName" min-width="160" />
           <el-table-column label="器材规格" prop="skuName" min-width="160" />
-          <el-table-column label="仓库" prop="warehouseName" width="120" />
-          <el-table-column label="库区" prop="areaName" width="120" />
           <el-table-column label="货架" prop="rackName" width="120" />
           <el-table-column label="货位" prop="locationName" width="120" />
           <el-table-column label="状态" width="100">
@@ -285,11 +263,6 @@ const {wms_item_instance_status, wms_shipment_type, wms_dispatch_mode} = proxy.u
 );
 
 const loading = ref(false)
-const shipmentDetailSourceOptions = computed(() => ([
-  { label: '库存', value: 'inventory' },
-  { label: '器材实例编码', value: 'itemInstance' },
-  { label: '整箱', value: 'box' }
-]))
 const initFormData = {
   id: undefined,
   shipmentOrderNo: undefined,
@@ -374,7 +347,6 @@ const calcLineAmount = (quantity, unitPrice) => {
 const syncShipmentDetail = (detail) => {
   const unitPrice = detail.unitPrice
   const lineAmount = detail.lineAmount ?? calcLineAmount(detail.quantity, unitPrice)
-  const detailSourceType = detail.detailSourceType ?? (detail.itemInstanceId ? (detail.boxId ? 'box' : 'itemInstance') : 'inventory')
   return {
     ...detail,
     itemCode: detail.itemCode ?? detail.itemSku?.item?.itemCode,
@@ -383,7 +355,6 @@ const syncShipmentDetail = (detail) => {
     unit: detail.unit ?? detail.itemSku?.item?.unit,
     productIdentifier: detail.productIdentifier ?? detail.itemSku?.productIdentifier,
     qualityGrade: detail.qualityGrade ?? detail.itemSku?.qualityGrade,
-    detailSourceType,
     unitPrice,
     lineAmount
   }
@@ -467,9 +438,6 @@ const createDetailRow = (payload) => {
     areaName: payload.areaName,
     itemInstanceId: payload.itemInstanceId,
     instanceCode: payload.instanceCode,
-    boxId: payload.boxId,
-    boxCode: payload.boxCode,
-    detailSourceType: payload.detailSourceType,
     remark: payload.remark
   }
 }
@@ -513,7 +481,6 @@ const doSave = (shipmentOrderStatus = 0) => {
           quantity: it.quantity,
           inventoryDetailId: it.inventoryDetailId,
           itemInstanceId: it.itemInstanceId,
-          boxId: it.boxId,
           warehouseId: form.value.warehouseId,
           areaId: it.areaId,
           remark: it.remark
@@ -600,7 +567,6 @@ const doShipment = async () => {
         quantity: it.quantity,
         inventoryDetailId: it.inventoryDetailId,
         itemInstanceId: it.itemInstanceId,
-        boxId: it.boxId,
         warehouseId: form.value.warehouseId,
         areaId: it.areaId
       }
@@ -662,7 +628,6 @@ const loadDetail = (id) => {
     if (response.data.details?.length) {
       response.data.details.forEach(detail => {
         detail.areaName = useWmsStore().areaMap.get(detail.areaId)?.areaName
-        detail.detailSourceType = detail.itemInstanceId ? (detail.boxId ? 'box' : 'itemInstance') : 'inventory'
       })
     }
     form.value = {
@@ -758,7 +723,6 @@ const addItemInstancesToShipment = async (items) => {
       areaName: useWmsStore().areaMap.get(item.areaId)?.areaName,
       itemInstanceId: item.id,
       instanceCode: item.instanceCode,
-      detailSourceType: 'itemInstance'
     }))
   }
   form.value.details.push(...newRows.map(it => syncShipmentDetail(it)))
@@ -897,6 +861,33 @@ const handleConfirmItemInstance = async () => {
   color: var(--el-text-color-secondary);
   font-size: 12px;
   line-height: 18px;
+}
+
+.item-instance-search-form {
+  margin-bottom: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+.item-instance-search-form :deep(.el-form-item) {
+  margin-right: 8px;
+  margin-bottom: 12px;
+}
+
+.item-instance-search-form :deep(.el-form-item__label) {
+  padding-right: 6px;
+}
+
+.item-instance-search-form__action {
+  margin-left: auto !important;
+  margin-right: 0 !important;
+}
+
+@media (max-width: 1280px) {
+  .item-instance-search-form :deep(.el-form-item) {
+    margin-right: 12px;
+  }
 }
 </style>
 

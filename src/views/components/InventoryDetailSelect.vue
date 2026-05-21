@@ -1,71 +1,60 @@
 <template>
-  <el-drawer :model-value="show" title="选择库存" @close="handleCancelClick" :size="size" :close-on-click-modal="false"
+  <el-drawer :model-value="show" title="选择器材实例" @close="handleCancelClick" :size="size" :close-on-click-modal="false"
              append-to-body>
-    <el-form :inline="true" label-width="108px">
-      <el-form-item label="器材名称">
-        <el-input v-model="query.itemName" clearable placeholder="器材名称"></el-input>
-      </el-form-item>
-      <el-form-item label="器材编号">
-        <el-input class="w200" v-model="query.itemCode" clearable placeholder="器材编号"></el-input>
-      </el-form-item>
-      <el-form-item label="库区">
-        <el-select v-model="query.areaId" placeholder="请选择库区" :disabled="selectAreaDisable"
-                   clearable filterable @change="handleAreaChange">
-          <el-option v-for="item in useWmsStore().areaList.filter(it => it.warehouseId === query.warehouseId)"
-                     :key="item.id" :label="item.areaName" :value="item.id"/>
-        </el-select>
-      </el-form-item>
-      <el-form-item label="货架">
-        <RackSelect v-model="query.rackId" :warehouse-id="query.warehouseId" :area-id="query.areaId" @update:model-value="handleRackChange" />
-      </el-form-item>
-      <el-form-item label="货位">
-        <LocationSelect v-model="query.locationId" :warehouse-id="query.warehouseId" :area-id="query.areaId" :rack-id="query.rackId" />
-      </el-form-item>
-      <el-form-item label="规格名称">
-        <el-input class="w200" v-model="query.skuName" clearable placeholder="规格名称"></el-input>
-      </el-form-item>
-      <el-form-item label="规格编号">
-        <el-input class="w200" v-model="query.barcode" clearable placeholder="规格编号"></el-input>
-      </el-form-item>
-      <el-form-item label="入库日期" prop="createTimeRange">
-        <el-date-picker
-          v-model="query.createTimeRange"
-          type="daterange"
-          range-separator="至"
-          value-format="YYYY-MM-DD HH:mm:ss"
-          format="YYYY-MM-DD"
-          :default-time="defaultTime"
-          start-placeholder="开始日期"
-          end-placeholder="结束日期"
-        />
-      </el-form-item>
-      <el-form-item label="多少天内过期" prop="daysToExpires">
-        <el-select v-model="query.daysToExpires" clearable>
-          <el-option label="30天内" :value="30">30天内</el-option>
-          <el-option label="60天内" :value="60">60天内</el-option>
-          <el-option label="90天内" :value="90">90天内</el-option>
-          <el-option label="120天内" :value="120">120天内</el-option>
-          <el-option label="180天内" :value="180">180天内</el-option>
-          <el-option label="365天内" :value="365">365天内</el-option>
-        </el-select>
-      </el-form-item>
-      <el-form-item>
-        <el-button type="primary" @click="clickQuery">查询</el-button>
-      </el-form-item>
+    <el-form label-width="96px" class="query-form">
+      <el-row :gutter="16">
+        <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
+          <el-form-item label="器材名称">
+            <el-input v-model="query.itemName" clearable placeholder="器材名称" />
+          </el-form-item>
+        </el-col>
+        <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
+          <el-form-item label="器材编号">
+            <el-input v-model="query.itemCode" clearable placeholder="器材编号" />
+          </el-form-item>
+        </el-col>
+        <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
+          <el-form-item label="规格名称">
+            <el-input v-model="query.skuName" clearable placeholder="规格名称" />
+          </el-form-item>
+        </el-col>
+        <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
+          <el-form-item label="规格编号">
+            <el-input v-model="query.barcode" clearable placeholder="规格编号" />
+          </el-form-item>
+        </el-col>
+      </el-row>
+      <el-row :gutter="16">
+        <el-col :xl="12" :lg="12" :md="24" :sm="24" :xs="24">
+          <el-form-item label="入库日期" prop="createTimeRange">
+            <el-date-picker
+              v-model="query.createTimeRange"
+              type="daterange"
+              range-separator="至"
+              value-format="YYYY-MM-DD HH:mm:ss"
+              format="YYYY-MM-DD"
+              :default-time="defaultTime"
+              start-placeholder="开始日期"
+              end-placeholder="结束日期"
+              style="width: 100%"
+            />
+          </el-form-item>
+        </el-col>
+        <el-col :xl="12" :lg="12" :md="24" :sm="24" :xs="24" class="query-actions">
+          <el-button type="primary" @click="clickQuery">查询</el-button>
+        </el-col>
+      </el-row>
     </el-form>
     <el-table :data="list" @selection-change="handleSelectionChange" border :row-key="getRowKey" empty-text="暂无库存"
               v-loading="loading" ref="inventorySelectFormRef" cell-class-name="my-cell" class="mt20">
       <el-table-column type="selection" width="55" :reserve-selection="true" :selectable="judgeSelectable"/>
-      <el-table-column label="库区" prop="areaName"/>
-      <el-table-column label="器材信息" prop="itemId">
-        <template #default="{ row }">
-          <div>{{ row.itemName || row.item?.itemName || '-' }}</div>
-          <div v-if="row.itemCode || row.item?.itemCode">编号：{{ row.itemCode || row.item?.itemCode }}</div>
-          <div>规格：{{ row.skuName || row.itemSku?.skuName || '-' }}</div>
-          <div v-if="row.productIdentifier || row.itemSku?.productIdentifier">产品标识：{{ row.productIdentifier || row.itemSku?.productIdentifier }}</div>
-          <div v-if="row.qualityGrade || row.itemSku?.qualityGrade">质量等级：{{ row.qualityGrade || row.itemSku?.qualityGrade }}</div>
-        </template>
-      </el-table-column>
+      <el-table-column label="库区" prop="areaName" min-width="110" show-overflow-tooltip />
+      <el-table-column label="器材实例编码" prop="instanceCode" min-width="180" show-overflow-tooltip />
+      <el-table-column label="器材名称" prop="itemName" min-width="150" show-overflow-tooltip />
+      <el-table-column label="器材编码" prop="itemCode" min-width="140" show-overflow-tooltip />
+      <el-table-column label="规格型号" prop="skuName" min-width="140" show-overflow-tooltip />
+      <el-table-column label="产品标识" prop="productIdentifier" min-width="130" show-overflow-tooltip />
+      <el-table-column label="质量等级" prop="qualityGrade" width="120" show-overflow-tooltip />
       <el-table-column label="入库日期" align="left" prop="createTime" width="140">
         <template #default="{ row }">
           <div>{{ parseTime(row.createTime, '{y}-{m}-{d}') }}</div>
@@ -102,12 +91,9 @@
 </template>
 <script setup name="InventoryDetailSelect">
 import {computed, getCurrentInstance, onMounted, reactive, ref} from 'vue';
-import {ElForm} from "element-plus";
 import {useRouter} from "vue-router";
 import {useWmsStore} from '@/store/modules/wms'
 import {listInventoryDetail} from "@/api/wms/inventoryDetail";
-import RackSelect from '@/views/components/RackSelect.vue'
-import LocationSelect from '@/views/components/LocationSelect.vue'
 const {proxy} = getCurrentInstance()
 const defaultTime = reactive([new Date(0,0,0,0,0,0), new Date(0,0,0,23,59,59)])
 
@@ -117,13 +103,12 @@ const query = reactive({
   itemName: '',
   itemCode: '',
   skuName: '',
-  skuCode: '',
+  barcode: '',
   minQuantity: 1,
   areaId: null,
   warehouseId: null,
   rackId: null,
   locationId: null,
-  daysToExpires: null
 });
 const selectInventoryVoCheck = ref([])
 const inventorySelectFormRef = ref(null)
@@ -172,15 +157,6 @@ const clickQuery = () => {
   pageReq.page = 1;
   loadAll();
 };
-
-const handleAreaChange = () => {
-  query.rackId = null
-  query.locationId = null
-}
-
-const handleRackChange = () => {
-  query.locationId = null
-}
 
 const props = defineProps({
   modelValue: {
@@ -272,6 +248,20 @@ onMounted(() => {
 })
 </script>
 <style lang="scss">
+.query-form {
+  .el-input,
+  .el-select,
+  .el-date-editor {
+    width: 100%;
+  }
+}
+
+.query-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: flex-end;
+}
+
 .el-table .my-cell {
   vertical-align: top
 }

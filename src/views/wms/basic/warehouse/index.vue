@@ -1,14 +1,20 @@
 <template>
   <div class="app-container">
     <el-card>
-      <el-form ref="queryRef" :model="queryParams" :inline="true" label-width="84px">
-        <el-form-item label="仓库名称" prop="warehouseName">
-          <el-input v-model="queryParams.warehouseName" placeholder="请输入仓库名称" clearable @keyup.enter="handleQuery" />
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" icon="Search" @click="handleQuery">搜索</el-button>
-          <el-button icon="Refresh" @click="resetQuery">重置</el-button>
-        </el-form-item>
+      <el-form ref="queryRef" :model="queryParams" label-width="88px" class="query-form">
+        <el-row :gutter="16">
+          <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
+            <el-form-item label="仓库名称" prop="warehouseName">
+              <el-input v-model="queryParams.warehouseName" placeholder="请输入仓库名称" clearable @keyup.enter="handleQuery" />
+            </el-form-item>
+          </el-col>
+          <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
+            <div class="query-actions">
+              <el-button type="primary" icon="Search" @click="handleQuery">搜索</el-button>
+              <el-button icon="Refresh" @click="resetQuery">重置</el-button>
+            </div>
+          </el-col>
+        </el-row>
       </el-form>
     </el-card>
 
@@ -73,10 +79,7 @@
     <el-dialog :title="dialog.title" v-model="dialog.visible" width="560px" append-to-body :close-on-click-modal="false">
       <div class="form-tip">带 * 为必填项</div>
       <el-form ref="warehouseFormRef" :model="form" :rules="rules" label-width="110px">
-        <el-form-item prop="warehouseName">
-          <template #label>
-            <FormLabelHelp label="仓库名称" purpose="用于标识仓库主体，在库存、单据和布局页面作为主维度展示。" example="主仓、综合器材仓" />
-          </template>
+        <el-form-item label="仓库名称" prop="warehouseName">
           <el-input v-model="form.warehouseName" placeholder="请输入仓库名称" />
         </el-form-item>
         <el-form-item label="备注" prop="remark">
@@ -99,7 +102,6 @@ import { useRouter } from 'vue-router'
 import { listWarehouse, getWarehouse, delWarehouse, addWarehouse, updateWarehouse } from '@/api/wms/warehouse'
 import { listArea } from '@/api/wms/area'
 import { useWmsStore } from '@/store/modules/wms'
-import FormLabelHelp from '@/views/components/FormLabelHelp.vue'
 import { resolveRoutePath } from '@/utils/routeResolver'
 
 const { proxy } = getCurrentInstance()
@@ -280,6 +282,13 @@ onMounted(async () => {
   display: flex;
   justify-content: flex-end;
   align-items: flex-start;
+}
+
+.query-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .preview-card {

@@ -1,45 +1,61 @@
 <template>
   <div class="app-container">
     <el-card>
-      <el-form ref="queryRef" :model="queryParams" :inline="true" label-width="68px">
-        <el-form-item label="编码" prop="locationCode">
-          <el-input v-model="queryParams.locationCode" placeholder="请输入货位编码" clearable @keyup.enter="handleQuery" />
-        </el-form-item>
-        <el-form-item label="名称" prop="locationName">
-          <el-input v-model="queryParams.locationName" placeholder="请输入货位名称" clearable @keyup.enter="handleQuery" />
-        </el-form-item>
-        <el-form-item label="仓库" prop="warehouseId">
-          <el-select v-model="queryParams.warehouseId" placeholder="请选择仓库" clearable filterable style="width: 180px" @change="handleQueryWarehouseChange">
-            <el-option
-              v-for="item in wmsStore.warehouseList"
-              :key="item.id"
-              :label="item.warehouseName"
-              :value="item.id"
-            />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="库区" prop="areaId">
-          <el-select v-model="queryParams.areaId" placeholder="请选择库区" clearable filterable style="width: 180px" @change="handleQueryAreaChange">
-            <el-option
-              v-for="item in areaOptions"
-              :key="item.id"
-              :label="item.areaName"
-              :value="item.id"
-            />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="货架" prop="rackId">
-          <RackSelect v-model="queryParams.rackId" :warehouse-id="queryParams.warehouseId" :area-id="queryParams.areaId" />
-        </el-form-item>
-        <el-form-item label="状态" prop="locationStatus">
-          <el-select v-model="queryParams.locationStatus" placeholder="请选择状态" clearable style="width: 140px">
-            <el-option v-for="dict in wms_location_status" :key="dict.value" :label="dict.label" :value="dict.value" />
-          </el-select>
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" icon="Search" @click="handleQuery">搜索</el-button>
-          <el-button icon="Refresh" @click="resetQuery">重置</el-button>
-        </el-form-item>
+      <el-form ref="queryRef" :model="queryParams" label-width="88px" class="query-form">
+        <el-row :gutter="16">
+          <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
+            <el-form-item label="编码" prop="locationCode">
+              <el-input v-model="queryParams.locationCode" placeholder="请输入货位编码" clearable @keyup.enter="handleQuery" />
+            </el-form-item>
+          </el-col>
+          <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
+            <el-form-item label="名称" prop="locationName">
+              <el-input v-model="queryParams.locationName" placeholder="请输入货位名称" clearable @keyup.enter="handleQuery" />
+            </el-form-item>
+          </el-col>
+          <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
+            <el-form-item label="仓库" prop="warehouseId">
+              <el-select v-model="queryParams.warehouseId" placeholder="请选择仓库" clearable filterable style="width: 100%" @change="handleQueryWarehouseChange">
+                <el-option
+                  v-for="item in wmsStore.warehouseList"
+                  :key="item.id"
+                  :label="item.warehouseName"
+                  :value="item.id"
+                />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
+            <el-form-item label="库区" prop="areaId">
+              <el-select v-model="queryParams.areaId" placeholder="请选择库区" clearable filterable style="width: 100%" @change="handleQueryAreaChange">
+                <el-option
+                  v-for="item in areaOptions"
+                  :key="item.id"
+                  :label="item.areaName"
+                  :value="item.id"
+                />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
+            <el-form-item label="货架" prop="rackId">
+              <RackSelect v-model="queryParams.rackId" :warehouse-id="queryParams.warehouseId" :area-id="queryParams.areaId" />
+            </el-form-item>
+          </el-col>
+          <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
+            <el-form-item label="状态" prop="locationStatus">
+              <el-select v-model="queryParams.locationStatus" placeholder="请选择状态" clearable style="width: 100%">
+                <el-option v-for="dict in wms_location_status" :key="dict.value" :label="dict.label" :value="dict.value" />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
+            <div class="query-actions">
+              <el-button type="primary" icon="Search" @click="handleQuery">搜索</el-button>
+              <el-button icon="Refresh" @click="resetQuery">重置</el-button>
+            </div>
+          </el-col>
+        </el-row>
       </el-form>
     </el-card>
 
@@ -117,22 +133,13 @@
             <el-option v-for="dict in wms_location_status" :key="dict.value" :label="dict.label" :value="dict.value" />
           </el-select>
         </el-form-item>
-        <el-form-item prop="length">
-          <template #label>
-            <FormLabelHelp label="长" purpose="记录货位物理长度，用于容量与布局摘要展示。" example="60" />
-          </template>
+        <el-form-item label="长" prop="length">
           <el-input-number v-model="form.length" :min="0" :precision="2" style="width: 100%" />
         </el-form-item>
-        <el-form-item prop="width">
-          <template #label>
-            <FormLabelHelp label="宽" purpose="货位宽度与所属货架宽度保持一致，当前页面不允许单独调整。" example="40" />
-          </template>
+        <el-form-item label="宽" prop="width">
           <el-input-number v-model="form.width" :min="0" :precision="2" style="width: 100%" disabled />
         </el-form-item>
-        <el-form-item prop="height">
-          <template #label>
-            <FormLabelHelp label="高" purpose="记录货位物理高度，用于容量与布局摘要展示。" example="50" />
-          </template>
+        <el-form-item label="高" prop="height">
           <el-input-number v-model="form.height" :min="0" :precision="2" style="width: 100%" />
         </el-form-item>
         <el-form-item label="占用状态" prop="occupiedFlag">
@@ -141,10 +148,7 @@
             <el-radio :label="1">已占用</el-radio>
           </el-radio-group>
         </el-form-item>
-        <el-form-item prop="sortNo">
-          <template #label>
-            <FormLabelHelp label="排序号" purpose="控制同货架下货位的展示顺序。" example="20" />
-          </template>
+        <el-form-item label="排序号" prop="sortNo">
           <el-input-number v-model="form.sortNo" :min="0" :precision="0" style="width: 100%" />
         </el-form-item>
         <el-form-item label="备注" prop="remark">
@@ -663,6 +667,13 @@ onMounted(async () => {
   display: flex;
   justify-content: flex-end;
   align-items: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.query-actions {
+  display: flex;
+  justify-content: flex-end;
   gap: 12px;
   flex-wrap: wrap;
 }

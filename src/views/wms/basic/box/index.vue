@@ -1,53 +1,71 @@
 <template>
   <div class="app-container">
     <el-card>
-      <el-form ref="queryRef" :model="queryParams" :inline="true" label-width="80px">
-        <el-form-item label="箱码" prop="boxCode">
-          <el-input v-model="queryParams.boxCode" placeholder="请输入箱码" clearable @keyup.enter="handleQuery" />
-        </el-form-item>
-        <el-form-item label="箱体名称" prop="boxName">
-          <el-input v-model="queryParams.boxName" placeholder="请输入箱体名称" clearable @keyup.enter="handleQuery" />
-        </el-form-item>
-        <el-form-item label="状态" prop="boxStatus">
-          <el-select v-model="queryParams.boxStatus" placeholder="请选择状态" clearable style="width: 160px">
-            <el-option v-for="dict in wms_box_status" :key="dict.value" :label="dict.label" :value="dict.value" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="仓库" prop="warehouseId">
-          <el-select v-model="queryParams.warehouseId" placeholder="请选择仓库" clearable filterable style="width: 180px" @change="handleQueryWarehouseChange">
-            <el-option
-              v-for="item in wmsStore.warehouseList"
-              :key="item.id"
-              :label="item.warehouseName"
-              :value="item.id"
-            />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="库区" prop="areaId">
-          <el-select v-model="queryParams.areaId" placeholder="请选择库区" clearable filterable style="width: 180px" @change="handleQueryAreaChange">
-            <el-option
-              v-for="item in queryAreaOptions"
-              :key="item.id"
-              :label="item.areaName"
-              :value="item.id"
-            />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="货架" prop="rackId">
-          <RackSelect v-model="queryParams.rackId" :warehouse-id="queryParams.warehouseId" :area-id="queryParams.areaId" />
-        </el-form-item>
-        <el-form-item label="货位" prop="locationId">
-          <LocationSelect
-            v-model="queryParams.locationId"
-            :warehouse-id="queryParams.warehouseId"
-            :area-id="queryParams.areaId"
-            :rack-id="queryParams.rackId"
-          />
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" icon="Search" @click="handleQuery">搜索</el-button>
-          <el-button icon="Refresh" @click="resetQuery">重置</el-button>
-        </el-form-item>
+      <el-form ref="queryRef" :model="queryParams" label-width="88px" class="query-form">
+        <el-row :gutter="16">
+          <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
+            <el-form-item label="箱码" prop="boxCode">
+              <el-input v-model="queryParams.boxCode" placeholder="请输入箱码" clearable @keyup.enter="handleQuery" />
+            </el-form-item>
+          </el-col>
+          <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
+            <el-form-item label="箱体名称" prop="boxName">
+              <el-input v-model="queryParams.boxName" placeholder="请输入箱体名称" clearable @keyup.enter="handleQuery" />
+            </el-form-item>
+          </el-col>
+          <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
+            <el-form-item label="状态" prop="boxStatus">
+              <el-select v-model="queryParams.boxStatus" placeholder="请选择状态" clearable style="width: 100%">
+                <el-option v-for="dict in wms_box_status" :key="dict.value" :label="dict.label" :value="dict.value" />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
+            <el-form-item label="仓库" prop="warehouseId">
+              <el-select v-model="queryParams.warehouseId" placeholder="请选择仓库" clearable filterable style="width: 100%" @change="handleQueryWarehouseChange">
+                <el-option
+                  v-for="item in wmsStore.warehouseList"
+                  :key="item.id"
+                  :label="item.warehouseName"
+                  :value="item.id"
+                />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
+            <el-form-item label="库区" prop="areaId">
+              <el-select v-model="queryParams.areaId" placeholder="请选择库区" clearable filterable style="width: 100%" @change="handleQueryAreaChange">
+                <el-option
+                  v-for="item in queryAreaOptions"
+                  :key="item.id"
+                  :label="item.areaName"
+                  :value="item.id"
+                />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
+            <el-form-item label="货架" prop="rackId">
+              <RackSelect v-model="queryParams.rackId" :warehouse-id="queryParams.warehouseId" :area-id="queryParams.areaId" />
+            </el-form-item>
+          </el-col>
+          <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
+            <el-form-item label="货位" prop="locationId">
+              <LocationSelect
+                v-model="queryParams.locationId"
+                :warehouse-id="queryParams.warehouseId"
+                :area-id="queryParams.areaId"
+                :rack-id="queryParams.rackId"
+              />
+            </el-form-item>
+          </el-col>
+          <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
+            <div class="query-actions">
+              <el-button type="primary" icon="Search" @click="handleQuery">搜索</el-button>
+              <el-button icon="Refresh" @click="resetQuery">重置</el-button>
+            </div>
+          </el-col>
+        </el-row>
       </el-form>
     </el-card>
 
@@ -171,10 +189,13 @@
       </div>
       <el-table :data="detailDialog.data.items || []" border empty-text="箱内暂无器材实例" cell-class-name="vertical-top-cell">
         <el-table-column label="器材实例编码" prop="instanceCode" min-width="180" />
-        <el-table-column label="器材/器材规格" min-width="220">
+        <el-table-column label="器材信息" min-width="220">
           <template #default="{ row }">
-            <div>{{ row.itemName || '-' }}</div>
-            <div v-if="row.skuName" class="sub-text">器材规格：{{ row.skuName }}</div>
+            <div class="item-title">{{ row.itemName || '-' }}</div>
+            <div v-if="row.itemCode" class="sub-text">器材编码：{{ row.itemCode }}</div>
+            <div v-if="row.skuName" class="sub-text">规格型号：{{ row.skuName }}</div>
+            <div v-if="row.productIdentifier" class="sub-text">产品标识：{{ row.productIdentifier }}</div>
+            <div v-if="row.qualityGrade" class="sub-text">质量等级：{{ row.qualityGrade }}</div>
           </template>
         </el-table-column>
         <el-table-column label="状态" width="100">
@@ -238,10 +259,13 @@
       >
         <el-table-column type="selection" width="55" />
         <el-table-column label="器材实例编码" prop="instanceCode" min-width="180" />
-        <el-table-column label="器材/器材规格" min-width="220">
+        <el-table-column label="器材信息" min-width="220">
           <template #default="{ row }">
-            <div>{{ row.itemName || '-' }}</div>
-            <div v-if="row.skuName" class="sub-text">器材规格：{{ row.skuName }}</div>
+            <div class="item-title">{{ row.itemName || '-' }}</div>
+            <div v-if="row.itemCode" class="sub-text">器材编码：{{ row.itemCode }}</div>
+            <div v-if="row.skuName" class="sub-text">规格型号：{{ row.skuName }}</div>
+            <div v-if="row.productIdentifier" class="sub-text">产品标识：{{ row.productIdentifier }}</div>
+            <div v-if="row.qualityGrade" class="sub-text">质量等级：{{ row.qualityGrade }}</div>
           </template>
         </el-table-column>
         <el-table-column label="状态" width="100">
@@ -284,10 +308,13 @@
       >
         <el-table-column type="selection" width="55" />
         <el-table-column label="器材实例编码" prop="instanceCode" min-width="180" />
-        <el-table-column label="器材/器材规格" min-width="220">
+        <el-table-column label="器材信息" min-width="220">
           <template #default="{ row }">
-            <div>{{ row.itemName || '-' }}</div>
-            <div v-if="row.skuName" class="sub-text">器材规格：{{ row.skuName }}</div>
+            <div class="item-title">{{ row.itemName || '-' }}</div>
+            <div v-if="row.itemCode" class="sub-text">器材编码：{{ row.itemCode }}</div>
+            <div v-if="row.skuName" class="sub-text">规格型号：{{ row.skuName }}</div>
+            <div v-if="row.productIdentifier" class="sub-text">产品标识：{{ row.productIdentifier }}</div>
+            <div v-if="row.qualityGrade" class="sub-text">质量等级：{{ row.qualityGrade }}</div>
           </template>
         </el-table-column>
         <el-table-column label="状态" width="100">
@@ -692,9 +719,17 @@ watch(
 </script>
 
 <style scoped>
+.item-title {
+  color: var(--el-text-color-primary);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
 .sub-text {
   color: var(--el-text-color-secondary);
   font-size: 12px;
+  line-height: 1.5;
 }
 
 .vertical-top-cell {
@@ -715,5 +750,12 @@ watch(
 
 .mb16 {
   margin-bottom: 16px;
+}
+
+.query-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 </style>

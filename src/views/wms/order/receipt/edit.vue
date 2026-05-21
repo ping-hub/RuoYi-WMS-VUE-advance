@@ -5,9 +5,16 @@
       <el-card header="入库单基本信息">
         <el-form label-width="108px" :model="form" ref="receiptForm" :rules="rules" :disabled="isViewMode">
           <el-row :gutter="24">
-            <el-col :span="12">
+            <el-col :span="6">
               <el-form-item label="入库单号" prop="receiptOrderNo">
-                <el-input v-model="form.receiptOrderNo" placeholder="入库单号" :disabled="form.id"></el-input>
+                <el-input v-model="form.receiptOrderNo" placeholder="入库单号" :disabled="form.id" style="width: 100%"></el-input>
+              </el-form-item>
+            </el-col>
+            <el-col :span="6">
+              <el-form-item label="入库类型" prop="receiptOrderType">
+                <el-select v-model="form.receiptOrderType" placeholder="请选择入库类型" clearable style="width: 100%">
+                  <el-option v-for="item in wms_receipt_type" :key="item.value" :label="item.label" :value="item.value" />
+                </el-select>
               </el-form-item>
             </el-col>
             <el-col :span="6">
@@ -37,17 +44,7 @@
             </el-col>
           </el-row>
           <el-row :gutter="24">
-            <el-col :span="12">
-              <el-form-item label="入库类型" prop="receiptOrderType">
-                <el-radio-group v-model="form.receiptOrderType">
-                  <el-radio-button
-                    v-for="item in wms_receipt_type"
-                    :key="item.value"
-                    :label="item.value"
-                  >{{ item.label }}</el-radio-button>
-                </el-radio-group>
-              </el-form-item>
-            </el-col>
+            
             <el-col :span="6">
               <el-form-item label="调拨根据" prop="basisNo">
                 <el-input v-model="form.basisNo" placeholder="请输入调拨根据"></el-input>
@@ -82,8 +79,6 @@
                 <el-date-picker v-model="form.receiptDate" type="date" value-format="YYYY-MM-DD" format="YYYY-MM-DD" style="width: 100%" />
               </el-form-item>
             </el-col>
-          </el-row>
-          <el-row :gutter="24">
             <el-col :span="12">
               <el-form-item label="备注" prop="remark">
                 <el-input
@@ -103,9 +98,9 @@
         <div class="receipt-order-content">
           <div class="flex-space-between mb8 receipt-toolbar">
             <div>
-              <div class="instance-tip">
+              <el-tag type="info">
                 入库按器材实例执行。支持“选择器材实例”或扫码枪扫二维码直接新增；箱码可直接录入，货位通过下拉选择。
-              </div>
+              </el-tag>
             </div>
             <div class="receipt-toolbar-actions">
               <el-popover
@@ -192,12 +187,6 @@
         </div>
       </el-card>
       <el-dialog v-model="itemInstanceSelectDialog.visible" title="选择器材实例" width="1200px" append-to-body>
-        <el-alert
-          class="mb10"
-          type="info"
-          :closable="false"
-          title="请选择尚未入库的器材实例。完成入库时会把实例绑定到当前仓库、库区、货架、货位和箱体。"
-        />
         <el-form :inline="true" :model="itemInstanceSelectDialog.query" label-width="88px">
           <el-form-item label="器材分类">
             <el-tree-select
@@ -230,7 +219,7 @@
               />
             </el-select>
           </el-form-item>
-          <el-form-item label="器材实例编码">
+          <el-form-item label="器材实例编码" label-width="100px">
             <el-input v-model="itemInstanceSelectDialog.query.instanceCode" placeholder="请输入器材实例编码" clearable @keyup.enter="getReceiptItemInstanceList" />
           </el-form-item>
           <el-form-item>

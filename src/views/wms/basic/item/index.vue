@@ -1,22 +1,32 @@
 <template>
   <div class="app-container">
     <el-card>
-      <el-form ref="queryRef" :model="queryParams" :inline="true" label-width="80px">
-        <el-form-item label="器材编码" prop="itemCode">
-          <el-input v-model="queryParams.itemCode" placeholder="请输入器材编码" clearable @keyup.enter="handleQuery" />
-        </el-form-item>
-        <el-form-item label="器材名称" prop="itemName">
-          <el-input v-model="queryParams.itemName" placeholder="请输入器材名称" clearable @keyup.enter="handleQuery" />
-        </el-form-item>
-        <el-form-item label="器材类型" prop="equipmentType">
-          <el-select v-model="queryParams.equipmentType" placeholder="请选择器材类型" clearable style="width: 180px">
-            <el-option v-for="item in equipmentTypeOptions" :key="item.value" :label="item.label" :value="item.value" />
-          </el-select>
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" icon="Search" @click="handleQuery">搜索</el-button>
-          <el-button icon="Refresh" @click="resetQuery">重置</el-button>
-        </el-form-item>
+      <el-form ref="queryRef" :model="queryParams" label-width="88px" class="query-form">
+        <el-row :gutter="16">
+          <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
+            <el-form-item label="器材编码" prop="itemCode">
+              <el-input v-model="queryParams.itemCode" placeholder="请输入器材编码" clearable @keyup.enter="handleQuery" />
+            </el-form-item>
+          </el-col>
+          <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
+            <el-form-item label="器材名称" prop="itemName">
+              <el-input v-model="queryParams.itemName" placeholder="请输入器材名称" clearable @keyup.enter="handleQuery" />
+            </el-form-item>
+          </el-col>
+          <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
+            <el-form-item label="器材类型" prop="equipmentType">
+              <el-select v-model="queryParams.equipmentType" placeholder="请选择器材类型" clearable style="width: 100%">
+                <el-option v-for="item in wms_equipment_type" :key="item.value" :label="item.label" :value="item.value" />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
+            <div class="query-actions">
+              <el-button type="primary" icon="Search" @click="handleQuery">搜索</el-button>
+              <el-button icon="Refresh" @click="resetQuery">重置</el-button>
+            </div>
+          </el-col>
+        </el-row>
       </el-form>
     </el-card>
 
@@ -93,7 +103,11 @@
                 <span v-else>-</span>
               </template>
             </el-table-column>
-            <el-table-column label="器材类型" prop="equipmentType" :width="getTableHeaderWidth('器材类型')" show-overflow-tooltip />
+            <el-table-column label="器材类型" :width="getTableHeaderWidth('器材类型')" show-overflow-tooltip>
+              <template #default="{ row }">
+                <dict-tag :options="wms_equipment_type" :value="row.equipmentType" />
+              </template>
+            </el-table-column>
             <el-table-column label="器材分类" :width="getTableHeaderWidth('器材分类')" show-overflow-tooltip>
               <template #default="{ row }">
                 <div class="cell-ellipsis" :title="getCategoryName(resolveCategoryId(row))">{{ getCategoryName(resolveCategoryId(row)) }}</div>
@@ -102,7 +116,7 @@
             <el-table-column label="计量单位" prop="unit" :width="getTableHeaderWidth('计量单位')" show-overflow-tooltip />
             <el-table-column label="启用状态" :width="getTableHeaderWidth('启用状态')">
               <template #default="{ row }">
-                <el-tag :type="row.status === '0' ? 'info' : 'success'">{{ row.status === '0' ? '停用' : '启用' }}</el-tag>
+                <dict-tag :options="wms_item_status" :value="row.status" />
               </template>
             </el-table-column>
             <el-table-column label="备注" prop="remark" :width="60" show-overflow-tooltip />
@@ -173,7 +187,7 @@
             <el-col :span="12">
               <el-form-item label="器材类型" prop="equipmentType">
                 <el-select v-model="form.equipmentType" placeholder="请选择器材类型" clearable style="width: 100%">
-                  <el-option v-for="item in equipmentTypeOptions" :key="item.value" :label="item.label" :value="item.value" />
+                  <el-option v-for="item in wms_equipment_type" :key="item.value" :label="item.label" :value="item.value" />
                 </el-select>
               </el-form-item>
             </el-col>
@@ -187,8 +201,7 @@
             <el-col :span="12">
               <el-form-item label="启用状态" prop="status">
                 <el-radio-group v-model="form.status">
-                  <el-radio label="1">启用</el-radio>
-                  <el-radio label="0">停用</el-radio>
+                  <el-radio v-for="item in wms_item_status" :key="item.value" :label="item.value">{{ item.label }}</el-radio>
                 </el-radio-group>
               </el-form-item>
             </el-col>
@@ -236,7 +249,7 @@
               <el-col :span="12">
                 <el-form-item label="状态">
                   <el-select v-model="sku.status" placeholder="请选择状态" style="width: 100%">
-                    <el-option v-for="item in statusOptions" :key="item.value" :label="item.label" :value="item.value" />
+                    <el-option v-for="item in wms_item_sku_status" :key="item.value" :label="item.label" :value="item.value" />
                   </el-select>
                 </el-form-item>
               </el-col>
@@ -334,17 +347,11 @@ import { buildQrTscCommand, WssPrintClient } from '@/utils/wssPrintClient';
 const route = useRoute();
 const { proxy } = getCurrentInstance();
 const wmsStore = useWmsStore();
-
-
-const equipmentTypeOptions = [
-  { label: '通装', value: '通装' },
-  { label: '专装', value: '专装' }
-];
-
-const statusOptions = [
-  { label: '启用', value: '1' },
-  { label: '停用', value: '0' }
-];
+const { wms_equipment_type, wms_item_status, wms_item_sku_status } = proxy.useDict(
+  'wms_equipment_type',
+  'wms_item_status',
+  'wms_item_sku_status'
+);
 
 const getTableHeaderWidth = (label) => {
   return [...label].reduce((total, char) => total + (/[^\x00-\xff]/.test(char) ? 14 : 8), 24);
@@ -982,6 +989,13 @@ const formatPrintSkuLabel = (sku) => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.query-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 </style>
 

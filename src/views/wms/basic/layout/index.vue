@@ -1,21 +1,29 @@
 <template>
   <div class="app-container storage-layout-page">
     <el-card shadow="never">
-      <el-form :model="queryParams" :inline="true" label-width="84px">
-        <el-form-item label="仓库" prop="warehouseId">
-          <el-select v-model="queryParams.warehouseId" clearable filterable placeholder="请选择仓库" style="width: 200px">
-            <el-option v-for="item in warehouseOptions" :key="item.id" :label="item.name" :value="item.id" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="库区" prop="areaId">
-          <el-select v-model="queryParams.areaId" clearable filterable placeholder="请选择库区" style="width: 200px">
-            <el-option v-for="item in areaOptions" :key="item.id" :label="item.name" :value="item.id" />
-          </el-select>
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" icon="Search" @click="loadLayoutTree">刷新布局</el-button>
-          <el-button icon="Refresh" @click="resetFilters">重置</el-button>
-        </el-form-item>
+      <el-form :model="queryParams" label-width="88px" class="query-form">
+        <el-row :gutter="16">
+          <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
+            <el-form-item label="仓库" prop="warehouseId">
+              <el-select v-model="queryParams.warehouseId" clearable filterable placeholder="请选择仓库" style="width: 100%">
+                <el-option v-for="item in warehouseOptions" :key="item.id" :label="item.name" :value="item.id" />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
+            <el-form-item label="库区" prop="areaId">
+              <el-select v-model="queryParams.areaId" clearable filterable placeholder="请选择库区" style="width: 100%">
+                <el-option v-for="item in areaOptions" :key="item.id" :label="item.name" :value="item.id" />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
+            <div class="query-actions">
+              <el-button type="primary" icon="Search" @click="loadLayoutTree">刷新布局</el-button>
+              <el-button icon="Refresh" @click="resetFilters">重置</el-button>
+            </div>
+          </el-col>
+        </el-row>
       </el-form>
       <div class="page-tip">
         仓储布局统一浏览仓库、库区、货架、货位；本页用于布局浏览，不替代仓库和库区维护页面。
@@ -516,6 +524,13 @@ onActivated(() => {
 .page-tip {
   color: #606266;
   font-size: 13px;
+}
+
+.query-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .tree-node {

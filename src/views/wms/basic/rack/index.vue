@@ -1,39 +1,44 @@
 <template>
   <div class="app-container">
     <el-card>
-      <el-form ref="queryRef" :model="queryParams" :inline="true" label-width="68px">
-        <el-form-item label="名称" prop="rackName">
-          <el-input v-model="queryParams.rackName" placeholder="请输入货架名称" clearable @keyup.enter="handleQuery" />
-        </el-form-item>
-        <el-form-item label="仓库" prop="warehouseId">
-          <el-select v-model="queryParams.warehouseId" placeholder="请选择仓库" clearable filterable style="width: 180px">
-            <el-option
-              v-for="item in wmsStore.warehouseList"
-              :key="item.id"
-              :label="item.warehouseName"
-              :value="item.id"
-            />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="库区" prop="areaId">
-          <el-select v-model="queryParams.areaId" placeholder="请选择库区" clearable filterable style="width: 180px">
-            <el-option
-              v-for="item in areaOptions"
-              :key="item.id"
-              :label="item.areaName"
-              :value="item.id"
-            />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="状态" prop="rackStatus">
-          <el-select v-model="queryParams.rackStatus" placeholder="请选择状态" clearable style="width: 140px">
-            <el-option v-for="dict in wms_rack_status" :key="dict.value" :label="dict.label" :value="dict.value" />
-          </el-select>
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" icon="Search" @click="handleQuery">搜索</el-button>
-          <el-button icon="Refresh" @click="resetQuery">重置</el-button>
-        </el-form-item>
+      <el-form ref="queryRef" :model="queryParams" label-width="88px" class="query-form">
+        <el-row :gutter="16">
+          <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
+            <el-form-item label="名称" prop="rackName">
+              <el-input v-model="queryParams.rackName" placeholder="请输入货架名称" clearable @keyup.enter="handleQuery" />
+            </el-form-item>
+          </el-col>
+          <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
+            <el-form-item label="仓库" prop="warehouseId">
+              <el-select v-model="queryParams.warehouseId" placeholder="请选择仓库" clearable filterable style="width: 100%">
+                <el-option
+                  v-for="item in wmsStore.warehouseList"
+                  :key="item.id"
+                  :label="item.warehouseName"
+                  :value="item.id"
+                />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
+            <el-form-item label="库区" prop="areaId">
+              <el-select v-model="queryParams.areaId" placeholder="请选择库区" clearable filterable style="width: 100%">
+                <el-option
+                  v-for="item in areaOptions"
+                  :key="item.id"
+                  :label="item.areaName"
+                  :value="item.id"
+                />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
+            <div class="query-actions">
+              <el-button type="primary" icon="Search" @click="handleQuery">搜索</el-button>
+              <el-button icon="Refresh" @click="resetQuery">重置</el-button>
+            </div>
+          </el-col>
+        </el-row>
       </el-form>
     </el-card>
 
@@ -110,40 +115,22 @@
             <el-option v-for="dict in wms_rack_status" :key="dict.value" :label="dict.label" :value="dict.value" />
           </el-select>
         </el-form-item>
-        <el-form-item prop="rowCount">
-          <template #label>
-            <FormLabelHelp label="行数" purpose="用于生成货架二维格子图的纵向行数。" example="4" />
-          </template>
+        <el-form-item label="行数" prop="rowCount">
           <el-input-number v-model="form.rowCount" :min="1" :precision="0" style="width: 100%" />
         </el-form-item>
-        <el-form-item prop="columnCount">
-          <template #label>
-            <FormLabelHelp label="列数" purpose="用于生成货架二维格子图的横向列数。" example="6" />
-          </template>
+        <el-form-item label="列数" prop="columnCount">
           <el-input-number v-model="form.columnCount" :min="1" :precision="0" style="width: 100%" />
         </el-form-item>
-        <el-form-item prop="length">
-          <template #label>
-            <FormLabelHelp label="长" purpose="记录货架物理长度，便于基础资料和布局摘要展示。" example="240" />
-          </template>
+        <el-form-item label="长" prop="length">
           <el-input-number v-model="form.length" :min="0" :precision="2" style="width: 100%" />
         </el-form-item>
-        <el-form-item prop="width">
-          <template #label>
-            <FormLabelHelp label="宽" purpose="记录货架物理宽度，便于基础资料和布局摘要展示。" example="80" />
-          </template>
+        <el-form-item label="宽" prop="width">
           <el-input-number v-model="form.width" :min="0" :precision="2" style="width: 100%" />
         </el-form-item>
-        <el-form-item prop="height">
-          <template #label>
-            <FormLabelHelp label="高" purpose="记录货架物理高度，便于基础资料和布局摘要展示。" example="220" />
-          </template>
+        <el-form-item label="高" prop="height">
           <el-input-number v-model="form.height" :min="0" :precision="2" style="width: 100%" />
         </el-form-item>
-        <el-form-item prop="orderNum">
-          <template #label>
-            <FormLabelHelp label="排序" purpose="控制同库区下货架的展示顺序。" example="10" />
-          </template>
+        <el-form-item label="排序" prop="orderNum">
           <el-input-number v-model="form.orderNum" :min="0" :precision="0" style="width: 100%" />
         </el-form-item>
         <el-form-item label="备注" prop="remark">
@@ -165,7 +152,6 @@ import { computed, getCurrentInstance, onMounted, reactive, ref, toRefs } from '
 import { ElMessageBox } from 'element-plus';
 import { addRack, delRack, getRack, listRack, updateRack } from '@/api/wms/rack';
 import { useWmsStore } from '@/store/modules/wms';
-import FormLabelHelp from '@/views/components/FormLabelHelp.vue'
 
 const { proxy } = getCurrentInstance();
 const { wms_rack_status } = proxy.useDict('wms_rack_status');
@@ -434,5 +420,12 @@ onMounted(async () => {
 
 .form-tip {
   margin-bottom: 12px;
+}
+
+.query-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 </style>

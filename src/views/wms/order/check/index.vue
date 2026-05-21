@@ -1,41 +1,34 @@
 <template>
   <div class="app-container">
     <el-card>
-      <el-form :model="queryParams" ref="queryRef" :inline="true" label-width="68px">
-        <el-form-item label="盘点状态" prop="checkOrderStatus">
-          <el-radio-group v-model="queryParams.checkOrderStatus" @change="handleQuery">
-            <el-radio-button
-              :key="-2"
-              :label="-2"
-            >
-              全部
-            </el-radio-button>
-            <el-radio-button
-              v-for="item in wms_check_status"
-              :key="item.value"
-              :label="item.value"
-            >
-              {{ item.label }}
-            </el-radio-button>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="盘点单号" prop="checkOrderNo">
-          <el-input
-            v-model="queryParams.checkOrderNo"
-            placeholder="请输入盘点单号"
-            clearable
-            @keyup.enter="handleQuery"
-          />
-        </el-form-item>
-        <el-form-item label="仓库" prop="warehouseId">
-          <el-select v-model="queryParams.warehouseId" clearable filterable placeholder="请选择仓库" style="width: 180px">
-            <el-option v-for="item in useWmsStore().warehouseList" :key="item.id" :label="item.warehouseName" :value="item.id"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" icon="Search" @click="handleQuery">搜索</el-button>
-          <el-button icon="Refresh" @click="resetQuery">重置</el-button>
-        </el-form-item>
+      <el-form :model="queryParams" ref="queryRef" label-width="88px" class="query-form">
+        <el-row :gutter="16">
+          <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
+            <el-form-item label="盘点状态" prop="checkOrderStatus">
+              <el-select v-model="queryParams.checkOrderStatus" clearable placeholder="请选择盘点状态" style="width: 100%" @change="handleQuery">
+                <el-option v-for="item in wms_check_status" :key="item.value" :label="item.label" :value="item.value" />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
+            <el-form-item label="盘点单号" prop="checkOrderNo">
+              <el-input v-model="queryParams.checkOrderNo" placeholder="请输入盘点单号" clearable @keyup.enter="handleQuery" />
+            </el-form-item>
+          </el-col>
+          <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
+            <el-form-item label="仓库" prop="warehouseId">
+              <el-select v-model="queryParams.warehouseId" clearable filterable placeholder="请选择仓库" style="width: 100%">
+                <el-option v-for="item in useWmsStore().warehouseList" :key="item.id" :label="item.warehouseName" :value="item.id"/>
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
+            <div class="query-actions">
+              <el-button type="primary" icon="Search" @click="handleQuery">搜索</el-button>
+              <el-button icon="Refresh" @click="resetQuery">重置</el-button>
+            </div>
+          </el-col>
+        </el-row>
       </el-form>
     </el-card>
 
@@ -59,19 +52,29 @@
                 empty-text="暂无盘点单"
                 cell-class-name="vertical-top-cell"
       >
-        <el-table-column label="单号" align="left" prop="checkOrderNo" />
-        <el-table-column label="盘点范围" align="left" width="240">
+        <el-table-column label="单号" align="left" prop="checkOrderNo" min-width="120" />
+        <el-table-column label="盘点范围" align="left" min-width="220">
           <template #default="{ row }">
             <div>仓库：{{ useWmsStore().warehouseMap.get(row.warehouseId)?.warehouseName }}</div>
             <div v-if="row.areaId">库区：{{ useWmsStore().areaMap.get(row.areaId)?.areaName }}</div>
-            <div v-if="row.rackId">货架：{{ row.rackId }}</div>
+            <div v-if="row.rackId">货架：{{ getRackName(row.rackId) }}</div>
           </template>
         </el-table-column>
-        <el-table-column label="盘点信息" align="left" min-width="220">
+        <el-table-column label="范围类型" align="left" min-width="110">
           <template #default="{ row }">
-            <div>范围类型：{{ row.checkScopeType || '-' }}</div>
-            <div v-if="row.checkDate">盘点日期：{{ parseTime(row.checkDate, '{y}-{m}-{d} {h}:{i}') }}</div>
-            <div v-if="row.checkerName || row.reviewerName" class="sub-text">盘点人：{{ row.checkerName || '-' }} / 复核人：{{ row.reviewerName || '-' }}</div>
+            <span v-if="row.checkScopeType">{{ proxy.selectDictLabel(wms_check_scope_type, row.checkScopeType) }}</span>
+            <span v-else>-</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="盘点日期" align="left" min-width="140">
+          <template #default="{ row }">
+            <span>{{ row.checkDate ? parseTime(row.checkDate, '{y}-{m}-{d} {h}:{i}') : '-' }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="盘点人/复核人" align="left" min-width="160">
+          <template #default="{ row }">
+            <div>盘点人：{{ row.checkerName || '-' }}</div>
+            <div class="sub-text">复核人：{{ row.reviewerName || '-' }}</div>
           </template>
         </el-table-column>
         <el-table-column label="盘点状态" align="center" prop="checkOrderStatus" width="120">
@@ -79,27 +82,15 @@
             <dict-tag :options="wms_check_status" :value="row.checkOrderStatus" />
           </template>
         </el-table-column>
-        <el-table-column label="盈亏数" align="right">
+        <el-table-column label="盈亏数" align="right" width="100">
           <template #default="{ row }">
             <el-statistic :value="Number(row.checkOrderTotal)" :precision="0"/>
           </template>
         </el-table-column>
-        <el-table-column label="创建/操作" align="left">
-          <template #default="{ row }">
-            <div>创建：{{ row.createBy }}</div>
-            <div v-if="row.updateBy">操作：{{ row.updateBy }}</div>
-          </template>
-        </el-table-column>
-        <el-table-column label="创建时间/操作时间" align="left" width="200">
-          <template #default="{ row }">
-            <div>创建：{{ parseTime(row.createTime, '{mm}-{dd} {hh}:{ii}') }}</div>
-            <div>操作：{{ parseTime(row.updateTime, '{mm}-{dd} {hh}:{ii}') }}</div>
-          </template>
-        </el-table-column>
-        <el-table-column label="备注" prop="remark" />
-        <el-table-column label="操作" align="right" class-name="small-padding fixed-width" width="120">
+        <el-table-column label="备注" prop="remark" min-width="120" show-overflow-tooltip />
+        <el-table-column label="操作" align="right" class-name="small-padding fixed-width" width="100">
           <template #default="scope">
-            <div>
+            <div class="table-actions">
               <el-popover
                 placement="left"
                 title="提示"
@@ -113,8 +104,6 @@
                 </template>
               </el-popover>
               <el-button link type="primary" @click="handleGoDetail(scope.row)" v-hasPermi="['wms:check:all']">查看</el-button>
-            </div>
-            <div class="mt10">
               <el-popover
                 placement="left"
                 title="提示"
@@ -142,12 +131,6 @@
         />
       </el-row>
     </el-card>
-    <check-order-detail
-      ref="checkOrderDetailRef"
-      :model-value="watchDetailObj.show"
-      :check-order-no="watchDetailObj.checkOrderNo"
-      @handle-cancel-click="watchDetailObj.show = false"
-    />
   </div>
 </template>
 
@@ -157,12 +140,13 @@ import {getCurrentInstance, reactive, ref, toRefs} from "vue";
 import { useRoute, useRouter } from "vue-router";
 import {useWmsStore} from "../../../../store/modules/wms";
 import {ElMessageBox} from "element-plus";
-import CheckOrderDetail from "@/views/wms/order/check/CheckOrderDetail.vue";
 import { resolveRoutePath } from "@/utils/routeResolver";
+import { listRackNoPage } from "@/api/wms/rack";
 const { proxy } = getCurrentInstance();
 const route = useRoute();
 const router = useRouter();
-const {wms_check_status} = proxy.useDict("wms_check_status");
+const wmsStore = useWmsStore();
+const {wms_check_status, wms_check_scope_type} = proxy.useDict("wms_check_status", "wms_check_scope_type");
 const checkOrderList = ref([]);
 const open = ref(false);
 const buttonLoading = ref(false);
@@ -175,24 +159,35 @@ const data = reactive({
     pageNum: 1,
     pageSize: 10,
     checkOrderNo: undefined,
-    checkOrderStatus: -2,
+    checkOrderStatus: undefined,
     warehouseId: undefined,
   },
 });
-const watchDetailObj = ref({
-  show: false,
-  checkOrderNo: null
-})
-const checkOrderDetailRef = ref(null)
+const rackMap = ref(new Map())
 const { queryParams } = toRefs(data);
+
+async function loadRackMap() {
+  const res = await listRackNoPage({})
+  const map = new Map()
+  ;(res.data || []).forEach(item => {
+    map.set(item.id, item.rackName)
+  })
+  rackMap.value = map
+}
+
+function getRackName(rackId) {
+  return rackMap.value.get(rackId) || rackId || '-'
+}
 
 /** 查询入库单列表 */
 function getList() {
   loading.value = true;
   const query = {...queryParams.value}
-  if (query.checkOrderStatus === -2) {
-    query.checkOrderStatus = null
-  }
+  Object.keys(query).forEach(key => {
+    if (query[key] === '' || query[key] === null || typeof query[key] === 'undefined') {
+      delete query[key]
+    }
+  })
   listCheckOrder(query).then(response => {
     checkOrderList.value = response.rows;
     total.value = response.total;
@@ -252,15 +247,16 @@ function handleUpdate(row) {
 }
 
 function handleGoDetail(row) {
-  watchDetailObj.value.checkOrderNo = row.checkOrderNo
-  checkOrderDetailRef.value.setCheckOrderId(row.id)
-  watchDetailObj.value.show = true
-  checkOrderDetailRef.value.handleQuery()
+  router.push({
+    path: resolveCheckOrderEditPath(),
+    query: { id: row.id, mode: 'view', returnFullPath: route.fullPath }
+  });
 }
 
 function getRowKey(row) {
   return row.id
 }
+loadRackMap();
 getList();
 </script>
 <style lang="scss">
@@ -269,5 +265,19 @@ getList();
 }
 .el-table .vertical-top-cell {
   vertical-align: top
+}
+
+.query-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.table-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 </style>

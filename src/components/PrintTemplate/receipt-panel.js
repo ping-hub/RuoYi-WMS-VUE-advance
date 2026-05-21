@@ -1,852 +1,196 @@
+const createStaticText = (left, top, width, height, text, extra = {}) => ({
+  options: {
+    left,
+    top,
+    width,
+    height,
+    title: text,
+    coordinateSync: false,
+    widthHeightSync: false,
+    ...extra
+  },
+  printElementType: {
+    title: "文本",
+    type: "text"
+  }
+});
+
+const createFieldText = (left, top, width, height, title, field, extra = {}) => ({
+  options: {
+    left,
+    top,
+    width,
+    height,
+    title,
+    field,
+    fields: [{ text: title, field }],
+    coordinateSync: false,
+    widthHeightSync: false,
+    ...extra
+  },
+  printElementType: {
+    title: "文本",
+    type: "text"
+  }
+});
+
+const createValueText = (left, top, width, height, field, extra = {}) => ({
+  options: {
+    left,
+    top,
+    width,
+    height,
+    title: "",
+    field,
+    fields: [{ text: "", field }],
+    coordinateSync: false,
+    widthHeightSync: false,
+    ...extra
+  },
+  printElementType: {
+    title: "文本",
+    type: "text"
+  }
+});
+
+const createRect = (left, top, width, height, extra = {}) => ({
+  options: {
+    left,
+    top,
+    width,
+    height,
+    ...extra
+  },
+  printElementType: {
+    title: "矩形",
+    type: "rect"
+  }
+});
+
+const createHLine = (left, top, width, extra = {}) => ({
+  options: {
+    left,
+    top,
+    width,
+    ...extra
+  },
+  printElementType: {
+    title: "横线",
+    type: "hline"
+  }
+});
+
+const createVLine = (left, top, height, extra = {}) => ({
+  options: {
+    left,
+    top,
+    height,
+    ...extra
+  },
+  printElementType: {
+    title: "竖线",
+    type: "vline"
+  }
+});
+
+const detailColumns = [
+  [
+    { title: "序号", field: "serialNo", width: 42, checked: true, columnId: "serialNo", rowspan: 1, colspan: 1, align: "center" },
+    { title: "名称", field: "itemName", width: 82, checked: true, columnId: "itemName", rowspan: 1, colspan: 1, align: "center" },
+    { title: "规格型号", field: "skuName", width: 82, checked: true, columnId: "skuName", rowspan: 1, colspan: 1, align: "center" },
+    { title: "计量单位", field: "unitName", width: 52, checked: true, columnId: "unitName", rowspan: 1, colspan: 1, align: "center" },
+    { title: "调拨数量\n等级", field: "dispatchLevel", width: 62, checked: true, columnId: "dispatchLevel", rowspan: 1, colspan: 1, align: "center" },
+    { title: "调拨数量\n数量", field: "dispatchQuantity", width: 48, checked: true, columnId: "dispatchQuantity", rowspan: 1, colspan: 1, align: "center" },
+    { title: "入库数量\n等级", field: "receiptLevel", width: 62, checked: true, columnId: "receiptLevel", rowspan: 1, colspan: 1, align: "center" },
+    { title: "入库数量\n数量", field: "receiptQuantity", width: 48, checked: true, columnId: "receiptQuantity", rowspan: 1, colspan: 1, align: "center" },
+    { title: "单价\n（元）", field: "unitPrice", width: 54, checked: true, columnId: "unitPrice", rowspan: 1, colspan: 1, align: "center" },
+    { title: "总价\n（元）", field: "lineAmount", width: 54, checked: true, columnId: "lineAmount", rowspan: 1, colspan: 1, align: "center" },
+    { title: "备注", field: "remark", width: 58, checked: true, columnId: "remark", rowspan: 1, colspan: 1, align: "center" }
+  ]
+];
+
 export default {
-  "panels": [
+  panels: [
     {
-      "index": 0,
-      "name": 1,
-      "height": 297,
-      "width": 210,
-      "paperHeader": 49.5,
-      "paperFooter": 780,
-      "printElements": [
+      index: 0,
+      name: 1,
+      height: 297,
+      width: 210,
+      paperHeader: 35,
+      paperFooter: 780,
+      printElements: [
+        createFieldText(16, 16, 120, 18, "附件", "attachmentLabel", { fontSize: 11 }),
+        createStaticText(220, 40, 150, 24, "器材入库单", {
+          fontSize: 18,
+          fontWeight: "700",
+          textAlign: "center",
+          lineHeight: 22
+        }),
+        createStaticText(76, 118, 120, 44, "入库通知单", {
+          fontSize: 16,
+          fontWeight: "700",
+          textAlign: "center",
+          lineHeight: 20
+        }),
+
+        createRect(245, 92, 310, 93),
+        createVLine(315, 92, 93),
+        createVLine(400, 92, 93),
+        createVLine(470, 92, 93),
+        createHLine(245, 123, 310),
+        createHLine(245, 154, 310),
+
+        createStaticText(250, 101, 60, 14, "调拨根据", { fontSize: 11.5, fontWeight: "600", textAlign: "center", lineHeight: 14 }),
+        createValueText(323, 101, 72, 14, "basisNo", { fontSize: 11.5, textAlign: "center", lineHeight: 14 }),
+        createStaticText(405, 101, 60, 14, "调拨方式", { fontSize: 11.5, fontWeight: "600", textAlign: "center", lineHeight: 14 }),
+        createValueText(478, 101, 72, 14, "dispatchMode", { fontSize: 11.5, textAlign: "center", lineHeight: 14 }),
+
+        createStaticText(250, 132, 60, 14, "通知机关", { fontSize: 11.5, fontWeight: "600", textAlign: "center", lineHeight: 14 }),
+        createValueText(323, 132, 72, 14, "noticeOrg", { fontSize: 11.5, textAlign: "center", lineHeight: 14 }),
+        createStaticText(405, 132, 60, 14, "收物单位", { fontSize: 11.5, fontWeight: "600", textAlign: "center", lineHeight: 14 }),
+        createValueText(478, 132, 72, 14, "receiveUnit", { fontSize: 11.5, textAlign: "center", lineHeight: 14 }),
+
+        createStaticText(250, 163, 60, 14, "采购日期", { fontSize: 11.5, fontWeight: "600", textAlign: "center", lineHeight: 14 }),
+        createValueText(320, 163, 75, 14, "purchaseDate", { fontSize: 10.5, textAlign: "center", lineHeight: 14 }),
+        createStaticText(405, 163, 60, 14, "入库日期", { fontSize: 11.5, fontWeight: "600", textAlign: "center", lineHeight: 14 }),
+        createValueText(472, 163, 78, 14, "receiptDate", { fontSize: 10.5, textAlign: "center", lineHeight: 14 }),
+
         {
-          "options": {
-            "left": 402.5,
-            "top": 35,
-            "height": 40,
-            "width": 160,
-            "title": "条形码",
-            "barcodeType": "code128",
-            "testData": "barcode",
-            "textType": "barcode",
-            "fields": [
-              {
-                "text": "入库单号",
-                "field": "receiptOrderNo"
-              },
-              {
-                "text": "订单号",
-                "field": "orderNo"
-              }
-            ],
-            "field": "receiptOrderNo",
-            "coordinateSync": false,
-            "widthHeightSync": false
+          options: {
+            left: 14,
+            top: 240,
+            height: 305,
+            width: 548,
+            field: "table",
+            columns: detailColumns
           },
-          "printElementType": {
-            "title": "条形码",
-            "type": "barcode"
+          printElementType: {
+            title: "表格",
+            type: "table",
+            editable: true,
+            columnDisplayEditable: true,
+            columnDisplayIndexEditable: true,
+            columnTitleEditable: true,
+            columnResizable: true,
+            columnAlignEditable: true,
+            isEnableEditField: true,
+            isEnableContextMenu: true,
+            isEnableInsertRow: true,
+            isEnableDeleteRow: true,
+            isEnableInsertColumn: true,
+            isEnableDeleteColumn: true,
+            isEnableMergeCell: true
           }
         },
-        {
-          "options": {
-            "left": 20,
-            "top": 42.5,
-            "height": 27,
-            "width": 350,
-            "fields": [
-              {
-                "text": "入库单号",
-                "field": "receiptOrderNo"
-              },
-              {
-                "text": "供应商",
-                "field": "supplierName"
-              },
-              {
-                "text": "订单号",
-                "field": "orderNo"
-              },
-              {
-                "text": "入库类型",
-                "field": "receiptOrderType"
-              },
-              {
-                "text": "入库状态",
-                "field": "receiptOrderStatus"
-              },
-              {
-                "text": "创建日期",
-                "field": "createTime"
-              },
-              {
-                "text": "备注",
-                "field": "remark"
-              },
-              {
-                "text": "仓库",
-                "field": "warehouse"
-              },
-              {
-                "text": "库区",
-                "field": "area"
-              }
-            ],
-            "title": "入库单",
-            "field": "receiptOrderNo",
-            "coordinateSync": false,
-            "widthHeightSync": false,
-            "fontSize": 18,
-            "fontWeight": "600",
-            "lineHeight": 26.25,
-            "qrCodeLevel": 0
-          },
-          "printElementType": {
-            "title": "文本",
-            "type": "text"
-          }
-        },
-        {
-          "options": {
-            "left": 20,
-            "top": 97.5,
-            "height": 9.75,
-            "width": 200,
-            "fields": [
-              {
-                "text": "入库单号",
-                "field": "receiptOrderNo"
-              },
-              {
-                "text": "供应商",
-                "field": "supplierName"
-              },
-              {
-                "text": "订单号",
-                "field": "orderNo"
-              },
-              {
-                "text": "入库类型",
-                "field": "receiptOrderType"
-              },
-              {
-                "text": "入库状态",
-                "field": "receiptOrderStatus"
-              },
-              {
-                "text": "创建日期",
-                "field": "createTime"
-              },
-              {
-                "text": "备注",
-                "field": "remark"
-              }
-            ],
-            "title": "入库类型",
-            "field": "receiptOrderType",
-            "coordinateSync": false,
-            "widthHeightSync": false,
-            "qrCodeLevel": 0,
-            "right": 139.5,
-            "bottom": 108,
-            "vCenter": 79.5,
-            "hCenter": 103.125
-          },
-          "printElementType": {
-            "title": "文本",
-            "type": "text"
-          }
-        },
-        {
-          "options": {
-            "left": 340,
-            "top": 97.5,
-            "height": 9.75,
-            "width": 200,
-            "fields": [
-              {
-                "text": "入库单号",
-                "field": "receiptOrderNo"
-              },
-              {
-                "text": "供应商",
-                "field": "supplierName"
-              },
-              {
-                "text": "订单号",
-                "field": "orderNo"
-              },
-              {
-                "text": "入库类型",
-                "field": "receiptOrderType"
-              },
-              {
-                "text": "入库状态",
-                "field": "receiptOrderStatus"
-              },
-              {
-                "text": "创建日期",
-                "field": "createTime"
-              },
-              {
-                "text": "备注",
-                "field": "remark"
-              }
-            ],
-            "title": "入库状态",
-            "field": "receiptOrderStatus",
-            "coordinateSync": false,
-            "widthHeightSync": false,
-            "qrCodeLevel": 0
-          },
-          "printElementType": {
-            "title": "文本",
-            "type": "text"
-          }
-        },
-        {
-          "options": {
-            "left": 20,
-            "top": 122.5,
-            "height": 9.75,
-            "width": 200,
-            "fields": [
-              {
-                "text": "入库单号",
-                "field": "receiptOrderNo"
-              },
-              {
-                "text": "供应商",
-                "field": "supplierName"
-              },
-              {
-                "text": "订单号",
-                "field": "orderNo"
-              },
-              {
-                "text": "入库类型",
-                "field": "receiptOrderType"
-              },
-              {
-                "text": "入库状态",
-                "field": "receiptOrderStatus"
-              },
-              {
-                "text": "创建日期",
-                "field": "createTime"
-              },
-              {
-                "text": "备注",
-                "field": "remark"
-              }
-            ],
-            "title": "供应商",
-            "field": "merchantName",
-            "coordinateSync": false,
-            "widthHeightSync": false,
-            "qrCodeLevel": 0
-          },
-          "printElementType": {
-            "title": "文本",
-            "type": "text"
-          }
-        },
-        {
-          "options": {
-            "left": 340,
-            "top": 122.5,
-            "height": 9.75,
-            "width": 150,
-            "fields": [
-              {
-                "text": "入库单号",
-                "field": "receiptOrderNo"
-              },
-              {
-                "text": "供应商",
-                "field": "supplierName"
-              },
-              {
-                "text": "订单号",
-                "field": "orderNo"
-              },
-              {
-                "text": "入库类型",
-                "field": "receiptOrderType"
-              },
-              {
-                "text": "入库状态",
-                "field": "receiptOrderStatus"
-              },
-              {
-                "text": "创建日期",
-                "field": "createTime"
-              },
-              {
-                "text": "备注",
-                "field": "remark"
-              }
-            ],
-            "title": "订单号",
-            "field": "orderNo",
-            "coordinateSync": false,
-            "widthHeightSync": false,
-            "qrCodeLevel": 0,
-            "right": 489.75,
-            "bottom": 131.25,
-            "vCenter": 414.75,
-            "hCenter": 126.375
-          },
-          "printElementType": {
-            "title": "文本",
-            "type": "text"
-          }
-        },
-        {
-          "options": {
-            "left": 20,
-            "top": 147.5,
-            "height": 9.75,
-            "width": 200,
-            "fields": [
-              {
-                "text": "入库单号",
-                "field": "receiptOrderNo"
-              },
-              {
-                "text": "供应商",
-                "field": "supplierName"
-              },
-              {
-                "text": "订单号",
-                "field": "orderNo"
-              },
-              {
-                "text": "入库类型",
-                "field": "receiptOrderType"
-              },
-              {
-                "text": "入库状态",
-                "field": "receiptOrderStatus"
-              },
-              {
-                "text": "创建日期",
-                "field": "createTime"
-              },
-              {
-                "text": "备注",
-                "field": "remark"
-              }
-            ],
-            "title": "仓库",
-            "field": "warehouseName",
-            "coordinateSync": false,
-            "widthHeightSync": false,
-            "qrCodeLevel": 0
-          },
-          "printElementType": {
-            "title": "文本",
-            "type": "text"
-          }
-        },
-        {
-          "options": {
-            "left": 340,
-            "top": 147.5,
-            "height": 9.75,
-            "width": 150,
-            "fields": [
-              {
-                "text": "入库单号",
-                "field": "receiptOrderNo"
-              },
-              {
-                "text": "供应商",
-                "field": "supplierName"
-              },
-              {
-                "text": "订单号",
-                "field": "orderNo"
-              },
-              {
-                "text": "入库类型",
-                "field": "receiptOrderType"
-              },
-              {
-                "text": "入库状态",
-                "field": "receiptOrderStatus"
-              },
-              {
-                "text": "创建日期",
-                "field": "createTime"
-              },
-              {
-                "text": "备注",
-                "field": "remark"
-              }
-            ],
-            "title": "库区",
-            "field": "areaName",
-            "coordinateSync": false,
-            "widthHeightSync": false,
-            "qrCodeLevel": 0,
-            "right": 489.75,
-            "bottom": 131.25,
-            "vCenter": 414.75,
-            "hCenter": 126.375
-          },
-          "printElementType": {
-            "title": "文本",
-            "type": "text"
-          }
-        },
-        {
-          "options": {
-            "left": 20,
-            "top": 172.5,
-            "height": 9.75,
-            "width": 200,
-            "fields": [
-              {
-                "text": "入库单号",
-                "field": "receiptOrderNo"
-              },
-              {
-                "text": "供应商",
-                "field": "supplierName"
-              },
-              {
-                "text": "订单号",
-                "field": "orderNo"
-              },
-              {
-                "text": "入库类型",
-                "field": "receiptOrderType"
-              },
-              {
-                "text": "入库状态",
-                "field": "receiptOrderStatus"
-              },
-              {
-                "text": "创建日期",
-                "field": "createTime"
-              },
-              {
-                "text": "备注",
-                "field": "remark"
-              }
-            ],
-            "title": "数量",
-            "field": "totalQuantity",
-            "coordinateSync": false,
-            "widthHeightSync": false,
-            "qrCodeLevel": 0
-          },
-          "printElementType": {
-            "title": "文本",
-            "type": "text"
-          }
-        },
-        {
-          "options": {
-            "left": 340,
-            "top": 172.5,
-            "height": 9.75,
-            "width": 150,
-            "fields": [
-              {
-                "text": "入库单号",
-                "field": "receiptOrderNo"
-              },
-              {
-                "text": "供应商",
-                "field": "supplierName"
-              },
-              {
-                "text": "订单号",
-                "field": "orderNo"
-              },
-              {
-                "text": "入库类型",
-                "field": "receiptOrderType"
-              },
-              {
-                "text": "入库状态",
-                "field": "receiptOrderStatus"
-              },
-              {
-                "text": "创建日期",
-                "field": "createTime"
-              },
-              {
-                "text": "备注",
-                "field": "remark"
-              }
-            ],
-            "title": "金额",
-            "field": "payableAmount",
-            "coordinateSync": false,
-            "widthHeightSync": false,
-            "qrCodeLevel": 0,
-            "right": 489.75,
-            "bottom": 131.25,
-            "vCenter": 414.75,
-            "hCenter": 126.375
-          },
-          "printElementType": {
-            "title": "文本",
-            "type": "text"
-          }
-        },
-        {
-          "options": {
-            "left": 20,
-            "top": 197.5,
-            "height": 9.75,
-            "width": 200,
-            "fields": [
-              {
-                "text": "入库单号",
-                "field": "receiptOrderNo"
-              },
-              {
-                "text": "供应商",
-                "field": "supplierName"
-              },
-              {
-                "text": "订单号",
-                "field": "orderNo"
-              },
-              {
-                "text": "入库类型",
-                "field": "receiptOrderType"
-              },
-              {
-                "text": "入库状态",
-                "field": "receiptOrderStatus"
-              },
-              {
-                "text": "创建日期",
-                "field": "createTime"
-              },
-              {
-                "text": "备注",
-                "field": "remark"
-              }
-            ],
-            "title": "创建人",
-            "field": "createBy",
-            "coordinateSync": false,
-            "widthHeightSync": false,
-            "qrCodeLevel": 0
-          },
-          "printElementType": {
-            "title": "文本",
-            "type": "text"
-          }
-        },
-        {
-          "options": {
-            "left": 340,
-            "top": 197.5,
-            "height": 9.75,
-            "width": 150,
-            "fields": [
-              {
-                "text": "入库单号",
-                "field": "receiptOrderNo"
-              },
-              {
-                "text": "供应商",
-                "field": "supplierName"
-              },
-              {
-                "text": "订单号",
-                "field": "orderNo"
-              },
-              {
-                "text": "入库类型",
-                "field": "receiptOrderType"
-              },
-              {
-                "text": "入库状态",
-                "field": "receiptOrderStatus"
-              },
-              {
-                "text": "创建日期",
-                "field": "createTime"
-              },
-              {
-                "text": "备注",
-                "field": "remark"
-              }
-            ],
-            "title": "创建时间",
-            "field": "createTime",
-            "coordinateSync": false,
-            "widthHeightSync": false,
-            "qrCodeLevel": 0,
-            "right": 489.75,
-            "bottom": 131.25,
-            "vCenter": 414.75,
-            "hCenter": 126.375
-          },
-          "printElementType": {
-            "title": "文本",
-            "type": "text"
-          }
-        },
-        {
-          "options": {
-            "left": 20,
-            "top": 222.5,
-            "height": 9.75,
-            "width": 200,
-            "fields": [
-              {
-                "text": "入库单号",
-                "field": "receiptOrderNo"
-              },
-              {
-                "text": "供应商",
-                "field": "supplierName"
-              },
-              {
-                "text": "订单号",
-                "field": "orderNo"
-              },
-              {
-                "text": "入库类型",
-                "field": "receiptOrderType"
-              },
-              {
-                "text": "入库状态",
-                "field": "receiptOrderStatus"
-              },
-              {
-                "text": "创建日期",
-                "field": "createTime"
-              },
-              {
-                "text": "备注",
-                "field": "remark"
-              }
-            ],
-            "title": "操作人",
-            "field": "updateBy",
-            "coordinateSync": false,
-            "widthHeightSync": false,
-            "qrCodeLevel": 0
-          },
-          "printElementType": {
-            "title": "文本",
-            "type": "text"
-          }
-        },
-        {
-          "options": {
-            "left": 340,
-            "top": 222.5,
-            "height": 9.75,
-            "width": 150,
-            "fields": [
-              {
-                "text": "入库单号",
-                "field": "receiptOrderNo"
-              },
-              {
-                "text": "供应商",
-                "field": "supplierName"
-              },
-              {
-                "text": "订单号",
-                "field": "orderNo"
-              },
-              {
-                "text": "入库类型",
-                "field": "receiptOrderType"
-              },
-              {
-                "text": "入库状态",
-                "field": "receiptOrderStatus"
-              },
-              {
-                "text": "创建日期",
-                "field": "createTime"
-              },
-              {
-                "text": "备注",
-                "field": "remark"
-              }
-            ],
-            "title": "操作时间",
-            "field": "updateTime",
-            "coordinateSync": false,
-            "widthHeightSync": false,
-            "qrCodeLevel": 0,
-            "right": 489.75,
-            "bottom": 131.25,
-            "vCenter": 414.75,
-            "hCenter": 126.375
-          },
-          "printElementType": {
-            "title": "文本",
-            "type": "text"
-          }
-        },
-        {
-          "options": {
-            "left": 17.5,
-            "top": 272.5,
-            "height": 54,
-            "width": 550,
-            "field": "table",
-            "groupFieldsFormatter": "function(type,options,data){ return [\"name\"] }",
-            "columns": [
-              [
-                {
-                  "width": 78.57142857142857,
-                  "title": "器材名称",
-                  "field": "itemName",
-                  "checked": true,
-                  "columnId": "itemName",
-                  "fixed": false,
-                  "rowspan": 1,
-                  "colspan": 1
-                },
-                {
-                  "width": 78.57142857142857,
-                  "title": "规格名称",
-                  "field": "skuName",
-                  "checked": true,
-                  "columnId": "skuName",
-                  "fixed": false,
-                  "rowspan": 1,
-                  "colspan": 1
-                },
-                {
-                  "width": 90,
-                  "title": "库区",
-                  "field": "areaName",
-                  "checked": true,
-                  "columnId": "areaName",
-                  "fixed": false,
-                  "rowspan": 1,
-                  "colspan": 1
-                },
-                {
-                  "width": 78.57142857142857,
-                  "title": "生产日期",
-                  "field": "productionDate",
-                  "checked": true,
-                  "columnId": "productionDate",
-                  "fixed": false,
-                  "rowspan": 1,
-                  "colspan": 1,
-                },
-                {
-                  "width": 78.57142857142857,
-                  "title": "过期日期",
-                  "field": "expirationDate",
-                  "checked": true,
-                  "columnId": "expirationDate",
-                  "fixed": false,
-                  "rowspan": 1,
-                  "colspan": 1,
-                },
-                {
-                  "width": 78.57142857142857,
-                  "align": "right",
-                  "title": "数量",
-                  "field": "quantity",
-                  "checked": true,
-                  "columnId": "quantity",
-                  "fixed": false,
-                  "rowspan": 1,
-                  "colspan": 1,
-                  "tableSummary": "sum",
-                  "tableSummaryAlign": "right",
-                  "tableSummaryNumFormat": "0"
-                },
-                {
-                  "width": 78.57142857142857,
-                  "align": "right",
-                  "title": "价格(元)",
-                  "field": "lineAmount",
-                  "checked": true,
-                  "columnId": "lineAmount",
-                  "fixed": false,
-                  "rowspan": 1,
-                  "colspan": 1,
-                  "tableSummary": "sum",
-                  "tableSummaryAlign": "right"
-                },
-              ]
-            ]
-          },
-          "printElementType": {
-            "title": "表格",
-            "type": "table",
-            "editable": true,
-            "columnDisplayEditable": true,
-            "columnDisplayIndexEditable": true,
-            "columnTitleEditable": true,
-            "columnResizable": true,
-            "columnAlignEditable": true,
-            "isEnableEditField": true,
-            "isEnableContextMenu": true,
-            "isEnableInsertRow": true,
-            "isEnableDeleteRow": true,
-            "isEnableInsertColumn": true,
-            "isEnableDeleteColumn": true,
-            "isEnableMergeCell": true
-          }
-        },
-        {
-          "options": {
-            "left": 20,
-            "top": 247.5,
-            "height": 9.75,
-            "width": 500,
-            "fields": [
-              {
-                "text": "入库单号",
-                "field": "receiptOrderNo"
-              },
-              {
-                "text": "供应商",
-                "field": "supplierName"
-              },
-              {
-                "text": "订单号",
-                "field": "orderNo"
-              },
-              {
-                "text": "入库类型",
-                "field": "receiptOrderType"
-              },
-              {
-                "text": "入库状态",
-                "field": "receiptOrderStatus"
-              },
-              {
-                "text": "创建日期",
-                "field": "createTime"
-              },
-              {
-                "text": "备注",
-                "field": "remark"
-              }
-            ],
-            "title": "备注",
-            "field": "remark",
-            "coordinateSync": false,
-            "widthHeightSync": false,
-            "qrCodeLevel": 0,
-            "right": 139.5,
-            "bottom": 233.25,
-            "vCenter": 79.5,
-            "hCenter": 228.375
-          },
-          "printElementType": {
-            "title": "文本",
-            "type": "text"
-          }
-        }
+
+        createFieldText(20, 602, 180, 18, "采购（配发）人", "purchaserName", { fontSize: 12, fontWeight: "600" }),
+        createFieldText(230, 602, 130, 18, "验收人", "acceptorName", { fontSize: 12, fontWeight: "600" }),
+        createFieldText(420, 602, 125, 18, "保管员", "keeperName", { fontSize: 12, fontWeight: "600" })
       ],
-      "paperNumberLeft": 565.5,
-      "paperNumberTop": 819,
-      "paperNumberContinue": true,
-      "watermarkOptions": {}
+      paperNumberLeft: 565.5,
+      paperNumberTop: 819,
+      paperNumberContinue: true,
+      watermarkOptions: {}
     }
   ]
 };
