@@ -14,6 +14,7 @@
     filterable
     ref="cascader"
     @visible-change="v => visibleChange(v,'cascader',  'ship')"
+    @change="handleChange"
   ></el-cascader>
 </template>
 
@@ -129,6 +130,9 @@ export default {
       useWmsStore().getWarehouseList();
       useWmsStore().getAreaList();
     },
+    handleChange(value) {
+      $emit(this, 'change', value)
+    },
     setOptions() {
       let areaMap = new Map()
       let warehouseMap = new Map()
@@ -158,6 +162,6 @@ export default {
       }
     },
   },
-  emits: ['update:value'],
+  emits: ['update:value', 'change'],
 }
 </script>

@@ -22,7 +22,7 @@
           </el-col>
           <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
             <el-form-item label="器材规格" prop="skuId">
-              <el-select v-model="queryParams.skuId" placeholder="请选择器材规格" clearable filterable style="width: 100%">
+              <el-select v-model="queryParams.skuId" placeholder="请选择器材规格" clearable filterable style="width: 100%" @change="handleQuery">
                 <el-option
                   v-for="item in querySkuOptions"
                   :key="item.id"
@@ -34,7 +34,7 @@
           </el-col>
           <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
             <el-form-item label="器材状态" prop="instanceStatus">
-              <el-select v-model="queryParams.instanceStatus" placeholder="请选择状态" clearable style="width: 100%">
+              <el-select v-model="queryParams.instanceStatus" placeholder="请选择状态" clearable style="width: 100%" @change="handleQuery">
                 <el-option v-for="dict in wms_item_instance_status" :key="dict.value" :label="dict.label" :value="dict.value" />
               </el-select>
             </el-form-item>
@@ -65,7 +65,7 @@
           </el-col>
           <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
             <el-form-item label="货架" prop="rackId">
-              <RackSelect v-model="queryParams.rackId" :warehouse-id="queryParams.warehouseId" :area-id="queryParams.areaId" />
+              <RackSelect v-model="queryParams.rackId" :warehouse-id="queryParams.warehouseId" :area-id="queryParams.areaId" @change="handleQueryRackChange" />
             </el-form-item>
           </el-col>
           <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
@@ -75,6 +75,7 @@
                 :warehouse-id="queryParams.warehouseId"
                 :area-id="queryParams.areaId"
                 :rack-id="queryParams.rackId"
+                @change="handleQuery"
               />
             </el-form-item>
           </el-col>
@@ -220,7 +221,7 @@
         <el-descriptions-item label="器材状态">
           <dict-tag :options="wms_item_instance_status" :value="detailDialog.data.instanceStatus" />
         </el-descriptions-item>
-        <el-descriptions-item label="器材">{{ detailDialog.data.itemName || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="器材名称">{{ detailDialog.data.itemName || '-' }}</el-descriptions-item>
         <el-descriptions-item label="器材规格">{{ detailDialog.data.skuName || '-' }}</el-descriptions-item>
         <el-descriptions-item label="在箱状态">{{ hasBox(detailDialog.data) ? '在箱' : '不在箱' }}</el-descriptions-item>
         <el-descriptions-item label="借出状态">{{ isBorrowed(detailDialog.data) ? '已借出' : '未借出' }}</el-descriptions-item>
@@ -432,17 +433,25 @@ const applyRouteQuery = () => {
 const handleQueryItemChange = async () => {
   queryParams.value.skuId = undefined;
   await loadSkuOptions(queryParams.value.itemId, 'query');
+  handleQuery();
 };
 
 const handleQueryWarehouseChange = () => {
   queryParams.value.areaId = undefined;
   queryParams.value.rackId = undefined;
   queryParams.value.locationId = undefined;
+  handleQuery();
 };
 
 const handleQueryAreaChange = () => {
   queryParams.value.rackId = undefined;
   queryParams.value.locationId = undefined;
+  handleQuery();
+};
+
+const handleQueryRackChange = () => {
+  queryParams.value.locationId = undefined;
+  handleQuery();
 };
 
 const reset = () => {

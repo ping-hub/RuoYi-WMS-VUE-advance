@@ -52,7 +52,7 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['update:modelValue']);
+const emit = defineEmits(['update:modelValue', 'change']);
 
 const locationList = ref([]);
 
@@ -62,6 +62,7 @@ const getOptionLabel = (item) => {
 
 const handleChange = (value) => {
   emit('update:modelValue', value);
+  emit('change', value);
 };
 
 const loadLocationList = async () => {

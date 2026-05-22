@@ -7,7 +7,7 @@
           <el-row :gutter="24">
             <el-col :span="6">
               <el-form-item label="入库单号" prop="receiptOrderNo">
-                <el-input v-model="form.receiptOrderNo" placeholder="入库单号" :disabled="form.id" style="width: 100%"></el-input>
+                <el-input v-model="form.receiptOrderNo" placeholder="保存后自动生成" disabled style="width: 100%"></el-input>
               </el-form-item>
             </el-col>
             <el-col :span="6">
@@ -121,12 +121,22 @@
             :data="form.details"
             border
             empty-text="暂无入库明细"
-          ><el-table-column label="器材实例编码" min-width="150"> 
+          ><el-table-column label="器材实例编码" min-width="180">
               <template #default="{ row }">
                 <span>{{ row.instanceCode || row.receiptItemInstances?.[0]?.instanceCode || '-' }}</span>
               </template>
             </el-table-column>
-            <el-table-column label="货架/货位" min-width="220">
+            <el-table-column label="器材信息" min-width="180">
+              <template #default="{ row }">
+                <div>{{ row.itemName || '-' }}</div>
+                <div v-if="row.itemCode" class="sub-text">器材编码：{{ row.itemCode }}</div>
+                <div v-if="row.skuName" class="sub-text">规格型号：{{ row.skuName }}</div>
+                <div v-if="row.unit" class="sub-text">计量单位：{{ row.unit }}</div>
+                <div v-if="row.productIdentifier" class="sub-text">产品标识：{{ row.productIdentifier }}</div>
+                <div v-if="row.qualityGrade" class="sub-text">质量等级：{{ row.qualityGrade }}</div>
+              </template>
+            </el-table-column>
+            <el-table-column label="货架/货位" min-width="210">
               <template #default="{ row }">
                 <div class="location-editor">
                   <RackSelect v-model="row.rackId" :warehouse-id="form.warehouseId" :area-id="form.areaId" placeholder="货架" :disabled="isViewMode" />
@@ -141,7 +151,7 @@
                 </div>
               </template>
             </el-table-column>
-            <el-table-column label="箱码" min-width="180">
+            <el-table-column label="箱码" min-width="160">
               <template #default="{ row }">
                 <el-input
                   v-model="row.boxCode"
@@ -149,7 +159,7 @@
                 />
               </template>
             </el-table-column>
-            <el-table-column label="单价" prop="unitPrice" width="160">
+            <el-table-column label="单价" prop="unitPrice" width="175">
               <template #default="scope">
                 <el-input-number
                   v-model="scope.row.unitPrice"
@@ -162,23 +172,17 @@
                 ></el-input-number>
               </template>
             </el-table-column>
-            <el-table-column label="总价" prop="lineAmount" width="160">
+            <el-table-column label="总价" prop="lineAmount" width="80" align="left">
               <template #default="{ row }">
-                <el-input-number v-model="row.lineAmount" :precision="2" :min="0" :controls="false" disabled></el-input-number>
+                <span>{{ Number(row.lineAmount || 0).toFixed(2) }}</span>
               </template>
             </el-table-column>
-            <el-table-column label="器材编码" prop="itemCode" min-width="120" show-overflow-tooltip />
-            <el-table-column label="器材名称" prop="itemName" min-width="140" show-overflow-tooltip />
-            <el-table-column label="规格型号" prop="skuName" min-width="140" show-overflow-tooltip />
-            <el-table-column label="计量单位" prop="unit" width="110" />
-            <el-table-column label="产品标识" prop="productIdentifier" min-width="140" show-overflow-tooltip />
-            <el-table-column label="质量等级" prop="qualityGrade" width="120" show-overflow-tooltip />
-            <el-table-column label="备注" width="180">
+            <el-table-column label="备注" min-width="150">
               <template #default="{ row }">
                 <el-input v-model="row.remark" placeholder="请输入备注" :disabled="isViewMode" />
               </template>
             </el-table-column>
-            <el-table-column label="操作" width="100" align="right" fixed="right">
+            <el-table-column label="操作" width="88" align="right">
               <template #default="scope">
                 <el-button v-if="!isViewMode" icon="Delete" type="danger" plain size="small" @click.stop="handleDeleteDetail(scope.row, scope.$index)" link>删除</el-button>
               </template>
@@ -280,7 +284,7 @@ import RackSelect from "@/views/components/RackSelect.vue";
 import LocationSelect from "@/views/components/LocationSelect.vue";
 import {useRoute} from "vue-router";
 import {useWmsStore} from '@/store/modules/wms'
-import { numSub, generateNo } from '@/utils/ruoyi'
+import { numSub } from '@/utils/ruoyi'
 import { delReceiptOrderDetail } from '@/api/wms/receiptOrderDetail'
 import { listReceiptTargets } from '@/api/wms/storageLayout'
 import { listItem } from "@/api/wms/item";
@@ -323,9 +327,6 @@ const data = reactive({
   rules: {
     id: [
       {required: true, message: "不能为空", trigger: "blur"}
-    ],
-    receiptOrderNo: [
-      {required: true, message: "入库单号不能为空", trigger: "blur"}
     ],
     receiptOrderType: [
       {required: true, message: "入库类型不能为空", trigger: "change"}
@@ -515,20 +516,15 @@ const handleReceiptItemCategoryChange = async () => {
   itemInstanceSelectDialog.query.itemId = undefined
   itemInstanceSelectDialog.pageNum = 1
   await loadReceiptItemOptions()
-  itemInstanceSelectDialog.list = []
-  itemInstanceSelectDialog.total = 0
+  getReceiptItemInstanceList()
 }
 
 const getReceiptItemInstanceList = () => {
-  if (!itemInstanceSelectDialog.query.itemId) {
-    itemInstanceSelectDialog.list = []
-    itemInstanceSelectDialog.total = 0
-    return
-  }
   itemInstanceSelectDialog.loading = true
   listItemInstance({
     pageNum: itemInstanceSelectDialog.pageNum,
     pageSize: itemInstanceSelectDialog.pageSize,
+    itemCategory: itemInstanceSelectDialog.query.itemCategory,
     itemId: itemInstanceSelectDialog.query.itemId,
     instanceCode: itemInstanceSelectDialog.query.instanceCode,
     unreceivedOnly: true,
@@ -834,7 +830,6 @@ onMounted(() => {
   if (id) {
     loadDetail(id)
   } else {
-    form.value.receiptOrderNo = 'RK' + generateNo()
     form.value.receiptOrderType = wms_receipt_type.value?.[0]?.value
   }
 })
@@ -927,6 +922,14 @@ const handleDeleteDetail = (row, index) => {
 .sub-text {
   color: var(--el-text-color-secondary);
   font-size: 12px;
+  line-height: 1.5;
+}
+
+.item-title {
+  color: var(--el-text-color-primary);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
 }
 
 .receipt-toolbar {

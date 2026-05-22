@@ -10,7 +10,7 @@
           </el-col>
           <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
             <el-form-item label="仓库" prop="warehouseId">
-              <el-select v-model="queryParams.warehouseId" placeholder="请选择仓库" clearable filterable style="width: 100%">
+              <el-select v-model="queryParams.warehouseId" placeholder="请选择仓库" clearable filterable style="width: 100%" @change="handleQueryWarehouseChange">
                 <el-option
                   v-for="item in wmsStore.warehouseList"
                   :key="item.id"
@@ -22,7 +22,7 @@
           </el-col>
           <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
             <el-form-item label="库区" prop="areaId">
-              <el-select v-model="queryParams.areaId" placeholder="请选择库区" clearable filterable style="width: 100%">
+              <el-select v-model="queryParams.areaId" placeholder="请选择库区" clearable filterable style="width: 100%" @change="handleQueryAreaChange">
                 <el-option
                   v-for="item in areaOptions"
                   :key="item.id"
@@ -284,6 +284,15 @@ async function getList() {
 
 function handleWarehouseChange() {
   form.value.areaId = undefined;
+}
+
+function handleQueryWarehouseChange() {
+  queryParams.value.areaId = undefined;
+  handleQuery();
+}
+
+function handleQueryAreaChange() {
+  handleQuery();
 }
 
 function handleQuery() {

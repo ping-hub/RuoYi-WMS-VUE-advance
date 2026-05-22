@@ -34,7 +34,7 @@
           <el-row :gutter="24">
             <el-col :span="6">
               <el-form-item label="盘点单号" prop="checkOrderNo">
-                <el-input v-model="form.checkOrderNo" placeholder="盘点单号" :disabled="form.id" style="width: 100%"></el-input>
+                <el-input v-model="form.checkOrderNo" placeholder="保存后自动生成" disabled style="width: 100%"></el-input>
               </el-form-item>
             </el-col>
             <el-col :span="6">
@@ -195,7 +195,7 @@ import {listInventoryDetailNoPage} from "@/api/wms/inventoryDetail";
 import {ElMessage, ElMessageBox} from "element-plus";
 import {useRoute, useRouter} from "vue-router";
 import {useWmsStore} from '@/store/modules/wms'
-import {numSub, generateNo} from '@/utils/ruoyi'
+import {numSub} from '@/utils/ruoyi'
 import RackSelect from "@/views/components/RackSelect.vue";
 import { listRackNoPage } from "@/api/wms/rack";
 import { listLocationNoPage } from "@/api/wms/location";
@@ -228,9 +228,6 @@ const initFormData = {
 const data = reactive({
   form: {...initFormData},
   rules: {
-    checkOrderNo: [
-      {required: true, message: "盘点单号不能为空", trigger: "blur"}
-    ],
     warehouseId: [
       {required: true, message: "请选择仓库", trigger: ['blur', 'change']}
     ],
@@ -489,8 +486,6 @@ onMounted(() => {
   if (id) {
     checking.value = true
     loadDetail(id)
-  } else {
-    form.value.checkOrderNo = 'PK' + generateNo()
   }
 })
 

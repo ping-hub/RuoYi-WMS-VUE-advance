@@ -5,14 +5,14 @@
         <el-row :gutter="16">
           <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
             <el-form-item label="仓库" prop="warehouseId">
-              <el-select v-model="queryParams.warehouseId" clearable filterable placeholder="请选择仓库" style="width: 100%">
+              <el-select v-model="queryParams.warehouseId" clearable filterable placeholder="请选择仓库" style="width: 100%" @change="handleWarehouseChange">
                 <el-option v-for="item in warehouseOptions" :key="item.id" :label="item.name" :value="item.id" />
               </el-select>
             </el-form-item>
           </el-col>
           <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
             <el-form-item label="库区" prop="areaId">
-              <el-select v-model="queryParams.areaId" clearable filterable placeholder="请选择库区" style="width: 100%">
+              <el-select v-model="queryParams.areaId" clearable filterable placeholder="请选择库区" style="width: 100%" @change="loadLayoutTree">
                 <el-option v-for="item in areaOptions" :key="item.id" :label="item.name" :value="item.id" />
               </el-select>
             </el-form-item>
@@ -461,6 +461,11 @@ function handleRackChange(value) {
     return
   }
   loadRackGrid(value)
+}
+
+function handleWarehouseChange() {
+  queryParams.areaId = undefined
+  loadLayoutTree()
 }
 
 function handleCellClick(cell) {

@@ -133,11 +133,11 @@
               title="提示"
               :width="300"
               trigger="hover"
-              :disabled="[-1, 0].includes(scope.row.shipmentOrderStatus)"
-              :content="'出库单【' + scope.row.shipmentOrderNo + '】已出库，无法删除！' "
+              :disabled="scope.row.shipmentOrderStatus === 0"
+              :content="'出库单【' + scope.row.shipmentOrderNo + '】已' + (scope.row.shipmentOrderStatus === 1 ? '出库' : '作废') + '，无法删除！' "
             >
               <template #reference>
-                <el-button link type="danger" @click="handleDelete(scope.row)" v-hasPermi="['wms:shipment:all']" :disabled="scope.row.shipmentOrderStatus === 1">删除</el-button>
+                <el-button link type="danger" @click="handleDelete(scope.row)" v-hasPermi="['wms:shipment:all']" :disabled="[-1, 1].includes(scope.row.shipmentOrderStatus)">删除</el-button>
               </template>
             </el-popover>
             <el-button link type="primary" @click="handlePrint(scope.row)" v-hasPermi="['wms:shipment:all']">打印</el-button>
@@ -244,7 +244,7 @@ function handleDelete(row) {
   }).catch((e) => {
     if (e === 409) {
       return ElMessageBox.alert(
-        '<div>出库单【' + row.shipmentOrderNo + '】已出库，不能删除 ！</div><div>请联系管理员处理！</div>',
+        '<div>出库单【' + row.shipmentOrderNo + '】已' + (row.shipmentOrderStatus === 1 ? '出库' : '作废') + '，不能删除！</div><div>请联系管理员处理！</div>',
         '系统提示',
         {
           dangerouslyUseHTMLString: true,

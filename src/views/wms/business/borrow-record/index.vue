@@ -5,14 +5,14 @@
         <el-row :gutter="16">
           <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
             <el-form-item label="借用状态" prop="borrowStatus">
-              <el-select v-model="queryParams.borrowStatus" placeholder="请选择借用状态" clearable style="width: 100%">
+              <el-select v-model="queryParams.borrowStatus" placeholder="请选择借用状态" clearable style="width: 100%" @change="handleQuery">
                 <el-option v-for="dict in wms_borrow_status" :key="dict.value" :label="dict.label" :value="dict.value" />
               </el-select>
             </el-form-item>
           </el-col>
           <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
             <el-form-item label="超期状态" prop="overdueFlag" label-width="100px">
-              <el-select v-model="queryParams.overdueFlag" placeholder="请选择超期状态" clearable style="width: 100%">
+              <el-select v-model="queryParams.overdueFlag" placeholder="请选择超期状态" clearable style="width: 100%" @change="handleQuery">
                 <el-option v-for="dict in wms_overdue_flag" :key="dict.value" :label="dict.label" :value="dict.value" />
               </el-select>
             </el-form-item>
@@ -201,6 +201,17 @@
               />
             </el-form-item>
           </el-col>
+          <el-col :span="12">
+            <el-form-item label="单据日期" prop="docDate">
+              <el-date-picker
+                v-model="borrowDialog.form.docDate"
+                type="date"
+                format="YYYY-MM-DD"
+                value-format="YYYY-MM-DD"
+                style="width: 100%"
+              />
+            </el-form-item>
+          </el-col>
         </el-row>
         <el-row :gutter="20">
           <el-col :span="12">
@@ -223,19 +234,6 @@
           <el-col :span="12">
             <el-form-item label="收货人" prop="toPerson">
               <el-input v-model="borrowDialog.form.toPerson" placeholder="请输入收货人" />
-            </el-form-item>
-          </el-col>
-        </el-row>
-        <el-row :gutter="20">
-          <el-col :span="12">
-            <el-form-item label="单据日期" prop="docDate">
-              <el-date-picker
-                v-model="borrowDialog.form.docDate"
-                type="date"
-                format="YYYY-MM-DD"
-                value-format="YYYY-MM-DD"
-                style="width: 100%"
-              />
             </el-form-item>
           </el-col>
         </el-row>
@@ -514,7 +512,7 @@ const loadBorrowableInstances = async () => {
     pageSize: 200,
     instanceStatus: '在库'
   });
-  borrowDialog.instanceOptions = (res.rows || []).filter(item => item.instanceStatus === '在库' && !item.boxId);
+  borrowDialog.instanceOptions = (res.rows || []).filter(item => item.instanceStatus === '在库');
 };
 
 const loadReturnableInstances = async () => {

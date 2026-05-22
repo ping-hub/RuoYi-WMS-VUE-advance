@@ -133,11 +133,11 @@
               title="提示"
               :width="300"
               trigger="hover"
-              :disabled="[-1, 0].includes(scope.row.receiptOrderStatus)"
-              :content="'入库单【' + scope.row.receiptOrderNo + '】已入库，无法删除！' "
+              :disabled="scope.row.receiptOrderStatus === 0"
+              :content="'入库单【' + scope.row.receiptOrderNo + '】已' + (scope.row.receiptOrderStatus === 1 ? '入库' : '作废') + '，无法删除！' "
             >
               <template #reference>
-                <el-button link type="danger" @click="handleDelete(scope.row)" v-hasPermi="['wms:receipt:all']" :disabled="scope.row.receiptOrderStatus === 1">删除</el-button>
+                <el-button link type="danger" @click="handleDelete(scope.row)" v-hasPermi="['wms:receipt:all']" :disabled="[-1, 1].includes(scope.row.receiptOrderStatus)">删除</el-button>
               </template>
             </el-popover>
             <el-button link type="primary" @click="handlePrint(scope.row)" v-hasPermi="['wms:receipt:all']">打印</el-button>
@@ -244,7 +244,7 @@ function handleDelete(row) {
   }).catch((e) => {
     if (e === 409) {
       return ElMessageBox.alert(
-        '<div>入库单【' + row.receiptOrderNo + '】已入库，不能删除 ！</div><div>请联系管理员处理！</div>',
+        '<div>入库单【' + row.receiptOrderNo + '】已' + (row.receiptOrderStatus === 1 ? '入库' : '作废') + '，不能删除！</div><div>请联系管理员处理！</div>',
         '系统提示',
         {
           dangerouslyUseHTMLString: true,

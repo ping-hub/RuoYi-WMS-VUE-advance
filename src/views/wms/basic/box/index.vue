@@ -15,7 +15,7 @@
           </el-col>
           <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
             <el-form-item label="状态" prop="boxStatus">
-              <el-select v-model="queryParams.boxStatus" placeholder="请选择状态" clearable style="width: 100%">
+              <el-select v-model="queryParams.boxStatus" placeholder="请选择状态" clearable style="width: 100%" @change="handleQuery">
                 <el-option v-for="dict in wms_box_status" :key="dict.value" :label="dict.label" :value="dict.value" />
               </el-select>
             </el-form-item>
@@ -46,7 +46,7 @@
           </el-col>
           <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
             <el-form-item label="货架" prop="rackId">
-              <RackSelect v-model="queryParams.rackId" :warehouse-id="queryParams.warehouseId" :area-id="queryParams.areaId" />
+              <RackSelect v-model="queryParams.rackId" :warehouse-id="queryParams.warehouseId" :area-id="queryParams.areaId" @change="handleQueryRackChange" />
             </el-form-item>
           </el-col>
           <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
@@ -56,6 +56,7 @@
                 :warehouse-id="queryParams.warehouseId"
                 :area-id="queryParams.areaId"
                 :rack-id="queryParams.rackId"
+                @change="handleQuery"
               />
             </el-form-item>
           </el-col>
@@ -491,11 +492,18 @@ const handleQueryWarehouseChange = () => {
   queryParams.value.areaId = undefined;
   queryParams.value.rackId = undefined;
   queryParams.value.locationId = undefined;
+  handleQuery();
 };
 
 const handleQueryAreaChange = () => {
   queryParams.value.rackId = undefined;
   queryParams.value.locationId = undefined;
+  handleQuery();
+};
+
+const handleQueryRackChange = () => {
+  queryParams.value.locationId = undefined;
+  handleQuery();
 };
 
 const reset = () => {

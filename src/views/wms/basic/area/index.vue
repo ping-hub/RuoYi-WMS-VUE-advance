@@ -10,7 +10,7 @@
           </el-col>
           <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
             <el-form-item label="所属仓库" prop="warehouseId">
-              <el-select v-model="queryParams.warehouseId" placeholder="请选择所属仓库" clearable filterable style="width: 100%">
+              <el-select v-model="queryParams.warehouseId" placeholder="请选择所属仓库" clearable filterable style="width: 100%" @change="handleQuery">
                 <el-option v-for="item in wmsStore.warehouseList" :key="item.id" :label="item.warehouseName" :value="item.id" />
               </el-select>
             </el-form-item>

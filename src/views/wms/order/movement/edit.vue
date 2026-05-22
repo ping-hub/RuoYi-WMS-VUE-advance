@@ -7,7 +7,7 @@
           <el-row :gutter="24">
             <el-col :span="6">
               <el-form-item label="调拨单号" prop="movementOrderNo">
-                <el-input v-model="form.movementOrderNo" placeholder="调拨单号" style="width: 100%" :disabled="form.id"></el-input>
+                <el-input v-model="form.movementOrderNo" placeholder="保存后自动生成" style="width: 100%" disabled></el-input>
               </el-form-item>
             </el-col>
             <el-col :span="6">
@@ -318,6 +318,7 @@
               :area-id="form.sourceAreaId"
               placeholder="货架"
               style="width: 140px"
+              @change="handleItemInstanceQueryChange"
             />
           </el-form-item>
           <el-form-item label="器材规格">
@@ -397,7 +398,7 @@ import {delMovementOrderDetail} from "@/api/wms/movementOrderDetail";
 import {ElMessage} from "element-plus";
 import {useRoute} from "vue-router";
 import {useWmsStore} from '@/store/modules/wms'
-import {numSub, generateNo} from '@/utils/ruoyi'
+import {numSub} from '@/utils/ruoyi'
 import {listInventoryDetailNoPage} from "@/api/wms/inventoryDetail";
 import {listItemInstance} from "@/api/wms/itemInstance";
 import RackSelect from "@/views/components/RackSelect.vue";
@@ -458,9 +459,6 @@ const itemInstanceDialog = reactive({
 const data = reactive({
   form: {...initFormData},
   rules: {
-    movementOrderNo: [
-      {required: true, message: "调拨单号不能为空", trigger: "blur"}
-    ],
     sourceWarehouseId: [
       {required: true, message: "请选择源仓库", trigger: ['blur', 'change']}
     ],
@@ -618,6 +616,11 @@ const getItemInstanceList = () => {
   }).finally(() => {
     itemInstanceDialog.loading = false
   })
+}
+
+const handleItemInstanceQueryChange = () => {
+  itemInstanceDialog.pageNum = 1
+  getItemInstanceList()
 }
 
 const handleItemInstanceSelectionChange = (selection) => {
@@ -829,8 +832,6 @@ onMounted(() => {
   const id = route.query && route.query.id;
   if (id) {
     loadDetail(id)
-  } else {
-    form.value.movementOrderNo = 'DB' + generateNo()
   }
 })
 

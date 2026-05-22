@@ -17,7 +17,7 @@
           </el-col>
           <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
             <el-form-item label="仓库库区" prop="place">
-              <WarehouseCascader v-model:value="queryParams.place" :show-all-levels="true" size="default" />
+              <WarehouseCascader v-model:value="queryParams.place" :show-all-levels="true" size="default" @change="handleQuery" />
             </el-form-item>
           </el-col>
           <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
@@ -85,7 +85,7 @@
       </div>
       <el-table v-loading="loading" :data="inventoryHistoryList" border class="mt20" empty-text="暂无库存流水" cell-class-name="vertical-top-cell">
         <el-table-column label="操作单号" prop="orderNo" min-width="200" show-overflow-tooltip />
-        <el-table-column label="器材信息" min-width="200">
+        <el-table-column label="器材信息" min-width="180">
           <template #default="{ row }">
             <div >{{ row.itemName || row.item?.itemName || '-' }}</div>
             <div v-if="row.item?.itemCode" class="sub-text">器材编码：{{ row.item.itemCode }}</div>
@@ -121,7 +121,7 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="备注" prop="remark" min-width="140" show-overflow-tooltip />
+        <el-table-column label="备注" prop="remark" min-width="130" show-overflow-tooltip />
         <el-table-column label="操作时间" min-width="160">
           <template #default="{ row }">
             {{ parseTime(row.createTime, '{y}-{m}-{d} {h}:{i}:{s}') || '-' }}

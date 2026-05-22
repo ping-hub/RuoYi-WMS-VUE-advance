@@ -7,8 +7,7 @@
           <el-row :gutter="24">
             <el-col :span="6">
               <el-form-item label="出库单号" prop="shipmentOrderNo">
-                <el-input v-model="form.shipmentOrderNo" placeholder="出库单号" style="width: 100%"
-                          :disabled="form.id"></el-input>
+                <el-input v-model="form.shipmentOrderNo" placeholder="保存后自动生成" style="width: 100%" disabled></el-input>
               </el-form-item>
             </el-col>
             <el-col :span="6">
@@ -100,31 +99,25 @@
             </div>
           </div>
           <el-table :data="form.details" border empty-text="暂无器材明细">
-            <el-table-column label="器材编码" prop="itemCode" min-width="120" show-overflow-tooltip />
-            <el-table-column label="器材名称" prop="itemName" min-width="140" show-overflow-tooltip />
-            <el-table-column label="规格型号" prop="skuName" min-width="140" show-overflow-tooltip />
-            <el-table-column label="计量单位" prop="unit" width="110" />
-            <el-table-column label="产品标识" prop="productIdentifier" min-width="140" show-overflow-tooltip />
-            <el-table-column label="器材实例编码" prop="instanceCode" min-width="180" show-overflow-tooltip />
-            <el-table-column label="库区" prop="areaName" width="200"/>
-            <el-table-column label="剩余库存" prop="remainQuantity" align="right" width="150">
+            <el-table-column label="器材实例编码" prop="instanceCode" min-width="170" show-overflow-tooltip />
+            <el-table-column label="器材信息" min-width="180">
               <template #default="{ row }">
-                <el-statistic :value="Number(row.remainQuantity)" :precision="0"/>
+                <div>{{ row.itemName || '-' }}</div>
+                <div v-if="row.itemCode" class="sub-text">器材编码：{{ row.itemCode }}</div>
+                <div v-if="row.skuName" class="sub-text">规格型号：{{ row.skuName }}</div>
+                <div v-if="row.unit" class="sub-text">计量单位：{{ row.unit }}</div>
+                <div v-if="row.productIdentifier" class="sub-text">产品标识：{{ row.productIdentifier }}</div>
+                <div v-if="row.qualityGrade" class="sub-text">质量等级：{{ row.qualityGrade }}</div>
               </template>
             </el-table-column>
-            <el-table-column label="出库数量" prop="quantity" width="180">
-              <template #default="scope">
-                <el-input-number
-                  v-model="scope.row.quantity"
-                  placeholder="出库数量"
-                  :min="1"
-                  :precision="0"
-                  :max="scope.row.remainQuantity"
-                  :disabled="true"
-                ></el-input-number>
+            <el-table-column label="货位信息" min-width="170">
+              <template #default="{ row }">
+                <div v-if="row.areaName">库区：{{ row.areaName }}</div>
+                <div v-if="row.rackName" class="sub-text">货架：{{ row.rackName }}</div>
+                <div v-if="row.locationName" class="sub-text">货位：{{ row.locationName }}</div>
               </template>
             </el-table-column>
-            <el-table-column label="单价" prop="unitPrice" width="160">
+            <el-table-column label="单价" prop="unitPrice" width="180">
               <template #default="scope">
                 <el-input-number
                   v-model="scope.row.unitPrice"
@@ -137,18 +130,17 @@
                 ></el-input-number>
               </template>
             </el-table-column>
-            <el-table-column label="总价" prop="lineAmount" width="160">
+            <el-table-column label="总价" prop="lineAmount" width="100" align="right">
               <template #default="{ row }">
-                <el-input-number v-model="row.lineAmount" :precision="2" :controls="false" :min="0" disabled></el-input-number>
+                <span>{{ Number(row.lineAmount || 0).toFixed(2) }}</span>
               </template>
             </el-table-column>
-            <el-table-column label="质量等级" prop="qualityGrade" width="120" show-overflow-tooltip />
-            <el-table-column label="备注" width="180">
+            <el-table-column label="备注" min-width="150">
               <template #default="{ row }">
                 <el-input v-model="row.remark" placeholder="请输入备注" :disabled="isViewMode" />
               </template>
             </el-table-column>
-            <el-table-column label="操作" width="100" align="right" fixed="right">
+            <el-table-column label="操作" width="88" align="right">
               <template #default="scope">
                 <el-button v-if="!isViewMode" icon="Delete" type="danger" plain size="small"
                            @click="handleDeleteDetail(scope.row, scope.$index)" link>删除
@@ -248,7 +240,7 @@ import {delShipmentOrderDetail} from "@/api/wms/shipmentOrderDetail";
 import {ElMessage, ElMessageBox} from "element-plus";
 import {useRoute} from "vue-router";
 import {useWmsStore} from '@/store/modules/wms'
-import {numSub, generateNo} from '@/utils/ruoyi'
+import {numSub} from '@/utils/ruoyi'
 import {listInventoryDetailNoPage} from "@/api/wms/inventoryDetail";
 import {getItemInstanceByCode, listItemInstance} from "@/api/wms/itemInstance";
 import RackSelect from "@/views/components/RackSelect.vue";
@@ -308,9 +300,6 @@ const shipmentScanBuffer = reactive({
 const data = reactive({
   form: {...initFormData},
   rules: {
-    shipmentOrderNo: [
-      {required: true, message: "出库单号不能为空", trigger: "blur"}
-    ],
     shipmentOrderType: [
       {required: true, message: "出库类型不能为空", trigger: "change"}
     ],
@@ -355,6 +344,11 @@ const syncShipmentDetail = (detail) => {
     unit: detail.unit ?? detail.itemSku?.item?.unit,
     productIdentifier: detail.productIdentifier ?? detail.itemSku?.productIdentifier,
     qualityGrade: detail.qualityGrade ?? detail.itemSku?.qualityGrade,
+    areaName: detail.areaName,
+    rackId: detail.rackId ?? detail.inventoryDetail?.rackId,
+    rackName: detail.rackName ?? detail.inventoryDetail?.rackName,
+    locationId: detail.locationId ?? detail.inventoryDetail?.locationId,
+    locationName: detail.locationName ?? detail.inventoryDetail?.locationName,
     unitPrice,
     lineAmount
   }
@@ -436,6 +430,10 @@ const createDetailRow = (payload) => {
     areaId: payload.areaId,
     inventoryDetailId: payload.inventoryDetailId,
     areaName: payload.areaName,
+    rackId: payload.rackId,
+    rackName: payload.rackName,
+    locationId: payload.locationId,
+    locationName: payload.locationName,
     itemInstanceId: payload.itemInstanceId,
     instanceCode: payload.instanceCode,
     remark: payload.remark
@@ -610,7 +608,6 @@ onMounted(() => {
   if (id) {
     loadDetail(id)
   } else {
-    form.value.shipmentOrderNo = 'CK' + generateNo()
     form.value.shipmentOrderType = wms_shipment_type.value?.[0]?.value
     refreshInventoryOptions()
   }
@@ -628,6 +625,8 @@ const loadDetail = (id) => {
     if (response.data.details?.length) {
       response.data.details.forEach(detail => {
         detail.areaName = useWmsStore().areaMap.get(detail.areaId)?.areaName
+        detail.rackName = detail.rackName ?? detail.inventoryDetail?.rackName
+        detail.locationName = detail.locationName ?? detail.inventoryDetail?.locationName
       })
     }
     form.value = {
@@ -721,6 +720,10 @@ const addItemInstancesToShipment = async (items) => {
       areaId: item.areaId,
       inventoryDetailId: matchedInventory.id,
       areaName: useWmsStore().areaMap.get(item.areaId)?.areaName,
+      rackId: matchedInventory.rackId,
+      rackName: matchedInventory.rackName,
+      locationId: matchedInventory.locationId,
+      locationName: matchedInventory.locationName,
       itemInstanceId: item.id,
       instanceCode: item.instanceCode,
     }))
@@ -861,6 +864,19 @@ const handleConfirmItemInstance = async () => {
   color: var(--el-text-color-secondary);
   font-size: 12px;
   line-height: 18px;
+}
+
+.item-title {
+  color: var(--el-text-color-primary);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.sub-text {
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .item-instance-search-form {

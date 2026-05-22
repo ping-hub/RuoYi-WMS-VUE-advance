@@ -17,17 +17,17 @@
           </el-col>
           <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
             <el-form-item label="源仓库库区" prop="sourcePlace">
-              <WarehouseCascader v-model:value="queryParams.sourcePlace" :show-all-levels="true" size="default" />
+              <WarehouseCascader v-model:value="queryParams.sourcePlace" :show-all-levels="true" size="default" @change="handleQuery" />
             </el-form-item>
           </el-col>
           <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
             <el-form-item label="目标仓库库区" prop="targetPlace">
-              <WarehouseCascader v-model:value="queryParams.targetPlace" :show-all-levels="true" size="default" />
+              <WarehouseCascader v-model:value="queryParams.targetPlace" :show-all-levels="true" size="default" @change="handleQuery" />
             </el-form-item>
           </el-col>
           <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
             <el-form-item label="调拨类型" prop="movementType">
-              <el-select v-model="queryParams.movementType" placeholder="请选择调拨类型" clearable style="width: 100%">
+              <el-select v-model="queryParams.movementType" placeholder="请选择调拨类型" clearable style="width: 100%" @change="handleQuery">
                 <el-option v-for="item in wms_movement_type" :key="item.value" :label="item.label" :value="item.value" />
               </el-select>
             </el-form-item>
@@ -123,11 +123,11 @@
                 title="提示"
                 :width="300"
                 trigger="hover"
-                :disabled="[-1, 0].includes(scope.row.movementOrderStatus)"
-                :content="'调拨单【' + scope.row.movementOrderNo + '】已调拨完成，无法删除！' "
+                :disabled="scope.row.movementOrderStatus === 0"
+                :content="'调拨单【' + scope.row.movementOrderNo + '】已' + (scope.row.movementOrderStatus === 1 ? '调拨完成' : '作废') + '，无法删除！' "
               >
                 <template #reference>
-                  <el-button link type="danger" @click="handleDelete(scope.row)" v-hasPermi="['wms:movement:all']" :disabled="scope.row.movementOrderStatus === 1">删除</el-button>
+                  <el-button link type="danger" @click="handleDelete(scope.row)" v-hasPermi="['wms:movement:all']" :disabled="[-1, 1].includes(scope.row.movementOrderStatus)">删除</el-button>
                 </template>
               </el-popover>
             </div>
@@ -245,7 +245,7 @@ function handleDelete(row) {
   }).catch((e) => {
     if (e === 409) {
       return ElMessageBox.alert(
-        '<div>调拨单【' + row.movementOrderNo + '】已调拨完成，不能删除！</div><div>请联系管理员处理！</div>',
+        '<div>调拨单【' + row.movementOrderNo + '】已' + (row.movementOrderStatus === 1 ? '调拨完成' : '作废') + '，不能删除！</div><div>请联系管理员处理！</div>',
         '系统提示',
         {
           dangerouslyUseHTMLString: true,

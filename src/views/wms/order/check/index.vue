@@ -17,7 +17,7 @@
           </el-col>
           <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
             <el-form-item label="仓库" prop="warehouseId">
-              <el-select v-model="queryParams.warehouseId" clearable filterable placeholder="请选择仓库" style="width: 100%">
+              <el-select v-model="queryParams.warehouseId" clearable filterable placeholder="请选择仓库" style="width: 100%" @change="handleQuery">
                 <el-option v-for="item in useWmsStore().warehouseList" :key="item.id" :label="item.warehouseName" :value="item.id"/>
               </el-select>
             </el-form-item>
@@ -53,7 +53,7 @@
                 cell-class-name="vertical-top-cell"
       >
         <el-table-column label="单号" align="left" prop="checkOrderNo" min-width="120" />
-        <el-table-column label="盘点范围" align="left" min-width="220">
+        <el-table-column label="盘点范围" align="left" min-width="150">
           <template #default="{ row }">
             <div>仓库：{{ useWmsStore().warehouseMap.get(row.warehouseId)?.warehouseName }}</div>
             <div v-if="row.areaId">库区：{{ useWmsStore().areaMap.get(row.areaId)?.areaName }}</div>
@@ -71,7 +71,7 @@
             <span>{{ row.checkDate ? parseTime(row.checkDate, '{y}-{m}-{d} {h}:{i}') : '-' }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="盘点人/复核人" align="left" min-width="160">
+        <el-table-column label="盘点人/复核人" align="left" min-width="140">
           <template #default="{ row }">
             <div>盘点人：{{ row.checkerName || '-' }}</div>
             <div class="sub-text">复核人：{{ row.reviewerName || '-' }}</div>
@@ -82,13 +82,13 @@
             <dict-tag :options="wms_check_status" :value="row.checkOrderStatus" />
           </template>
         </el-table-column>
-        <el-table-column label="盈亏数" align="right" width="100">
+        <el-table-column label="盈亏数" align="center" width="100">
           <template #default="{ row }">
             <el-statistic :value="Number(row.checkOrderTotal)" :precision="0"/>
           </template>
         </el-table-column>
         <el-table-column label="备注" prop="remark" min-width="120" show-overflow-tooltip />
-        <el-table-column label="操作" align="right" class-name="small-padding fixed-width" width="100">
+        <el-table-column label="操作" align="right" class-name="small-padding fixed-width" width="120">
           <template #default="scope">
             <div class="table-actions">
               <el-popover
@@ -109,11 +109,11 @@
                 title="提示"
                 :width="300"
                 trigger="hover"
-                :disabled="[-1, 0].includes(scope.row.checkOrderStatus)"
-                :content="'盘点单【' + scope.row.checkOrderNo + '】已盘点完成，无法删除！' "
+                :disabled="scope.row.checkOrderStatus === 0"
+                :content="'盘点单【' + scope.row.checkOrderNo + '】已' + (scope.row.checkOrderStatus === 1 ? '盘点完成' : '作废') + '，无法删除！' "
               >
                 <template #reference>
-                  <el-button link type="danger" @click="handleDelete(scope.row)" v-hasPermi="['wms:check:all']" :disabled="scope.row.checkOrderStatus === 1">删除</el-button>
+                  <el-button link type="danger" @click="handleDelete(scope.row)" v-hasPermi="['wms:check:all']" :disabled="[-1, 1].includes(scope.row.checkOrderStatus)">删除</el-button>
                 </template>
               </el-popover>
             </div>
@@ -230,7 +230,7 @@ function handleDelete(row) {
   }).catch((e) => {
     if (e === 409) {
       return ElMessageBox.alert(
-        '<div>盘点单【' + row.checkOrderNo + '】已盘点完成，不能删除！</div><div>请联系管理员处理！</div>',
+        '<div>盘点单【' + row.checkOrderNo + '】已' + (row.checkOrderStatus === 1 ? '盘点完成' : '作废') + '，不能删除！</div><div>请联系管理员处理！</div>',
         '系统提示',
         {
           dangerouslyUseHTMLString: true,

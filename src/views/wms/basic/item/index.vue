@@ -15,7 +15,7 @@
           </el-col>
           <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
             <el-form-item label="器材类型" prop="equipmentType">
-              <el-select v-model="queryParams.equipmentType" placeholder="请选择器材类型" clearable style="width: 100%">
+              <el-select v-model="queryParams.equipmentType" placeholder="请选择器材类型" clearable style="width: 100%" @change="handleQuery">
                 <el-option v-for="item in wms_equipment_type" :key="item.value" :label="item.label" :value="item.value" />
               </el-select>
             </el-form-item>
