@@ -60,7 +60,7 @@
       <el-table v-loading="loading" :data="shipmentOrderList" border class="mt20" empty-text="暂无出库单">
         <el-table-column label="单号" align="left" width="150">
           <template #default="{ row }">
-            <div>单号：{{ row.shipmentOrderNo }}</div>
+            <div>{{ row.shipmentOrderNo }}</div>
           </template>
         </el-table-column>
         <el-table-column label="出库类型" width="95" align="left" prop="shipmentOrderType">

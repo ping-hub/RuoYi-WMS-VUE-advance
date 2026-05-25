@@ -315,6 +315,10 @@
                 format="YYYY-MM-DD HH:mm:ss"
                 value-format="YYYY-MM-DD HH:mm:ss"
                 style="width: 100%"
+                :disabled-date="disableFutureReturnDate"
+                :disabled-hours="getDisabledReturnHours"
+                :disabled-minutes="getDisabledReturnMinutes"
+                :disabled-seconds="getDisabledReturnSeconds"
               />
             </el-form-item>
           </el-col>
@@ -332,7 +336,7 @@
     </el-dialog>
 
     <el-dialog title="借用详情" v-model="detailDialog.visible" width="860px" append-to-body>
-      <el-descriptions :column="2" border>
+      <el-descriptions :column="2" border class="borrow-detail-descriptions">
         <el-descriptions-item label="借用单号">{{ detailDialog.data.borrowNo || '-' }}</el-descriptions-item>
         <el-descriptions-item label="器材实例编码">{{ detailDialog.data.instanceCode || '-' }}</el-descriptions-item>
         <el-descriptions-item label="借用状态">
@@ -351,11 +355,11 @@
         <el-descriptions-item label="超期状态">
           <el-tag v-if="detailDialog.data.overdueFlag === 1" type="danger">超期{{ detailDialog.data.overdueDays || 0 }}天</el-tag>
           <el-tag v-else type="success">正常</el-tag>
-        </el-descriptions-item>
-        <el-descriptions-item label="借用备注">{{ detailDialog.data.borrowRemark || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="原位置">{{ getOriginalLocationText(detailDialog.data) }}</el-descriptions-item>
+        </el-descriptions-item>        
         <el-descriptions-item label="归还时间">{{ detailDialog.data.returnTime ? parseTime(detailDialog.data.returnTime, '{y}-{m}-{d} {h}:{i}:{s}') : '-' }}</el-descriptions-item>
-        <el-descriptions-item label="归还位置">{{ getReturnedLocationText(detailDialog.data) }}</el-descriptions-item>
+        <el-descriptions-item label="借用备注" :span="2">{{ detailDialog.data.borrowRemark || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="原位置" :span="2">{{ getOriginalLocationText(detailDialog.data) }}</el-descriptions-item>
+        <el-descriptions-item label="归还位置" :span="2">{{ getReturnedLocationText(detailDialog.data) }}</el-descriptions-item>
         <el-descriptions-item label="归还备注" :span="2">{{ detailDialog.data.returnRemark || '-' }}</el-descriptions-item>
       </el-descriptions>
     </el-dialog>
@@ -459,6 +463,66 @@ const borrowRules = {
 };
 
 const itemInstanceStatusOptions = computed(() => wms_item_instance_status.value);
+
+const padDateValue = (value) => String(value).padStart(2, '0');
+
+const formatCurrentDateTime = (date = new Date()) => {
+  const year = date.getFullYear();
+  const month = padDateValue(date.getMonth() + 1);
+  const day = padDateValue(date.getDate());
+  const hour = padDateValue(date.getHours());
+  const minute = padDateValue(date.getMinutes());
+  const second = padDateValue(date.getSeconds());
+  return `${year}-${month}-${day} ${hour}:${minute}:${second}`;
+};
+
+const parseDateTimeValue = (value) => {
+  if (!value) {
+    return null;
+  }
+  if (value instanceof Date) {
+    return value;
+  }
+  return new Date(String(value).replace(' ', 'T'));
+};
+
+const isSameDate = (left, right) => left.getFullYear() === right.getFullYear()
+  && left.getMonth() === right.getMonth()
+  && left.getDate() === right.getDate();
+
+const createDisabledTimeRange = (start, end) => Array.from({ length: end - start + 1 }, (_, index) => start + index);
+
+const disableFutureReturnDate = (date) => date.getTime() > Date.now();
+
+const getDisabledReturnHours = () => {
+  const selected = parseDateTimeValue(returnDialog.form.returnTime);
+  const now = new Date();
+  if (!selected || !isSameDate(selected, now)) {
+    return [];
+  }
+  return createDisabledTimeRange(now.getHours() + 1, 23);
+};
+
+const getDisabledReturnMinutes = (selectedHour) => {
+  const selected = parseDateTimeValue(returnDialog.form.returnTime);
+  const now = new Date();
+  if (!selected || !isSameDate(selected, now) || selectedHour !== now.getHours()) {
+    return [];
+  }
+  return createDisabledTimeRange(now.getMinutes() + 1, 59);
+};
+
+const getDisabledReturnSeconds = (selectedHour, selectedMinute) => {
+  const selected = parseDateTimeValue(returnDialog.form.returnTime);
+  const now = new Date();
+  if (!selected
+    || !isSameDate(selected, now)
+    || selectedHour !== now.getHours()
+    || selectedMinute !== now.getMinutes()) {
+    return [];
+  }
+  return createDisabledTimeRange(now.getSeconds() + 1, 59);
+};
 
 const getLocationText = (row) => {
   const parts = [];
@@ -640,7 +704,7 @@ const handleReturn = async (row) => {
     id: row?.borrowStatus === 'borrowed' ? row?.id : undefined,
     instanceCode: row?.instanceCode,
     itemInstanceId: row?.itemInstanceId,
-    returnTime: undefined,
+    returnTime: formatCurrentDateTime(),
     returnRemark: undefined
   };
   returnDialog.currentRecord = {};
@@ -694,6 +758,11 @@ const submitReturn = async () => {
   }
   if (!returnDialog.form.id) {
     proxy.$modal.msgError('当前器材实例不存在未归还借用记录');
+    return;
+  }
+  const selectedReturnTime = parseDateTimeValue(returnDialog.form.returnTime);
+  if (selectedReturnTime && selectedReturnTime.getTime() > Date.now()) {
+    proxy.$modal.msgError('归还时间不得超过当前时间');
     return;
   }
   buttonLoading.value = true;
@@ -825,6 +894,24 @@ onMounted(async () => {
 .return-record-value-wrap {
   white-space: normal;
   word-break: break-all;
+}
+
+.borrow-detail-descriptions :deep(.el-descriptions__table) {
+  table-layout: fixed;
+}
+
+.borrow-detail-descriptions :deep(.el-descriptions__label.el-descriptions__cell.is-bordered-label) {
+  width: 112px;
+  white-space: nowrap;
+  word-break: keep-all;
+  vertical-align: top;
+}
+
+.borrow-detail-descriptions :deep(.el-descriptions__content.el-descriptions__cell.is-bordered-content) {
+  white-space: normal;
+  word-break: break-all;
+  line-height: 24px;
+  vertical-align: top;
 }
 
 .stats-row {

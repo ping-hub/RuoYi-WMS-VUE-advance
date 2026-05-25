@@ -60,7 +60,7 @@
       <el-table v-loading="loading" :data="receiptOrderList" border class="mt20" empty-text="暂无入库单">
         <el-table-column label="单号" align="left" width="150">
           <template #default="{ row }">
-            <div>单号：{{ row.receiptOrderNo }}</div>
+            <div>{{ row.receiptOrderNo }}</div>
           </template>
         </el-table-column>
         <el-table-column label="入库类型" width="90"  align="left" prop="receiptOrderType">

@@ -62,14 +62,14 @@
                 empty-text="暂无调拨单"
                 cell-class-name="vertical-top-cell"
       >
-        <el-table-column label="单号/调拨" align="left" min-width="180">
+        <el-table-column label="单号" align="left" min-width="180">
           <template #default="{ row }">
-            <div>单号：{{ row.movementOrderNo }}</div>
-            <div v-if="row.dispatchBasis">依据：{{ row.dispatchBasis }}</div>
+            <div>{{ row.movementOrderNo }}</div>
           </template>
         </el-table-column>
         <el-table-column label="调拨信息" align="left" min-width="240">
           <template #default="{ row }">
+            <div v-if="row.dispatchBasis">依据：{{ row.dispatchBasis }}</div>
             <div v-if="row.movementType">类型：{{ proxy.selectDictLabel(wms_movement_type, row.movementType) }}</div>
             <div v-if="row.dispatchMode">方式：{{ proxy.selectDictLabel(wms_dispatch_mode, row.dispatchMode) }}</div>
             <div v-if="row.dispatchDate">调拨日期：{{ parseTime(row.dispatchDate, '{y}-{m}-{d}') }}</div>
