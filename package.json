@@ -1,17 +1,12 @@
 {
-  "name": "ruoyi-wms",
+  "name": "wms",
   "version": "4.8.2",
-  "description": "ruoyi-wms后台管理系统",
-  "author": "ZCC",
+  "description": "仓储后台管理系统",
   "license": "MIT",
   "scripts": {
     "dev": "vite",
     "build:prod": "vite build",
     "preview": "vite preview"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://gitee.com/zccbbg/ruoyi-wms-vue.git"
   },
   "dependencies": {
     "@element-plus/icons-vue": "2.0.10",
@@ -31,7 +26,8 @@
     "vue": "3.2.45",
     "vue-cropper": "1.0.3",
     "vue-plugin-hiprint": "^0.0.56",
-    "vue-router": "4.1.4"
+    "vue-router": "4.1.4",
+    "ws": "^8.21.0"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "3.1.0",

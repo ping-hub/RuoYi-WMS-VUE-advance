@@ -23,9 +23,9 @@ export function getBorrowRecord(id) {
   });
 }
 
-export function getCurrentBorrowRecord(itemInstanceId) {
+export function getCurrentBorrowRecord(instanceCode) {
   return request({
-    url: '/wms/borrowRecord/current/' + itemInstanceId,
+    url: '/wms/borrowRecord/current/' + instanceCode,
     method: 'get'
   });
 }

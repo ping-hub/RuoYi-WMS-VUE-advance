@@ -79,7 +79,7 @@
             <div v-if="row.basisNo">调拨根据：{{ row.basisNo }}</div>
             <div v-if="row.receiveUnit">收物单位：{{ row.receiveUnit }}</div>
             <div v-if="row.noticeOrg">通知机关：{{ row.noticeOrg }}</div>
-            <div v-if="row.dispatchMode">调拨方式：{{ proxy.selectDictLabel(wms_dispatch_mode, row.dispatchMode) }}</div>
+            <div v-if="row.dispatchMode">调拨方式：{{ row.dispatchMode }}</div>
             <div v-if="row.shipmentDate">出库日期：{{ parseTime(row.shipmentDate, '{y}-{m}-{d}') }}</div>
           </template>
         </el-table-column>
@@ -170,10 +170,9 @@ import { resolveRoutePath } from "@/utils/routeResolver";
 const { proxy } = getCurrentInstance();
 const route = useRoute();
 const router = useRouter();
-const { wms_shipment_status, wms_shipment_type, wms_dispatch_mode } = proxy.useDict(
+const { wms_shipment_status, wms_shipment_type } = proxy.useDict(
   "wms_shipment_status",
-  "wms_shipment_type",
-  "wms_dispatch_mode"
+  "wms_shipment_type"
 );
 const shipmentOrderList = ref([]);
 const loading = ref(true);
@@ -311,7 +310,7 @@ async function handlePrint(row) {
     shipmentOrderType: shipmentOrder.shipmentOrderType,
     shipmentOrderStatus: proxy.selectDictLabel(wms_shipment_status.value, shipmentOrder.shipmentOrderStatus),
     basisNo: shipmentOrder.basisNo,
-    dispatchMode: proxy.selectDictLabel(wms_dispatch_mode.value, shipmentOrder.dispatchMode),
+    dispatchMode: shipmentOrder.dispatchMode,
     noticeOrg: shipmentOrder.noticeOrg,
     receiveUnit: shipmentOrder.receiveUnit,
     purchaseDate: proxy.parseTime(shipmentOrder.purchaseDate, '{y}-{m}-{d}'),

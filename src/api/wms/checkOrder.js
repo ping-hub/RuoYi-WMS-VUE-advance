@@ -43,7 +43,24 @@ export function delCheckOrder(id) {
   })
 }
 
-// 盘库结束
+// 开始盘点：加载SKU级库存明细
+export function startCheck(id) {
+  return request({
+    url: '/wms/checkOrder/startCheck/' + id,
+    method: 'post'
+  })
+}
+
+// 查询盘点单指定SKU的在库器材实例列表（懒加载）
+export function getInstancesBySku(checkOrderId, skuId) {
+  return request({
+    url: '/wms/checkOrder/instances/' + checkOrderId,
+    method: 'get',
+    params: { skuId }
+  })
+}
+
+// 完成盘点：保存盘点结果和实例差异明细
 export function check(data) {
   return request({
     url: '/wms/checkOrder/check',

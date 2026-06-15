@@ -52,9 +52,7 @@
             </el-col>
             <el-col :span="6">
               <el-form-item label="调拨方式" prop="dispatchMode">
-                <el-select v-model="form.dispatchMode" placeholder="请选择调拨方式" clearable style="width: 100%">
-                  <el-option v-for="item in wms_dispatch_mode" :key="item.value" :label="item.label" :value="item.value" />
-                </el-select>
+                <el-input v-model="form.dispatchMode" placeholder="请输入调拨方式" />
               </el-form-item>
             </el-col>
             <el-col :span="6">
@@ -293,7 +291,7 @@ import { getItemInstanceByCode, listItemInstance } from "@/api/wms/itemInstance"
 const {proxy} = getCurrentInstance();
 const route = useRoute();
 const isViewMode = computed(() => route.query.mode === 'view');
-const { wms_receipt_type, wms_dispatch_mode } = proxy.useDict("wms_receipt_type", "wms_dispatch_mode");
+const { wms_receipt_type } = proxy.useDict("wms_receipt_type");
 const loading = ref(false)
 const initFormData = {
   id: undefined,
@@ -409,7 +407,6 @@ const normalizeReceiptInstance = (instance = {}) => ({
 })
 
 const createReceiptDetailFromInstance = (item = {}) => syncReceiptDetail({
-  itemInstanceId: item.id ?? item.itemInstanceId,
   instanceCode: item.instanceCode,
   boxCode: item.boxCode ?? '',
   itemId: item.itemId,
@@ -428,7 +425,7 @@ const createReceiptDetailFromInstance = (item = {}) => syncReceiptDetail({
   generateItemInstance: 1,
   generatedInstanceQuantity: 0,
   receiptItemInstances: [normalizeReceiptInstance({
-    id: item.id ?? item.itemInstanceId,
+    id: item.id ?? item.instanceCode,
     instanceCode: item.instanceCode,
     boxCode: item.boxCode ?? '',
     remark: item.remark
@@ -449,7 +446,6 @@ const syncReceiptDetail = (detail) => {
     unit: detail.unit ?? detail.itemSku?.item?.unit,
     productIdentifier: detail.productIdentifier ?? detail.itemSku?.productIdentifier,
     qualityGrade: detail.qualityGrade ?? detail.itemSku?.qualityGrade,
-    itemInstanceId: detail.itemInstanceId ?? firstReceiptInstance.id,
     instanceCode: detail.instanceCode ?? firstReceiptInstance.instanceCode ?? '',
     boxCode: detail.boxCode ?? firstReceiptInstance.boxCode ?? '',
     quantity: Number(detail.quantity || 1),
@@ -542,7 +538,7 @@ const handleReceiptItemInstanceSelectionChange = (selection) => {
 }
 
 const isReceiptItemInstanceSelectable = (row) => {
-  return !form.value.details.some(detail => detail.itemInstanceId === row.id)
+  return !form.value.details.some(detail => detail.instanceCode === row.instanceCode)
 }
 
 const handleConfirmReceiptItemInstance = () => {
@@ -578,7 +574,7 @@ const handleScanAddReceiptInstance = async (instanceCode) => {
     ElMessage.error(`未找到待入库器材实例：${instanceCode}`)
     return
   }
-  if (form.value.details.some(detail => detail.itemInstanceId === item.id)) {
+  if (form.value.details.some(detail => detail.instanceCode === item.instanceCode)) {
     ElMessage.warning(`器材实例 ${instanceCode} 已在当前单据中`)
     return
   }
@@ -633,14 +629,13 @@ const validateReceiptInstancesBeforeSubmit = () => {
     if (quantity !== 1) {
       return '当前入库模式按器材实例执行，明细数量必须为1'
     }
-    const instanceId = detail.itemInstanceId ?? detail.receiptItemInstances?.[0]?.id
     const instanceCode = String(detail.instanceCode || detail.receiptItemInstances?.[0]?.instanceCode || '').trim()
-    if (!instanceId && !instanceCode) {
+    if (!instanceCode) {
       return '请先选择器材实例'
     }
-    const uniqueKey = instanceId ? `ID:${instanceId}` : `CODE:${instanceCode}`
+    const uniqueKey = `CODE:${instanceCode}`
     if (instanceSet.has(uniqueKey)) {
-      duplicatedInstances.add(instanceCode || String(instanceId))
+      duplicatedInstances.add(instanceCode)
     }
     instanceSet.add(uniqueKey)
   }
@@ -651,7 +646,7 @@ const validateReceiptInstancesBeforeSubmit = () => {
 }
 
 const buildReceiptItemInstances = (detail) => [{
-  id: detail.itemInstanceId ?? detail.receiptItemInstances?.[0]?.id,
+  id: detail.receiptItemInstances?.[0]?.id,
   instanceCode: detail.instanceCode ?? detail.receiptItemInstances?.[0]?.instanceCode,
   boxCode: detail.boxCode ?? detail.receiptItemInstances?.[0]?.boxCode,
   remark: detail.remark

@@ -71,7 +71,7 @@
           <template #default="{ row }">
             <div v-if="row.dispatchBasis">依据：{{ row.dispatchBasis }}</div>
             <div v-if="row.movementType">类型：{{ proxy.selectDictLabel(wms_movement_type, row.movementType) }}</div>
-            <div v-if="row.dispatchMode">方式：{{ proxy.selectDictLabel(wms_dispatch_mode, row.dispatchMode) }}</div>
+            <div v-if="row.dispatchMode">方式：{{ row.dispatchMode }}</div>
             <div v-if="row.dispatchDate">调拨日期：{{ parseTime(row.dispatchDate, '{y}-{m}-{d}') }}</div>
           </template>
         </el-table-column>
@@ -161,10 +161,9 @@ const { proxy } = getCurrentInstance();
 const route = useRoute();
 const router = useRouter();
 const wmsStore = useWmsStore();
-const { wms_movement_status, wms_movement_type, wms_dispatch_mode } = proxy.useDict(
+const { wms_movement_status, wms_movement_type } = proxy.useDict(
   "wms_movement_status",
-  "wms_movement_type",
-  "wms_dispatch_mode"
+  "wms_movement_type"
 );
 const movementOrderList = ref([]);
 const loading = ref(true);

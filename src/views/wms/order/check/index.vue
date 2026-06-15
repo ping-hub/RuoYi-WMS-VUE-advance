@@ -88,34 +88,19 @@
           </template>
         </el-table-column>
         <el-table-column label="备注" prop="remark" min-width="120" show-overflow-tooltip />
-        <el-table-column label="操作" align="right" class-name="small-padding fixed-width" width="120">
+        <el-table-column label="操作" align="right" class-name="small-padding fixed-width" width="180">
           <template #default="scope">
             <div class="table-actions">
-              <el-popover
-                placement="left"
-                title="提示"
-                :width="300"
-                trigger="hover"
-                :disabled="scope.row.checkOrderStatus === 0"
-                :content="'盘点单【' + scope.row.checkOrderNo + '】已' + (scope.row.checkOrderStatus === 1 ? '盘点完成' : '作废') + '，无法修改！' "
-              >
-                <template #reference>
-                  <el-button link type="primary" @click="handleUpdate(scope.row)" v-hasPermi="['wms:check:all']" :disabled="[-1, 1].includes(scope.row.checkOrderStatus)">修改</el-button>
-                </template>
-              </el-popover>
-              <el-button link type="primary" @click="handleGoDetail(scope.row)" v-hasPermi="['wms:check:all']">查看</el-button>
-              <el-popover
-                placement="left"
-                title="提示"
-                :width="300"
-                trigger="hover"
-                :disabled="scope.row.checkOrderStatus === 0"
-                :content="'盘点单【' + scope.row.checkOrderNo + '】已' + (scope.row.checkOrderStatus === 1 ? '盘点完成' : '作废') + '，无法删除！' "
-              >
-                <template #reference>
-                  <el-button link type="danger" @click="handleDelete(scope.row)" v-hasPermi="['wms:check:all']" :disabled="[-1, 1].includes(scope.row.checkOrderStatus)">删除</el-button>
-                </template>
-              </el-popover>
+              <!-- 待盘点：去盘点 / 修改 / 删除 -->
+              <template v-if="scope.row.checkOrderStatus === 0">
+                <el-button link type="primary" @click="handleGoCheck(scope.row)" v-hasPermi="['wms:check:all']">去盘点</el-button>
+                <el-button link type="primary" @click="handleUpdate(scope.row)" v-hasPermi="['wms:check:all']">修改</el-button>
+                <el-button link type="danger" @click="handleDelete(scope.row)" v-hasPermi="['wms:check:all']">删除</el-button>
+              </template>
+              <!-- 已完成 / 已作废：只查看 -->
+              <template v-else>
+                <el-button link type="primary" @click="handleGoDetail(scope.row)" v-hasPermi="['wms:check:all']">查看</el-button>
+              </template>
             </div>
           </template>
         </el-table-column>
@@ -240,6 +225,11 @@ function handleDelete(row) {
   }).finally(() => {
     loading.value = false;
   });
+}
+
+/** 去盘点（进入盘点操作页面） */
+function handleGoCheck(row) {
+  router.push({ path: resolveCheckOrderEditPath(), query: { id: row.id, returnFullPath: route.fullPath } });
 }
 
 function handleUpdate(row) {

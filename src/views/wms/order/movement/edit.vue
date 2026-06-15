@@ -111,9 +111,7 @@
               </el-col>
               <el-col :span="6">
                 <el-form-item label="调拨方式" prop="dispatchMode">
-                  <el-select v-model="form.dispatchMode" placeholder="请选择调拨方式" clearable style="width: 100%">
-                    <el-option v-for="item in wms_dispatch_mode" :key="item.value" :label="item.label" :value="item.value" />
-                  </el-select>
+                  <el-input v-model="form.dispatchMode" placeholder="请输入调拨方式" />
                 </el-form-item>
               </el-col>
               <el-col :span="6">
@@ -152,9 +150,7 @@
               </el-col>
               <el-col :span="6">
                 <el-form-item label="调拨方式" prop="dispatchMode">
-                  <el-select v-model="form.dispatchMode" placeholder="请选择调拨方式" clearable style="width: 100%">
-                    <el-option v-for="item in wms_dispatch_mode" :key="item.value" :label="item.label" :value="item.value" />
-                  </el-select>
+                  <el-input v-model="form.dispatchMode" placeholder="请输入调拨方式" />
                 </el-form-item>
               </el-col>
               <el-col :span="6">
@@ -407,9 +403,8 @@ import LocationSelect from "@/views/components/LocationSelect.vue";
 const {proxy} = getCurrentInstance();
 const route = useRoute();
 const isViewMode = computed(() => route.query.mode === 'view');
-const {wms_movement_type, wms_dispatch_mode} = proxy.useDict(
-  "wms_movement_type",
-  "wms_dispatch_mode"
+const {wms_movement_type} = proxy.useDict(
+  "wms_movement_type"
 );
 
 const loading = ref(false)
@@ -503,7 +498,6 @@ const syncMovementDetail = (detail) => {
     unit: detail.unit ?? detail.itemSku?.item?.unit,
     productIdentifier: detail.productIdentifier ?? detail.itemSku?.productIdentifier,
     qualityGrade: detail.qualityGrade ?? detail.itemSku?.qualityGrade,
-    itemInstanceId: detail.itemInstanceId ?? detail.inventoryDetail?.itemInstanceId,
     instanceCode: detail.instanceCode ?? detail.itemInstance?.instanceCode ?? detail.inventoryDetail?.instanceCode,
     sourceRackId: detail.sourceRackId ?? detail.inventoryDetail?.rackId,
     sourceRackName: detail.sourceRackName ?? detail.rackName,
@@ -536,7 +530,7 @@ const refreshInventoryOptions = async () => {
 
 const matchInventoryDetailByItemInstance = (item) => {
   return inventoryDetailOptions.value.find(detail => {
-    return detail.itemInstanceId === item.id
+    return detail.instanceCode === item.instanceCode
       && detail.warehouseId === form.value.sourceWarehouseId
       && (!form.value.sourceAreaId || detail.areaId === form.value.sourceAreaId)
       && Number(detail.remainQuantity || 0) > 0
@@ -550,7 +544,7 @@ const addItemInstancesToMovement = async (items) => {
   await refreshInventoryOptions()
   const newRows = []
   for (const item of items) {
-    if (form.value.details.some(detail => detail.itemInstanceId === item.id)) {
+    if (form.value.details.some(detail => detail.instanceCode === item.instanceCode)) {
       throw new Error(`器材实例编码 ${item.instanceCode} 已添加`)
     }
     const matchedInventory = matchInventoryDetailByItemInstance(item)
@@ -572,7 +566,6 @@ const createMovementDetailRow = (item, matchedInventory) => {
     unit: item.unit,
     productIdentifier: item.productIdentifier,
     qualityGrade: item.qualityGrade,
-    itemInstanceId: item.id,
     instanceCode: item.instanceCode,
     quantity: 1,
     remainQuantity: matchedInventory.remainQuantity,
@@ -628,7 +621,7 @@ const handleItemInstanceSelectionChange = (selection) => {
 }
 
 const isItemInstanceSelectable = (row) => {
-  return !form.value.details.some(detail => detail.itemInstanceId === row.id)
+  return !form.value.details.some(detail => detail.instanceCode === row.instanceCode)
 }
 
 const handleConfirmItemInstance = async () => {
@@ -671,7 +664,7 @@ const doSave = (movementOrderStatus = 0) => {
           id: it.id,
           movementOrderId: form.value.id,
           skuId: it.skuId,
-          itemInstanceId: it.itemInstanceId,
+          instanceCode: it.instanceCode,
           itemCode: it.itemCode,
           itemName: it.itemName,
           skuName: it.skuName,
@@ -769,7 +762,7 @@ const doMovement = async () => {
         id: it.id,
         movementOrderId: form.value.id,
         skuId: it.skuId,
-        itemInstanceId: it.itemInstanceId,
+        instanceCode: it.instanceCode,
         itemCode: it.itemCode,
         itemName: it.itemName,
         skuName: it.skuName,

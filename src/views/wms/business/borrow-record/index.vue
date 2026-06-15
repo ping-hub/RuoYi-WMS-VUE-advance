@@ -145,9 +145,9 @@
     <el-dialog title="借出登记" v-model="borrowDialog.visible" width="760px" append-to-body :close-on-click-modal="false">
       <div class="form-tip">带 * 为必填项</div>
       <el-form ref="borrowFormRef" :model="borrowDialog.form" :rules="borrowRules" label-width="110px">
-        <el-form-item label="器材实例编码" prop="itemInstanceId">
+        <el-form-item label="器材实例编码" prop="instanceCode">
           <el-select
-            v-model="borrowDialog.form.itemInstanceId"
+            v-model="borrowDialog.form.instanceCode"
             placeholder="请选择器材实例编码"
             filterable
             clearable
@@ -378,7 +378,7 @@ import {
   listBorrowRecord,
   returnBorrowItem
 } from '@/api/wms/borrowRecord';
-import { listItemInstance, getItemInstanceByCode, getItemInstance } from '@/api/wms/itemInstance';
+import { listItemInstance, getItemInstanceByCode } from '@/api/wms/itemInstance';
 
 const router = useRouter();
 const route = useRoute();
@@ -405,19 +405,18 @@ const instanceOptions = ref([]);
 const queryParams = reactive({
   pageNum: 1,
   pageSize: 10,
-  itemInstanceId: undefined,
+  instanceCode: undefined,
   borrowStatus: undefined,
   borrower: undefined,
   fromUnit: undefined,
   toUnit: undefined,
-  overdueFlag: undefined,
-  instanceCode: undefined
+  overdueFlag: undefined
 });
 
 const borrowDialog = reactive({
   visible: false,
   form: {
-    itemInstanceId: undefined,
+    instanceCode: undefined,
     borrower: undefined,
     fromUnit: undefined,
     toUnit: undefined,
@@ -437,7 +436,6 @@ const returnDialog = reactive({
   form: {
     id: undefined,
     instanceCode: undefined,
-    itemInstanceId: undefined,
     returnTime: undefined,
     returnRemark: undefined
   },
@@ -451,7 +449,7 @@ const detailDialog = reactive({
 });
 
 const borrowRules = {
-  itemInstanceId: [
+  instanceCode: [
     { required: true, message: '器材实例编码不能为空', trigger: 'change' }
   ],
   borrower: [
@@ -597,8 +595,7 @@ const loadQueryInstances = async () => {
 };
 
 const applyRouteQuery = () => {
-  const { itemInstanceId, instanceCode, borrowStatus, overdueFlag } = route.query;
-  queryParams.itemInstanceId = itemInstanceId ? Number(itemInstanceId) : undefined;
+  const { instanceCode, borrowStatus, overdueFlag } = route.query;
   queryParams.instanceCode = instanceCode || undefined;
   queryParams.borrowStatus = borrowStatus || undefined;
   queryParams.overdueFlag = overdueFlag;
@@ -614,19 +611,6 @@ const handleQuery = async () => {
 };
 
 const handleInstanceCodeQuery = async () => {
-  if (!queryParams.instanceCode) {
-    queryParams.itemInstanceId = undefined;
-    await getList();
-    return;
-  }
-  try {
-    const res = await getItemInstanceByCode(queryParams.instanceCode);
-    queryParams.itemInstanceId = res.data?.id;
-  } catch (e) {
-    queryParams.itemInstanceId = undefined;
-    ElMessage.error('未找到对应器材实例编码');
-    return;
-  }
   queryParams.pageNum = 1;
   await getList();
 };
@@ -635,7 +619,7 @@ const resetQuery = async () => {
   proxy.resetForm('queryRef');
   queryParams.pageNum = 1;
   queryParams.pageSize = 10;
-  queryParams.itemInstanceId = undefined;
+  queryParams.instanceCode = undefined;
   queryParams.borrowStatus = undefined;
   queryParams.borrower = undefined;
   queryParams.fromUnit = undefined;
@@ -653,7 +637,7 @@ const resetQuery = async () => {
 const handleBorrow = async (row) => {
   borrowDialog.visible = true;
   borrowDialog.form = {
-    itemInstanceId: row?.itemInstanceId || row?.id,
+    instanceCode: row?.instanceCode,
     borrower: undefined,
     fromUnit: undefined,
     toUnit: undefined,
@@ -666,17 +650,17 @@ const handleBorrow = async (row) => {
   };
   borrowDialog.currentItem = {};
   await loadBorrowableInstances();
-  if (borrowDialog.form.itemInstanceId) {
-    await handleBorrowInstanceChange(borrowDialog.form.itemInstanceId);
+  if (borrowDialog.form.instanceCode) {
+    await handleBorrowInstanceChange(borrowDialog.form.instanceCode);
   }
 };
 
-const handleBorrowInstanceChange = async (itemInstanceId) => {
-  if (!itemInstanceId) {
+const handleBorrowInstanceChange = async (instanceCode) => {
+  if (!instanceCode) {
     borrowDialog.currentItem = {};
     return;
   }
-  const res = await getItemInstance(itemInstanceId);
+  const res = await getItemInstanceByCode(instanceCode);
   borrowDialog.currentItem = res.data || {};
   borrowDialog.form.instanceCode = res.data?.instanceCode;
 };
@@ -703,7 +687,6 @@ const handleReturn = async (row) => {
   returnDialog.form = {
     id: row?.borrowStatus === 'borrowed' ? row?.id : undefined,
     instanceCode: row?.instanceCode,
-    itemInstanceId: row?.itemInstanceId,
     returnTime: formatCurrentDateTime(),
     returnRemark: undefined
   };
@@ -714,15 +697,8 @@ const handleReturn = async (row) => {
     returnDialog.currentRecord = res.data || {};
     returnDialog.form.id = res.data?.id;
     returnDialog.form.instanceCode = res.data?.instanceCode;
-    returnDialog.form.itemInstanceId = res.data?.itemInstanceId;
   } else if (returnDialog.form.instanceCode) {
     await handleReturnInstanceChange(returnDialog.form.instanceCode);
-  } else if (returnDialog.form.itemInstanceId) {
-    const res = await getItemInstance(returnDialog.form.itemInstanceId);
-    returnDialog.form.instanceCode = res.data?.instanceCode;
-    if (returnDialog.form.instanceCode) {
-      await handleReturnInstanceChange(returnDialog.form.instanceCode);
-    }
   }
 };
 
@@ -730,23 +706,22 @@ const handleReturnInstanceChange = async (instanceCode) => {
   if (!instanceCode) {
     returnDialog.currentRecord = {};
     returnDialog.form.id = undefined;
-    returnDialog.form.itemInstanceId = undefined;
+    returnDialog.form.instanceCode = undefined;
     return;
   }
   try {
     const itemRes = await getItemInstanceByCode(instanceCode);
-    const itemInstanceId = itemRes.data?.id;
-    if (!itemInstanceId) {
+    if (!itemRes.data?.instanceCode) {
       throw new Error('item_instance_not_found');
     }
-    returnDialog.form.itemInstanceId = itemInstanceId;
-    const res = await getCurrentBorrowRecord(itemInstanceId);
+    returnDialog.form.instanceCode = itemRes.data.instanceCode;
+    const res = await getCurrentBorrowRecord(instanceCode);
     returnDialog.currentRecord = res.data || {};
     returnDialog.form.id = res.data?.id;
   } catch (e) {
     returnDialog.currentRecord = {};
     returnDialog.form.id = undefined;
-    returnDialog.form.itemInstanceId = undefined;
+    returnDialog.form.instanceCode = undefined;
     ElMessage.error('未找到对应器材实例编码');
   }
 };
@@ -808,10 +783,10 @@ onMounted(async () => {
   ]);
   if (queryParams.instanceCode && queryParams.borrowStatus === 'borrowed') {
     await handleReturn({ instanceCode: queryParams.instanceCode });
-  } else if (queryParams.itemInstanceId && queryParams.borrowStatus === 'borrowed') {
-    await handleReturn({ itemInstanceId: queryParams.itemInstanceId });
-  } else if (queryParams.itemInstanceId) {
-    await handleBorrow({ id: queryParams.itemInstanceId });
+  } else if (queryParams.instanceCode && queryParams.borrowStatus === 'borrowed') {
+    await handleReturn({ instanceCode: queryParams.instanceCode });
+  } else if (queryParams.instanceCode) {
+    await handleBorrow({ id: queryParams.instanceCode });
   }
   if (queryParams.instanceCode) {
     await handleInstanceCodeQuery();

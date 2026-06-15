@@ -79,7 +79,7 @@
             <div v-if="row.basisNo">调拨根据：{{ row.basisNo }}</div>
             <div v-if="row.receiveUnit">收物单位：{{ row.receiveUnit }}</div>
             <div v-if="row.noticeOrg">通知机关：{{ row.noticeOrg }}</div>
-            <div v-if="row.dispatchMode">调拨方式：{{ proxy.selectDictLabel(wms_dispatch_mode, row.dispatchMode) }}</div>
+            <div v-if="row.dispatchMode">调拨方式：{{ row.dispatchMode }}</div>
             <div v-if="row.receiptDate">入库日期：{{ parseTime(row.receiptDate, '{y}-{m}-{d}') }}</div>
           </template>
         </el-table-column>
@@ -170,10 +170,9 @@ import receiptPanel from "@/components/PrintTemplate/receipt-panel";
 const { proxy } = getCurrentInstance();
 const route = useRoute();
 const router = useRouter();
-const { wms_receipt_status, wms_receipt_type, wms_dispatch_mode } = proxy.useDict(
+const { wms_receipt_status, wms_receipt_type } = proxy.useDict(
   "wms_receipt_status",
-  "wms_receipt_type",
-  "wms_dispatch_mode"
+  "wms_receipt_type"
 );
 const receiptOrderList = ref([]);
 const loading = ref(true);

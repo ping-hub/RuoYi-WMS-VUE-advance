@@ -633,7 +633,7 @@ const getPackCandidates = async () => {
 };
 
 const handlePackSelectionChange = (selection) => {
-  packDialog.selectedIds = selection.map(item => item.id);
+  packDialog.selectedIds = selection.map(item => item.instanceCode);
 };
 
 const submitPack = async () => {
@@ -645,7 +645,7 @@ const submitPack = async () => {
   try {
     await packBox({
       boxId: packDialog.boxId,
-      itemInstanceIds: packDialog.selectedIds
+      instanceCodes: packDialog.selectedIds
     });
     proxy.$modal.msgSuccess('装箱成功');
     packDialog.visible = false;
@@ -674,7 +674,7 @@ const getUnpackItems = async (boxId) => {
 };
 
 const handleUnpackSelectionChange = (selection) => {
-  unpackDialog.selectedIds = selection.map(item => item.id);
+  unpackDialog.selectedIds = selection.map(item => item.instanceCode);
 };
 
 const submitUnpack = async () => {
@@ -686,7 +686,7 @@ const submitUnpack = async () => {
   try {
     await unpackBox({
       boxId: unpackDialog.boxId,
-      itemInstanceIds: unpackDialog.selectedIds
+      instanceCodes: unpackDialog.selectedIds
     });
     proxy.$modal.msgSuccess('拆箱成功');
     unpackDialog.visible = false;

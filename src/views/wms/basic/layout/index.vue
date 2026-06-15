@@ -80,7 +80,7 @@
 
           <el-descriptions v-if="rackGrid" :column="4" border class="mb16">
             <el-descriptions-item label="货架">{{ currentRackInfo?.name || '-' }}</el-descriptions-item>
-            <el-descriptions-item label="行列">{{ `${rackGrid.rowCount || 0} 行 / ${rackGrid.columnCount || 0} 列` }}</el-descriptions-item>
+            <el-descriptions-item label="行列">{{ `${effectiveGridSize.rowCount || 0} 行 / ${effectiveGridSize.columnCount || 0} 列` }}</el-descriptions-item>
             <el-descriptions-item label="尺寸">{{ formatDimensionText(rackGrid.length, rackGrid.width, rackGrid.height) }}</el-descriptions-item>
             <el-descriptions-item label="排序号">{{ rackGrid.orderNum ?? '-' }}</el-descriptions-item>
           </el-descriptions>
@@ -99,7 +99,7 @@
             <div
               v-else
               class="rack-grid"
-              :style="{ gridTemplateColumns: `repeat(${Math.max(rackGrid.columnCount || 1, 1)}, minmax(92px, 1fr))` }"
+              :style="{ gridTemplateColumns: `repeat(${Math.max(effectiveGridSize.columnCount || 1, 1)}, minmax(92px, 1fr))` }"
             >
               <button
                 v-for="cell in normalizedCells"
@@ -289,8 +289,30 @@ const summaryTitle = computed(() => {
   return `${locationSummary.value.locationName || '-'} / ${locationSummary.value.locationCode || '-'}`
 })
 
+/**
+ * 根据后端返回的 cells 数据动态计算实际行列数，
+ * 取后端 rowCount/columnCount 与 cells 实际最大值中的较大者，
+ * 防止后端优化后行列数不准确导致格子丢失。
+ */
+const effectiveGridSize = computed(() => {
+  const cells = rackGrid.value?.cells || []
+  let maxRow = 0
+  let maxCol = 0
+  cells.forEach(cell => {
+    const r = Number(cell.rowNo) || 0
+    const c = Number(cell.columnNo) || 0
+    if (r > maxRow) maxRow = r
+    if (c > maxCol) maxCol = c
+  })
+  return {
+    rowCount: Math.max(rackGrid.value?.rowCount || 0, maxRow),
+    columnCount: Math.max(rackGrid.value?.columnCount || 0, maxCol)
+  }
+})
+
 const normalizedCells = computed(() => {
-  if (!rackGrid.value?.rowCount || !rackGrid.value?.columnCount) {
+  const { rowCount, columnCount } = effectiveGridSize.value
+  if (!rowCount || !columnCount) {
     return []
   }
   const cellMap = new Map()
@@ -298,8 +320,8 @@ const normalizedCells = computed(() => {
     cellMap.set(`${cell.rowNo}-${cell.columnNo}`, cell)
   })
   const cells = []
-  for (let rowNo = 1; rowNo <= rackGrid.value.rowCount; rowNo += 1) {
-    for (let columnNo = 1; columnNo <= rackGrid.value.columnCount; columnNo += 1) {
+  for (let rowNo = 1; rowNo <= rowCount; rowNo += 1) {
+    for (let columnNo = 1; columnNo <= columnCount; columnNo += 1) {
       const current = cellMap.get(`${rowNo}-${columnNo}`) || {}
       cells.push({
         ...current,
@@ -393,6 +415,18 @@ async function loadRackGrid(rackId) {
   try {
     const res = await getRackGrid(rackId)
     rackGrid.value = res.data
+    // 诊断：检测后端返回的行列数与实际 cells 数据是否一致
+    if (import.meta.env.DEV && res.data) {
+      const cells = res.data.cells || []
+      const maxRow = cells.reduce((m, c) => Math.max(m, Number(c.rowNo) || 0), 0)
+      const maxCol = cells.reduce((m, c) => Math.max(m, Number(c.columnNo) || 0), 0)
+      if (maxRow > (res.data.rowCount || 0) || maxCol > (res.data.columnCount || 0)) {
+        console.warn(
+          `[StorageLayout] 货架(id=${rackId}) 后端行列数(rowCount=${res.data.rowCount}, columnCount=${res.data.columnCount}) ` +
+          `小于 cells 实际最大值(maxRow=${maxRow}, maxCol=${maxCol})，已自动修正，请检查后端接口。`
+        )
+      }
+    }
     const availableCell = (res.data?.cells || []).find(item => item.locationId)
     if (availableCell?.locationId) {
       selectedLocationId.value = availableCell.locationId

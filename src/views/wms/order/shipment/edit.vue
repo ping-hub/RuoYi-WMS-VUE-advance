@@ -44,9 +44,7 @@
             </el-col>
             <el-col :span="6">
               <el-form-item label="调拨方式" prop="dispatchMode">
-                <el-select v-model="form.dispatchMode" placeholder="请选择调拨方式" clearable style="width: 100%">
-                  <el-option v-for="item in wms_dispatch_mode" :key="item.value" :label="item.label" :value="item.value" />
-                </el-select>
+                <el-input v-model="form.dispatchMode" placeholder="请输入调拨方式" />
               </el-form-item>
             </el-col>
             <el-col :span="6">
@@ -248,10 +246,9 @@ import RackSelect from "@/views/components/RackSelect.vue";
 const {proxy} = getCurrentInstance();
 const route = useRoute();
 const isViewMode = computed(() => route.query.mode === 'view');
-const {wms_item_instance_status, wms_shipment_type, wms_dispatch_mode} = proxy.useDict(
+const {wms_item_instance_status, wms_shipment_type} = proxy.useDict(
   "wms_item_instance_status",
-  "wms_shipment_type",
-  "wms_dispatch_mode"
+  "wms_shipment_type"
 );
 
 const loading = ref(false)
@@ -409,6 +406,7 @@ const matchInventoryDetail = (source, extraUsage = {}) => {
     return it.skuId === source.skuId
       && it.warehouseId === form.value.warehouseId
       && (!targetAreaId || it.areaId === targetAreaId)
+      && (!source.instanceCode || it.instanceCode === source.instanceCode)
   })
   return candidates.find(it => getInventoryAvailableQuantity(it.id, extraUsage) >= Number(source.quantity || 1))
 }
@@ -434,7 +432,6 @@ const createDetailRow = (payload) => {
     rackName: payload.rackName,
     locationId: payload.locationId,
     locationName: payload.locationName,
-    itemInstanceId: payload.itemInstanceId,
     instanceCode: payload.instanceCode,
     remark: payload.remark
   }
@@ -478,7 +475,7 @@ const doSave = (shipmentOrderStatus = 0) => {
           lineAmount: it.lineAmount,
           quantity: it.quantity,
           inventoryDetailId: it.inventoryDetailId,
-          itemInstanceId: it.itemInstanceId,
+          instanceCode: it.instanceCode,
           warehouseId: form.value.warehouseId,
           areaId: it.areaId,
           remark: it.remark
@@ -564,7 +561,7 @@ const doShipment = async () => {
         lineAmount: it.lineAmount,
         quantity: it.quantity,
         inventoryDetailId: it.inventoryDetailId,
-        itemInstanceId: it.itemInstanceId,
+        instanceCode: it.instanceCode,
         warehouseId: form.value.warehouseId,
         areaId: it.areaId
       }
@@ -694,13 +691,14 @@ const addItemInstancesToShipment = async (items) => {
   const extraUsage = {}
   const newRows = []
   for (const item of items) {
-    if (form.value.details.some(detail => detail.itemInstanceId === item.id)) {
+    if (form.value.details.some(detail => detail.instanceCode === item.instanceCode)) {
       throw new Error(`器材实例编码 ${item.instanceCode} 已添加`)
     }
     const matchedInventory = matchInventoryDetail({
       skuId: item.skuId,
       areaId: item.areaId,
-      quantity: 1
+      quantity: 1,
+      instanceCode: item.instanceCode
     }, extraUsage)
     if (!matchedInventory) {
       throw new Error(`器材实例编码 ${item.instanceCode} 未匹配到可用库存明细`)
@@ -724,7 +722,6 @@ const addItemInstancesToShipment = async (items) => {
       rackName: matchedInventory.rackName,
       locationId: matchedInventory.locationId,
       locationName: matchedInventory.locationName,
-      itemInstanceId: item.id,
       instanceCode: item.instanceCode,
     }))
   }
@@ -821,7 +818,7 @@ const handleItemInstanceSelectionChange = (selection) => {
 }
 
 const isItemInstanceSelectable = (row) => {
-  return !form.value.details.some(detail => detail.itemInstanceId === row.id)
+  return !form.value.details.some(detail => detail.instanceCode === row.instanceCode)
 }
 
 const handleConfirmItemInstance = async () => {
