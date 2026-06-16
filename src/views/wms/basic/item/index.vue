@@ -102,24 +102,6 @@
             </el-col>
           </el-row>
           <el-row :gutter="20">
-            <el-col :span="10">
-              <el-form-item label="器材分类" prop="itemCategory">
-                <el-tree-select
-                  v-model="form.itemCategory"
-                  :data="categoryTreeOptions"
-                  :props="{ value: 'id', label: 'label', children: 'children' }"
-                  value-key="id"
-                  check-strictly
-                  placeholder="请选择器材分类"
-                  style="width: 100%"
-                />
-              </el-form-item>
-            </el-col>
-            <el-col :span="2">
-              <el-button link type="primary" icon="Plus" @click="handleAddType(true)">新增分类</el-button>
-            </el-col>
-          </el-row>
-          <el-row :gutter="20">
             <el-col :span="12">
               <el-form-item label="计量单位" prop="unit">
                 <el-input v-model="form.unit" placeholder="请输入计量单位 例:台/个/张/包" />
@@ -375,9 +357,6 @@ const data = reactive({
     ],
     itemName: [
       { required: true, message: '器材名称不能为空', trigger: 'blur' }
-    ],
-    itemCategory: [
-      { required: true, message: '器材分类不能为空', trigger: 'change' }
     ]
   }
 });

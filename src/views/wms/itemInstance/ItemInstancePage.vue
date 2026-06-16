@@ -9,15 +9,13 @@
             </el-form-item>
           </el-col>
           <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
-            <el-form-item label="器材" prop="itemId">
-              <el-select v-model="queryParams.itemId" placeholder="请选择器材" clearable filterable style="width: 100%" @change="handleQueryItemChange">
-                <el-option
-                  v-for="item in itemOptions"
-                  :key="item.id"
-                  :label="item.itemCode ? item.itemName + ' (' + item.itemCode + ')' : item.itemName"
-                  :value="item.id"
-                />
-              </el-select>
+            <el-form-item label="器材名称" prop="itemName">
+              <el-input v-model="queryParams.itemName" placeholder="请输入器材名称" clearable @keyup.enter="handleQuery" />
+            </el-form-item>
+          </el-col>
+          <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
+            <el-form-item label="器材编码" prop="itemCode">
+              <el-input v-model="queryParams.itemCode" placeholder="请输入器材编码" clearable @keyup.enter="handleQuery" />
             </el-form-item>
           </el-col>
           <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
@@ -53,7 +51,7 @@
           </el-col>
           <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
             <el-form-item label="库区" prop="areaId">
-              <el-select v-model="queryParams.areaId" placeholder="请选择库区" clearable filterable style="width: 100%" @change="handleQueryAreaChange">
+              <el-select v-model="queryParams.areaId" placeholder="请选择库区" clearable filterable style="width: 100%" @change="handleQuery">
                 <el-option
                   v-for="item in queryAreaOptions"
                   :key="item.id"
@@ -61,22 +59,6 @@
                   :value="item.id"
                 />
               </el-select>
-            </el-form-item>
-          </el-col>
-          <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
-            <el-form-item label="货架" prop="rackId">
-              <RackSelect v-model="queryParams.rackId" :warehouse-id="queryParams.warehouseId" :area-id="queryParams.areaId" @change="handleQueryRackChange" />
-            </el-form-item>
-          </el-col>
-          <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
-            <el-form-item label="货位" prop="locationId">
-              <LocationSelect
-                v-model="queryParams.locationId"
-                :warehouse-id="queryParams.warehouseId"
-                :area-id="queryParams.areaId"
-                :rack-id="queryParams.rackId"
-                @change="handleQuery"
-              />
             </el-form-item>
           </el-col>
           <el-col :span="24">
@@ -93,42 +75,23 @@
 
     <el-card class="mt20">
       <el-row :gutter="10" class="mb8" type="flex" justify="space-between">
-        <el-col :span="8"><span style="font-size: large">器材台账</span></el-col>
+        <el-col :span="8"><span style="font-size: large">库存明细</span></el-col>
       </el-row>
 
       <el-table v-loading="loading" :data="itemInstanceList" border empty-text="暂无器材实例编码" cell-class-name="vertical-top-cell">
         <el-table-column label="器材实例编码" prop="instanceCode" min-width="160" show-overflow-tooltip />
-        <el-table-column label="器材信息" min-width="220">
-          <template #default="{ row }">
-            <div >{{ row.itemName || '-' }}</div>
-            <div v-if="row.itemCode" class="sub-text">器材编码：{{ row.itemCode }}</div>
-            <div v-if="row.skuName" class="sub-text">规格型号：{{ row.skuName }}</div>
-            <div v-if="row.unit" class="sub-text">计量单位：{{ row.unit }}</div>
-            <div v-if="row.productIdentifier" class="sub-text">产品标识：{{ row.productIdentifier }}</div>
-            <div v-if="row.qualityGrade" class="sub-text">质量等级：{{ row.qualityGrade }}</div>
-          </template>
-        </el-table-column>
-        <el-table-column label="状态" width="90">
+        <el-table-column label="器材名称" prop="itemName" min-width="120" show-overflow-tooltip />
+        <el-table-column label="器材编码" prop="itemCode" min-width="110" show-overflow-tooltip />
+        <el-table-column label="器材规格" prop="skuName" min-width="110" show-overflow-tooltip />
+        <el-table-column label="仓库" prop="warehouseName" min-width="90" show-overflow-tooltip />
+        <el-table-column label="库区" prop="areaName" min-width="90" show-overflow-tooltip />
+        <el-table-column label="器材状态" width="90">
           <template #default="{ row }">
             <dict-tag :options="wms_item_instance_status" :value="row.instanceStatus" />
           </template>
         </el-table-column>
-        <el-table-column label="位置" min-width="130">
-          <template #default="{ row }">
-            <div v-if="row.warehouseName">仓库：{{ row.warehouseName }}</div>
-            <div v-if="row.areaName">库区：{{ row.areaName }}</div>
-            <div v-if="row.rackName">货架：{{ row.rackName }}</div>
-            <div v-if="row.locationName">货位：{{ row.locationName }}</div>
-            <div>{{ row.boxCode ? `箱码：${row.boxCode}` : '-' }}</div>
-          </template>
-        </el-table-column>
-        <el-table-column label="关联单号" min-width="120" show-overflow-tooltip>
-          <template #default="{ row }">
-            {{ row.currentBusinessNo || '-' }}
-          </template>
-        </el-table-column>
-        <el-table-column label="备注" prop="remark" min-width="120" show-overflow-tooltip />
-        <el-table-column label="操作" align="right" width="180">
+        <el-table-column label="备注" prop="remark" min-width="80" show-overflow-tooltip />
+        <el-table-column label="操作" align="right" width="130">
           <template #default="{ row }">
             <el-button link type="primary" @click="handleView(row)">详情</el-button>
             <el-button
@@ -179,7 +142,7 @@
         </el-row>
         <el-row :gutter="20">
           <el-col :span="12">
-            <el-form-item label="器材" prop="itemId">
+            <el-form-item label="器材名称">
               <el-input :model-value="form.itemName" disabled />
             </el-form-item>
           </el-col>
@@ -276,11 +239,8 @@ import {
   listItemInstance,
   updateItemInstance
 } from '@/api/wms/itemInstance';
-import { listItem } from '@/api/wms/item';
 import { listItemSku } from '@/api/wms/itemSku';
 import { useWmsStore } from '@/store/modules/wms';
-import RackSelect from '@/views/components/RackSelect.vue';
-import LocationSelect from '@/views/components/LocationSelect.vue';
 
 const router = useRouter();
 const { proxy } = getCurrentInstance();
@@ -289,7 +249,6 @@ const { wms_item_instance_status } = proxy.useDict('wms_item_instance_status');
 const wmsStore = useWmsStore();
 
 const itemInstanceList = ref([]);
-const itemOptions = ref([]);
 const querySkuOptions = ref([]);
 const loading = ref(true);
 const buttonLoading = ref(false);
@@ -310,7 +269,7 @@ const detailDialog = reactive({
 
 const upload = reactive({
   open: false,
-  title: '器材台账导入',
+  title: '库存明细导入',
   isUploading: false,
   headers: { Authorization: 'Bearer ' + getToken() },
   url: import.meta.env.VITE_APP_BASE_API + '/wms/itemInstance/importData'
@@ -336,13 +295,12 @@ const data = reactive({
     pageNum: 1,
     pageSize: 10,
     instanceCode: undefined,
-    itemId: undefined,
+    itemName: undefined,
+    itemCode: undefined,
     skuId: undefined,
     instanceStatus: undefined,
     warehouseId: undefined,
     areaId: undefined,
-    rackId: undefined,
-    locationId: undefined,
     receiptOrderDetailId: undefined
   },
   rules: {}
@@ -367,23 +325,9 @@ const canEditRow = (row) => row?.instanceStatus === '在库';
 
 const getEditDisabledMessage = (row) => `器材实例【${row?.instanceCode || '-'}】当前状态为【${row?.instanceStatus || '-'}】，无法修改！`;
 
-const loadItemOptions = async () => {
-  const res = await listItem({});
-  itemOptions.value = res.data || [];
-};
-
-const loadSkuOptions = async (itemId, target = 'query') => {
-  if (!itemId) {
-    if (target === 'query') {
-      querySkuOptions.value = [];
-    }
-    return;
-  }
-  const res = await listItemSku({ itemId });
-  const list = res.data || [];
-  if (target === 'query') {
-    querySkuOptions.value = list;
-  }
+const loadSkuOptions = async () => {
+  const res = await listItemSku({});
+  querySkuOptions.value = res.data || [];
 };
 
 const getList = async () => {
@@ -405,52 +349,31 @@ const handleQuery = () => {
 const resetQuery = async () => {
   proxy.resetForm('queryRef');
   queryParams.value.receiptOrderDetailId = undefined;
-  queryParams.value.itemId = undefined;
   queryParams.value.skuId = undefined;
   queryParams.value.pageNum = 1;
   queryParams.value.pageSize = 10;
-  querySkuOptions.value = [];
   applyRouteQuery();
   await getList();
 };
 
 const applyRouteQuery = () => {
-  const { receiptOrderDetailId, instanceCode, itemId, skuId } = route.query;
+  const { receiptOrderDetailId, instanceCode, itemCode, skuId } = route.query;
   if (receiptOrderDetailId) {
     queryParams.value.receiptOrderDetailId = Number(receiptOrderDetailId);
   }
   if (instanceCode) {
     queryParams.value.instanceCode = instanceCode;
   }
-  if (itemId) {
-    queryParams.value.itemId = Number(itemId);
+  if (itemCode) {
+    queryParams.value.itemCode = itemCode;
   }
   if (skuId) {
     queryParams.value.skuId = Number(skuId);
   }
 };
 
-const handleQueryItemChange = async () => {
-  queryParams.value.skuId = undefined;
-  await loadSkuOptions(queryParams.value.itemId, 'query');
-  handleQuery();
-};
-
 const handleQueryWarehouseChange = () => {
   queryParams.value.areaId = undefined;
-  queryParams.value.rackId = undefined;
-  queryParams.value.locationId = undefined;
-  handleQuery();
-};
-
-const handleQueryAreaChange = () => {
-  queryParams.value.rackId = undefined;
-  queryParams.value.locationId = undefined;
-  handleQuery();
-};
-
-const handleQueryRackChange = () => {
-  queryParams.value.locationId = undefined;
   handleQuery();
 };
 
@@ -468,7 +391,7 @@ const handleUpdate = async (row) => {
   const res = await getItemInstance(row.id);
   form.value = { ...initFormData(), ...res.data };
   dialog.visible = true;
-  dialog.title = '修改器材台账';
+  dialog.title = '修改库存明细';
 };
 
 const submitForm = () => {
@@ -514,7 +437,7 @@ const handleExport = () => {
 };
 
 const handleImport = () => {
-  upload.title = '器材台账导入';
+  upload.title = '库存明细导入';
   upload.open = true;
 };
 
@@ -544,11 +467,6 @@ watch(
   () => route.query,
   async () => {
     applyRouteQuery();
-    if (queryParams.value.itemId) {
-      await loadSkuOptions(queryParams.value.itemId, 'query');
-    } else {
-      querySkuOptions.value = [];
-    }
     await getList();
   }
 );
@@ -558,11 +476,8 @@ onMounted(async () => {
   await Promise.all([
     wmsStore.getWarehouseList(),
     wmsStore.getAreaList(),
-    loadItemOptions()
+    loadSkuOptions()
   ]);
-  if (queryParams.value.itemId) {
-    await loadSkuOptions(queryParams.value.itemId, 'query');
-  }
   await getList();
 });
 </script>

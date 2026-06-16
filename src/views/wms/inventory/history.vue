@@ -1,7 +1,7 @@
 <template>
   <div class="app-container">
     <el-card>
-      <el-form :model="queryParams" ref="queryRef" label-width="88px" class="query-form">
+      <el-form :model="queryParams" ref="queryRef" label-width="112px" class="query-form">
         <el-row :gutter="16">
           <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
             <el-form-item label="操作类型" prop="orderType">
@@ -25,9 +25,16 @@
               <el-input v-model="queryParams.itemName" clearable placeholder="请输入器材名称" @keyup.enter="handleQuery" />
             </el-form-item>
           </el-col>
+        </el-row>
+        <el-row :gutter="16">
           <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
             <el-form-item label="器材编码" prop="itemCode">
               <el-input v-model="queryParams.itemCode" clearable placeholder="请输入器材编码" @keyup.enter="handleQuery" />
+            </el-form-item>
+          </el-col>
+          <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
+            <el-form-item label="器材实例编码" prop="instanceCode">
+              <el-input v-model="queryParams.instanceCode" clearable placeholder="请输入器材实例编码" @keyup.enter="handleQuery" />
             </el-form-item>
           </el-col>
           <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
@@ -50,7 +57,9 @@
               />
             </el-form-item>
           </el-col>
-          <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
+        </el-row>
+        <el-row>
+          <el-col :span="24" class="query-actions-row">
             <div class="query-actions">
               <el-button type="primary" icon="Search" @click="handleQuery">搜索</el-button>
               <el-button icon="Refresh" @click="resetQuery">重置</el-button>
@@ -60,76 +69,58 @@
       </el-form>
     </el-card>
 
-    <el-row :gutter="12" class="mt20">
-      <el-col :span="8">
-        <el-card shadow="hover">
-          <el-statistic title="当前页记录数" :value="pageSummary.recordCount" />
-        </el-card>
-      </el-col>
-      <el-col :span="8">
-        <el-card shadow="hover">
-          <el-statistic title="当前页数量变化合计" :value="pageSummary.quantity" :precision="0" />
-        </el-card>
-      </el-col>
-      <el-col :span="8">
-        <el-card shadow="hover">
-          <el-statistic title="当前页金额合计" :value="pageSummary.lineAmount" :precision="2" />
-        </el-card>
-      </el-col>
-    </el-row>
-
     <el-card class="mt20">
       <div class="mb8 flex-space-between">
-        <div class="table-title">库存流水</div>
+        <div class="table-title">器材溯源</div>
         <div class="table-tip">支持按操作类型与总账核心字段追溯库存变化</div>
       </div>
-      <el-table v-loading="loading" :data="inventoryHistoryList" border class="mt20" empty-text="暂无库存流水" cell-class-name="vertical-top-cell">
-        <el-table-column label="操作单号" prop="orderNo" min-width="200" show-overflow-tooltip />
-        <el-table-column label="器材信息" min-width="180">
+      <el-table v-loading="loading" :data="inventoryHistoryList" border class="mt20" empty-text="暂无器材溯源" cell-class-name="vertical-top-cell">
+        <el-table-column label="操作单号" width="215" show-overflow-tooltip>
           <template #default="{ row }">
-            <div >{{ row.itemName || row.item?.itemName || '-' }}</div>
-            <div v-if="row.item?.itemCode" class="sub-text">器材编码：{{ row.item.itemCode }}</div>
-            <div v-if="row.itemSku?.skuName" class="sub-text">规格型号：{{ row.itemSku.skuName }}</div>
-            <div v-if="row.itemSku?.productIdentifier" class="sub-text">产品标识：{{ row.itemSku.productIdentifier }}</div>
-            <div v-if="row.itemSku?.qualityGrade" class="sub-text">质量等级：{{ row.itemSku.qualityGrade }}</div>
+            <el-button link type="primary" @click="handleGoOrder(row)" :disabled="!row.orderId">
+              {{ row.orderNo || '-' }}
+            </el-button>
           </template>
         </el-table-column>
-        <el-table-column label="操作类型" align="center" width="100">
+        <el-table-column label="器材实例编码" width="180" show-overflow-tooltip>
+          <template #default="{ row }">
+            {{ row.instanceCode || '-' }}
+          </template>
+        </el-table-column>
+        <el-table-column label="器材名称" width="100" show-overflow-tooltip>
+          <template #default="{ row }">
+            {{ row.itemName || row.item?.itemName || '-' }}
+          </template>
+        </el-table-column>
+        <el-table-column label="器材编码" width="110" show-overflow-tooltip>
+          <template #default="{ row }">
+            {{ row.item?.itemCode || '-' }}
+          </template>
+        </el-table-column>
+        <el-table-column label="规格型号" width="100" show-overflow-tooltip>
+          <template #default="{ row }">
+            {{ row.itemSku?.skuName || '-' }}
+          </template>
+        </el-table-column>
+        <el-table-column label="仓库" width="80" show-overflow-tooltip>
+          <template #default="{ row }">
+            {{ useWmsStore().warehouseMap.get(row.warehouseId)?.warehouseName || '-' }}
+          </template>
+        </el-table-column>
+        <el-table-column label="库区" width="80" show-overflow-tooltip>
+          <template #default="{ row }">
+            {{ useWmsStore().areaMap.get(row.areaId)?.areaName || '-' }}
+          </template>
+        </el-table-column>
+        <el-table-column label="操作类型" align="center" width="80">
           <template #default="{ row }">
             <dict-tag :options="wms_inventory_history_type" :value="row.orderType" />
           </template>
         </el-table-column>
-        <el-table-column label="仓库/库区" min-width="180">
-          <template #default="{ row }">
-            <div>仓库：{{ useWmsStore().warehouseMap.get(row.warehouseId)?.warehouseName || '-' }}</div>
-            <div>库区：{{ useWmsStore().areaMap.get(row.areaId)?.areaName || '-' }}</div>
-          </template>
-        </el-table-column>
-        <el-table-column label="数量/金额(元)" min-width="170">
-          <template #default="{ row }">
-            <div class="flex-space-between">
-              <div>数量：</div>
-              <el-statistic :value="Number(row.quantity || 0)" :precision="0" />
-            </div>
-            <div class="flex-space-between">
-              <div>单价：</div>
-              <span>{{ formatMoney(row.unitPrice) }}</span>
-            </div>
-            <div class="flex-space-between">
-              <div>总价：</div>
-              <span>{{ formatMoney(row.lineAmount) }}</span>
-            </div>
-          </template>
-        </el-table-column>
-        <el-table-column label="备注" prop="remark" min-width="130" show-overflow-tooltip />
-        <el-table-column label="操作时间" min-width="160">
+        <el-table-column label="备注" prop="remark" width="70" show-overflow-tooltip />
+        <el-table-column label="操作时间" width="170">
           <template #default="{ row }">
             {{ parseTime(row.createTime, '{y}-{m}-{d} {h}:{i}:{s}') || '-' }}
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" fixed="right" width="100" align="center">
-          <template #default="{ row }">
-            <el-button link type="primary" @click="handleGoOrder(row)">相关单据</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -170,6 +161,7 @@ const queryParams = ref({
   orderNo: undefined,
   itemName: undefined,
   itemCode: undefined,
+  instanceCode: undefined,
   skuName: undefined,
   skuCode: undefined,
   place: [],
@@ -303,6 +295,11 @@ getList()
   font-size: 14px;
   font-weight: 600;
   line-height: 1.5;
+}
+
+.query-actions-row {
+  display: flex;
+  justify-content: flex-end;
 }
 
 .query-actions {

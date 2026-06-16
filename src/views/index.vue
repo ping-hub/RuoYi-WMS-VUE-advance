@@ -1,7 +1,7 @@
 <template>
-  <StorageLayoutHome />
+  <SmartWms />
 </template>
 
 <script setup name="Index">
-import StorageLayoutHome from '@/views/wms/basic/layout/index.vue'
+import SmartWms from '@/views/wms/dashboard/smartWms.vue'
 </script>

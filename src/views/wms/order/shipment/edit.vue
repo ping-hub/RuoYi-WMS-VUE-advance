@@ -133,16 +133,13 @@
       <el-dialog v-model="itemDetailDialog.visible" title="器材详情" width="520px" append-to-body>
         <div v-loading="itemDetailDialog.loading">
           <el-descriptions v-if="itemDetailDialog.data" :column="2" border>
-            <el-descriptions-item label="器材名称" :span="2">{{ itemDetailDialog.data.itemName || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="实例编码">{{ itemDetailDialog.data.instanceCode || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="器材名称">{{ itemDetailDialog.data.itemName || '-' }}</el-descriptions-item>
             <el-descriptions-item label="器材编码">{{ itemDetailDialog.data.itemCode || '-' }}</el-descriptions-item>
             <el-descriptions-item label="规格型号">{{ itemDetailDialog.data.skuName || '-' }}</el-descriptions-item>
             <el-descriptions-item label="计量单位">{{ itemDetailDialog.data.unit || '-' }}</el-descriptions-item>
             <el-descriptions-item label="产品标识">{{ itemDetailDialog.data.productIdentifier || '-' }}</el-descriptions-item>
             <el-descriptions-item label="质量等级">{{ itemDetailDialog.data.qualityGrade || '-' }}</el-descriptions-item>
-            <el-descriptions-item label="实例编码">{{ itemDetailDialog.data.instanceCode || '-' }}</el-descriptions-item>
-            <el-descriptions-item label="库区">{{ itemDetailDialog.data.areaName || '-' }}</el-descriptions-item>
-            <el-descriptions-item label="货架">{{ itemDetailDialog.data.rackName || '-' }}</el-descriptions-item>
-            <el-descriptions-item label="货位" :span="2">{{ itemDetailDialog.data.locationName || '-' }}</el-descriptions-item>
             <el-descriptions-item label="状态">{{ itemDetailDialog.data.instanceStatus || '-' }}</el-descriptions-item>
           </el-descriptions>
           <el-empty v-else-if="!itemDetailDialog.loading" description="暂无器材详情" />
@@ -244,7 +241,6 @@ import {useWmsStore} from '@/store/modules/wms'
 import {numSub} from '@/utils/ruoyi'
 import {listInventoryDetailNoPage} from "@/api/wms/inventoryDetail";
 import {getItemInstanceByCode, listItemInstance} from "@/api/wms/itemInstance";
-import {getItem} from "@/api/wms/item";
 import RackSelect from "@/views/components/RackSelect.vue";
 
 const {proxy} = getCurrentInstance();
@@ -311,69 +307,43 @@ const handleDetailRowClick = async (row) => {
   itemDetailDialog.loading = true
   itemDetailDialog.data = null
   try {
-    // 优先用 instanceCode 从器材实例表取数据
     if (row.instanceCode) {
-      try {
-        const res = await getItemInstanceByCode(row.instanceCode)
-        if (res.data) {
-          itemDetailDialog.data = {
-            itemName: res.data.itemName ?? row.itemName,
-            itemCode: res.data.itemCode ?? row.itemCode,
-            skuName: res.data.skuName ?? row.skuName,
-            unit: res.data.unit ?? row.unit,
-            productIdentifier: res.data.productIdentifier ?? row.productIdentifier,
-            qualityGrade: res.data.qualityGrade ?? row.qualityGrade,
-            instanceCode: res.data.instanceCode ?? row.instanceCode,
-            areaName: row.areaName ?? '-',
-            rackName: row.rackName ?? '-',
-            locationName: row.locationName ?? '-',
-            instanceStatus: res.data.instanceStatus ?? '-'
-          }
-          return
+      const res = await getItemInstanceByCode(row.instanceCode)
+      if (res.data) {
+        itemDetailDialog.data = {
+          itemName: res.data.itemName ?? row.itemName,
+          instanceCode: res.data.instanceCode ?? row.instanceCode,
+          itemCode: res.data.itemCode ?? row.itemCode,
+          skuName: res.data.skuName ?? row.skuName,
+          unit: res.data.unit ?? row.unit,
+          productIdentifier: res.data.productIdentifier ?? row.productIdentifier,
+          qualityGrade: res.data.qualityGrade ?? row.qualityGrade,
+          instanceStatus: res.data.instanceStatus ?? '-'
         }
-      } catch (e) {
-        // fallback 到器材表
-      }
-    }
-    // fallback: 从器材表取数据
-    if (row.skuId) {
-      try {
-        const res = await getItem(row.skuId)
-        if (res.data) {
-          itemDetailDialog.data = {
-            itemName: res.data.itemName ?? row.itemName,
-            itemCode: res.data.itemCode ?? row.itemCode,
-            skuName: res.data.skuName ?? row.skuName,
-            unit: res.data.unit ?? row.unit,
-            productIdentifier: res.data.productIdentifier ?? row.productIdentifier,
-            qualityGrade: res.data.qualityGrade ?? row.qualityGrade,
-            instanceCode: row.instanceCode,
-            areaName: row.areaName ?? '-',
-            rackName: row.rackName ?? '-',
-            locationName: row.locationName ?? '-',
-            instanceStatus: '-'
-          }
-          return
-        }
-      } catch (e) {
-        // 都取不到，显示明细表里存的数据
+        return
       }
     }
     itemDetailDialog.data = {
       itemName: row.itemName,
+      instanceCode: row.instanceCode,
       itemCode: row.itemCode,
       skuName: row.skuName,
       unit: row.unit,
       productIdentifier: row.productIdentifier,
       qualityGrade: row.qualityGrade,
-      instanceCode: row.instanceCode,
-      areaName: row.areaName ?? '-',
-      rackName: row.rackName ?? '-',
-      locationName: row.locationName ?? '-',
       instanceStatus: '-'
     }
   } catch (e) {
-    itemDetailDialog.data = null
+    itemDetailDialog.data = {
+      itemName: row.itemName,
+      instanceCode: row.instanceCode,
+      itemCode: row.itemCode,
+      skuName: row.skuName,
+      unit: row.unit,
+      productIdentifier: row.productIdentifier,
+      qualityGrade: row.qualityGrade,
+      instanceStatus: '-'
+    }
   } finally {
     itemDetailDialog.loading = false
   }
