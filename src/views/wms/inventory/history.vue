@@ -75,50 +75,50 @@
         <div class="table-tip">支持按操作类型与总账核心字段追溯库存变化</div>
       </div>
       <el-table v-loading="loading" :data="inventoryHistoryList" border class="mt20" empty-text="暂无器材溯源" cell-class-name="vertical-top-cell">
-        <el-table-column label="操作单号" width="215" show-overflow-tooltip>
+        <el-table-column label="操作单号" min-width="215" show-overflow-tooltip>
           <template #default="{ row }">
             <el-button link type="primary" @click="handleGoOrder(row)" :disabled="!row.orderId">
               {{ row.orderNo || '-' }}
             </el-button>
           </template>
         </el-table-column>
-        <el-table-column label="器材实例编码" width="180" show-overflow-tooltip>
+        <el-table-column label="器材实例编码" min-width="180" show-overflow-tooltip>
           <template #default="{ row }">
             {{ row.instanceCode || '-' }}
           </template>
         </el-table-column>
-        <el-table-column label="器材名称" width="100" show-overflow-tooltip>
+        <el-table-column label="器材名称" min-width="100" show-overflow-tooltip>
           <template #default="{ row }">
             {{ row.itemName || row.item?.itemName || '-' }}
           </template>
         </el-table-column>
-        <el-table-column label="器材编码" width="110" show-overflow-tooltip>
+        <el-table-column label="器材编码" min-width="110" show-overflow-tooltip>
           <template #default="{ row }">
             {{ row.item?.itemCode || '-' }}
           </template>
         </el-table-column>
-        <el-table-column label="规格型号" width="100" show-overflow-tooltip>
+        <el-table-column label="规格型号" min-width="100" show-overflow-tooltip>
           <template #default="{ row }">
             {{ row.itemSku?.skuName || '-' }}
           </template>
         </el-table-column>
-        <el-table-column label="仓库" width="80" show-overflow-tooltip>
+        <el-table-column label="仓库" min-width="80" show-overflow-tooltip>
           <template #default="{ row }">
             {{ useWmsStore().warehouseMap.get(row.warehouseId)?.warehouseName || '-' }}
           </template>
         </el-table-column>
-        <el-table-column label="库区" width="80" show-overflow-tooltip>
+        <el-table-column label="库区" min-width="80" show-overflow-tooltip>
           <template #default="{ row }">
             {{ useWmsStore().areaMap.get(row.areaId)?.areaName || '-' }}
           </template>
         </el-table-column>
-        <el-table-column label="操作类型" align="center" width="80">
+        <el-table-column label="操作类型" align="center" min-width="80">
           <template #default="{ row }">
             <dict-tag :options="wms_inventory_history_type" :value="row.orderType" />
           </template>
         </el-table-column>
-        <el-table-column label="备注" prop="remark" width="70" show-overflow-tooltip />
-        <el-table-column label="操作时间" width="170">
+        <el-table-column label="备注" prop="remark" min-width="70" show-overflow-tooltip />
+        <el-table-column label="操作时间" min-width="170">
           <template #default="{ row }">
             {{ parseTime(row.createTime, '{y}-{m}-{d} {h}:{i}:{s}') || '-' }}
           </template>

@@ -2,12 +2,10 @@
   <div class="dashboard-container" ref="containerRef">
     <!-- 顶部标题栏 -->
     <div class="dashboard-header">
-      <div class="header-decoration left"></div>
       <h1 class="dashboard-title">智慧仓储可视化看板</h1>
-      <div class="header-decoration right"></div>
       <div class="header-time">{{ currentTime }}</div>
       <button v-show="!exporting" class="export-btn" @click="exportImage">导出图片</button>
-      <button class="fullscreen-btn" @click="toggleFullscreen" :title="isFullscreen ? '退出全屏' : '全屏展示'">
+      <button v-show="!exporting" class="fullscreen-btn" @click="toggleFullscreen" :title="isFullscreen ? '退出全屏' : '全屏展示'">
         <svg v-if="!isFullscreen" viewBox="0 0 1024 1024" width="14" height="14"><path d="M192 192h192V128H128v256h64V192zM640 128v64h192v192h64V128H640zM192 640h-64v256h256v-64H192V640zM832 832H640v64h256V640h-64v192z" fill="currentColor"/></svg>
         <svg v-else viewBox="0 0 1024 1024" width="14" height="14"><path d="M384 128v64H192v192h-64V128h256zM640 128h256v256h-64V192H640V128zM128 640h64v192h192v64H128V640zM832 640h64v256H640v-64h192V640z" fill="currentColor"/></svg>
         {{ isFullscreen ? '退出全屏' : '全屏' }}
@@ -112,13 +110,12 @@
             <div class="category-table">
               <table>
                 <thead>
-                  <tr><th>物资分类</th><th>物料数量</th><th>物资价值</th></tr>
+                  <tr><th>物资分类</th><th>物料数量</th></tr>
                 </thead>
                 <tbody>
                   <tr v-for="(row, idx) in tableData" :key="idx" :class="{ 'even-row': idx % 2 === 1 }">
                     <td>{{ row.category }}</td>
                     <td>{{ row.quantity }}</td>
-                    <td>{{ row.value }}</td>
                   </tr>
                 </tbody>
               </table>
@@ -240,7 +237,9 @@ const exportImage = async () => {
   try {
     const canvas = await html2canvas(containerRef.value, {
       backgroundColor: '#000810',
-      scale: 2,
+      scale: 1,
+      width: 1920,
+      height: 1080,
       useCORS: true,
       logging: false,
     });
@@ -264,13 +263,13 @@ const initCharts = () => {
     backgroundColor: 'transparent',
     tooltip: { trigger: 'item' },
     legend: {
-      bottom: '2%', textStyle: { color: '#a0c4e8', fontSize: 11 },
+      bottom: '2%', textStyle: { color: '#a0c4e8', fontSize: 18 },
       itemWidth: 10, itemHeight: 10,
       data: ['A类','B类','C类','D类']
     },
     series: [{
       type: 'pie', radius: ['35%', '65%'], center: ['50%', '45%'],
-      label: { show: true, color: '#a0c4e8', fontSize: 10, formatter: '{b}\n{c}' },
+      label: { show: true, color: '#a0c4e8', fontSize: 18, formatter: '{b}\n{c}' },
       labelLine: { lineStyle: { color: 'rgba(160,196,232,0.4)' } },
       data: [
         { value: 2232, name: 'A类', itemStyle: { color: '#3b82f6' } },
@@ -287,17 +286,17 @@ const initCharts = () => {
   inoutChart.setOption({
     backgroundColor: 'transparent',
     tooltip: { trigger: 'axis' },
-    legend: { data: ['入库', '出库'], textStyle: { color: '#a0c4e8' }, top: 0 },
+    legend: { data: ['入库', '出库'], textStyle: { color: '#a0c4e8', fontSize: 18 }, top: 0 },
     grid: { top: '18%', left: '8%', right: '4%', bottom: '10%', containLabel: true },
     xAxis: {
       type: 'category', data: ['0801','0802','0803','0804','0805','0806','0807'],
       axisLine: { lineStyle: { color: 'rgba(0,231,255,0.3)' } },
-      axisLabel: { color: '#a0c4e8' }
+      axisLabel: { color: '#a0c4e8', fontSize: 18 }
     },
     yAxis: {
       type: 'value', max: 1600, interval: 200,
       axisLine: { lineStyle: { color: 'rgba(0,231,255,0.3)' } },
-      axisLabel: { color: '#a0c4e8' },
+      axisLabel: { color: '#a0c4e8', fontSize: 18 },
       splitLine: { lineStyle: { color: 'rgba(0,231,255,0.1)' } }
     },
     series: [
@@ -324,10 +323,10 @@ const initCharts = () => {
   sourceChart.setOption({
     backgroundColor: 'transparent',
     tooltip: { trigger: 'item' },
-    legend: { bottom: '2%', textStyle: { color: '#a0c4e8', fontSize: 11 }, itemWidth: 10, itemHeight: 10 },
+    legend: { bottom: '2%', textStyle: { color: '#a0c4e8', fontSize: 18 }, itemWidth: 10, itemHeight: 10 },
     series: [{
       type: 'pie', radius: ['35%', '65%'], center: ['50%', '42%'],
-      label: { show: true, color: '#a0c4e8', fontSize: 10, formatter: '{d}%' },
+      label: { show: true, color: '#a0c4e8', fontSize: 18, formatter: '{d}%' },
       data: [
         { value: 4567, name: '自采', itemStyle: { color: '#3b82f6' } },
         { value: 1234, name: '调拨', itemStyle: { color: '#22c55e' } },
@@ -342,10 +341,10 @@ const initCharts = () => {
   qualityChart.setOption({
     backgroundColor: 'transparent',
     tooltip: { trigger: 'item' },
-    legend: { bottom: '2%', textStyle: { color: '#a0c4e8', fontSize: 11 }, itemWidth: 10, itemHeight: 10 },
+    legend: { bottom: '2%', textStyle: { color: '#a0c4e8', fontSize: 18 }, itemWidth: 10, itemHeight: 10 },
     series: [{
       type: 'pie', radius: ['35%', '65%'], center: ['50%', '42%'],
-      label: { show: true, color: '#a0c4e8', fontSize: 10, formatter: '{b}\n{c}' },
+      label: { show: true, color: '#a0c4e8', fontSize: 18, formatter: '{b}\n{c}' },
       labelLine: { lineStyle: { color: 'rgba(160,196,232,0.4)' } },
       data: [
         { value: 2232, name: 'A品', itemStyle: { color: '#3b82f6' } },
@@ -372,7 +371,7 @@ const initCharts = () => {
       splitLine: { show: false },
       axisLabel: { show: false },
       detail: {
-        fontSize: 20, fontWeight: 'bold', color: '#00e7ff',
+        fontSize: 42, fontWeight: 'bold', color: '#00e7ff',
         offsetCenter: [0, 0],
         formatter: '{value}',
         textShadowColor: 'rgba(0,231,255,0.5)', textShadowBlur: 10
@@ -420,8 +419,8 @@ onUnmounted(() => {
 <style scoped>
 /* 全局 */
 .dashboard-container {
-  width: 100%;
-  height: calc(100vh - 84px);
+  width: 1920px;
+  height: 1080px;
   background: linear-gradient(180deg, #001226 0%, #020d1a 50%, #000810 100%);
   color: #fff;
   overflow: hidden;
@@ -434,7 +433,7 @@ onUnmounted(() => {
 }
 
 .dashboard-container:fullscreen {
-  height: 100vh;
+  height: 1080px;
   padding: 0 24px 24px;
 }
 
@@ -472,7 +471,7 @@ onUnmounted(() => {
 .header-decoration {
   width: 180px;
   height: 36px;
-  background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 36'><path d='M0 0 L160 0 L180 18 L160 36 L0 36 L20 18 Z' fill='none' stroke='%2300e7ff' stroke-width='1.5'/></svg>") no-repeat center;
+  background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 48'><path d='M0 0 L160 0 L180 24 L160 48 L0 48 L20 24 Z' fill='none' stroke='%2300e7ff' stroke-width='1.5'/></svg>") no-repeat center;
   background-size: contain;
 }
 
@@ -513,16 +512,16 @@ onUnmounted(() => {
 
 .export-btn {
   position: absolute;
-  left: 16px;
+  left: 24px;
   top: 50%;
   transform: translateY(-50%);
   background: linear-gradient(135deg, rgba(0,231,255,0.15) 0%, rgba(37,113,233,0.1) 100%);
   border: 1px solid rgba(0,231,255,0.35);
   color: #00e7ff;
-  font-size: 13px;
+  font-size: 18px;
   font-weight: 600;
   letter-spacing: 1px;
-  padding: 6px 14px;
+  padding: 6px 18px;
   border-radius: 4px;
   cursor: pointer;
   backdrop-filter: blur(6px);
@@ -540,7 +539,7 @@ onUnmounted(() => {
 
 .fullscreen-btn {
   position: absolute;
-  left: 110px;
+  left: 160px;
   top: 50%;
   transform: translateY(-50%);
   display: flex;
@@ -549,7 +548,7 @@ onUnmounted(() => {
   background: linear-gradient(135deg, rgba(0,231,255,0.15) 0%, rgba(37,113,233,0.1) 100%);
   border: 1px solid rgba(0,231,255,0.35);
   color: #00e7ff;
-  font-size: 13px;
+  font-size: 18px;
   font-weight: 600;
   letter-spacing: 1px;
   padding: 6px 12px;
@@ -582,20 +581,20 @@ onUnmounted(() => {
 .col {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   min-height: 0;
 }
 
-.col-left { width: 22%; }
-.col-center { width: 56%; }
-.col-right { width: 22%; }
+.col-left { width: 25%; }
+.col-center { width: 45%; }
+.col-right { width: 30%; }
 
 /* 通用卡片 */
 .card {
   background: rgba(0,20,40,0.65);
   border: 1px solid rgba(0,231,255,0.2);
   border-radius: 6px;
-  padding: 12px 14px;
+  padding: 8px 12px;
   box-shadow: 0 0 15px rgba(0,231,255,0.08), inset 0 0 20px rgba(0,231,255,0.05);
   position: relative;
   overflow: hidden;
@@ -623,12 +622,12 @@ onUnmounted(() => {
 }
 
 .card-title {
-  font-size: 13px;
+  font-size: 18px;
   font-weight: 700;
   color: #00e7ff;
   letter-spacing: 2px;
   padding-left: 10px;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
   flex-shrink: 0;
   text-shadow: 0 0 8px rgba(0,231,255,0.4);
 }
@@ -640,15 +639,15 @@ onUnmounted(() => {
 }
 
 /* 安全运行天数 */
-.card-safe-days { flex: 0 0 auto; }
+.card-safe-days { flex: 2; min-height: 0; }
 
 .safe-days-value {
-  font-size: 54px;
+  font-size: 40px;
   font-weight: bold;
   color: #00e7ff;
   text-align: center;
   line-height: 1;
-  padding: 6px 0;
+  padding: 4px 0;
   text-shadow: 0 0 20px rgba(0,231,255,0.6), 0 0 40px rgba(0,231,255,0.3);
   font-family: 'Courier New', monospace;
   letter-spacing: 4px;
@@ -656,12 +655,12 @@ onUnmounted(() => {
 
 .safe-days-time {
   text-align: center;
-  font-size: 11px;
+  font-size: 18px;
   color: rgba(160,196,232,0.6);
 }
 
 /* 待办事项 */
-.card-todo { flex: 0 0 auto; }
+.card-todo { flex: 2; min-height: 0; }
 
 .todo-content {
   display: flex;
@@ -673,24 +672,24 @@ onUnmounted(() => {
 .todo-right { flex: 1; }
 
 .todo-value {
-  font-size: 28px;
+  font-size: 24px;
   font-weight: bold;
   color: #fff;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 
-.todo-unit { font-size: 13px; font-weight: normal; color: #a0c4e8; margin-left: 4px; }
+.todo-unit { font-size: 18px; font-weight: normal; color: #a0c4e8; margin-left: 4px; }
 
-.progress-bar-wrapper { margin-top: 4px; }
+.progress-bar-wrapper { margin-top: 3px; }
 
 .progress-label {
-  font-size: 11px;
+  font-size: 18px;
   color: #a0c4e8;
-  margin-bottom: 3px;
+  margin-bottom: 2px;
 }
 
 .progress-bar-bg {
-  height: 8px;
+  height: 6px;
   background: rgba(0,231,255,0.1);
   border-radius: 4px;
   overflow: hidden;
@@ -703,16 +702,16 @@ onUnmounted(() => {
   box-shadow: 0 0 8px rgba(249,115,22,0.4);
 }
 
-.todo-label { font-size: 11px; color: #a0c4e8; margin-bottom: 4px; }
+.todo-label { font-size: 18px; color: #a0c4e8; margin-bottom: 3px; }
 
 .todo-done-value {
-  font-size: 22px;
+  font-size: 20px;
   font-weight: bold;
   color: #fff;
 }
 
 /* 环境监测 */
-.card-env { flex: 0 0 auto; }
+.card-env { flex: 2; min-height: 0; }
 
 .env-content {
   display: flex;
@@ -728,8 +727,8 @@ onUnmounted(() => {
 }
 
 .env-icon {
-  width: 40px;
-  height: 40px;
+  width: 32px;
+  height: 32px;
   border-radius: 8px;
   display: flex;
   align-items: center;
@@ -740,15 +739,15 @@ onUnmounted(() => {
 }
 
 .env-value {
-  font-size: 20px;
+  font-size: 18px;
   font-weight: bold;
   color: #fff;
 }
 
-.env-label { font-size: 11px; color: #a0c4e8; }
+.env-label { font-size: 18px; color: #a0c4e8; }
 
 /* 物资来源 */
-.card-source { flex: 1; min-height: 0; }
+.card-source { flex: 4; min-height: 0; }
 
 /* 核心指标 */
 .core-metrics {
@@ -762,10 +761,10 @@ onUnmounted(() => {
   background: rgba(0,20,40,0.65);
   border: 1px solid rgba(0,231,255,0.35);
   border-radius: 6px;
-  padding: 10px 12px;
+  padding: 8px 10px;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   box-shadow: 0 0 12px rgba(0,231,255,0.12), inset 0 0 15px rgba(0,231,255,0.06);
   transition: border-color 0.3s, transform 0.2s;
 }
@@ -776,8 +775,8 @@ onUnmounted(() => {
 }
 
 .metric-icon {
-  width: 36px;
-  height: 36px;
+  width: 28px;
+  height: 28px;
   border-radius: 6px;
   background: rgba(0,231,255,0.12);
   border: 1px solid rgba(0,231,255,0.25);
@@ -788,7 +787,7 @@ onUnmounted(() => {
 }
 
 .metric-value {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: bold;
   color: #fff;
   letter-spacing: 1px;
@@ -796,12 +795,12 @@ onUnmounted(() => {
 }
 
 .metric-label {
-  font-size: 11px;
+  font-size: 18px;
   color: #a0c4e8;
 }
 
 /* 物资种类 */
-.card-category { flex: 6; min-height: 0; }
+.card-category { flex: 5; min-height: 0; }
 
 .category-content {
   flex: 1;
@@ -811,12 +810,12 @@ onUnmounted(() => {
 }
 
 .category-chart {
-  flex: 1;
+  flex: 6;
   min-width: 0;
 }
 
 .category-table {
-  flex: 1;
+  flex: 4;
   min-width: 0;
   overflow-y: auto;
   max-height: 100%;
@@ -829,7 +828,7 @@ onUnmounted(() => {
 .category-table table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 11px;
+  font-size: 18px;
 }
 
 .category-table th {
@@ -854,7 +853,7 @@ onUnmounted(() => {
 }
 
 /* 出入库 */
-.card-inout { flex: 4; min-height: 0; }
+.card-inout { flex: 5; min-height: 0; }
 
 /* 库存预警 */
 .card-stock-warning { flex: 1; min-height: 0; }
@@ -909,14 +908,14 @@ onUnmounted(() => {
 }
 
 .warning-cell-label {
-  font-size: 12px;
+  font-size: 18px;
   color: #a0c4e8;
   font-weight: 500;
-  margin-bottom: 4px;
+  margin-bottom: 3px;
 }
 
 .warning-cell-value {
-  font-size: 20px;
+  font-size: 18px;
   font-weight: bold;
   text-shadow: 0 0 8px currentColor;
 }
@@ -939,8 +938,8 @@ onUnmounted(() => {
 }
 
 .gauge-circle {
-  width: 72px;
-  height: 72px;
+  width: 56px;
+  height: 56px;
   position: relative;
 }
 
@@ -973,14 +972,14 @@ onUnmounted(() => {
 }
 
 .gauge-num {
-  font-size: 14px;
+  font-size: 18px;
   font-weight: bold;
   color: #00e7ff;
   text-shadow: 0 0 8px rgba(0,231,255,0.5);
 }
 
 .gauge-label {
-  font-size: 11px;
+  font-size: 18px;
   color: #a0c4e8;
 }
 

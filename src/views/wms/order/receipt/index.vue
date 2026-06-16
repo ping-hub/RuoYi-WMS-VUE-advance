@@ -294,7 +294,7 @@ async function handlePrint(row) {
     receiptOrderType: receiptOrder.receiptOrderType,
     receiptOrderStatus: proxy.selectDictLabel(wms_receipt_status.value, receiptOrder.receiptOrderStatus),
     basisNo: receiptOrder.basisNo,
-    dispatchMode: proxy.selectDictLabel(wms_dispatch_mode.value, receiptOrder.dispatchMode),
+    dispatchMode: receiptOrder.dispatchMode,
     noticeOrg: receiptOrder.noticeOrg,
     receiveUnit: receiptOrder.receiveUnit,
     purchaseDate: proxy.parseTime(receiptOrder.purchaseDate, '{y}-{m}-{d}'),

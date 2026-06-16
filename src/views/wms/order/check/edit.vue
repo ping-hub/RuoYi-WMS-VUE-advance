@@ -1,7 +1,7 @@
 <template>
-  <!-- 申请模式：新建盘点申请 -->
+  <!-- 申请模式：新建盘点任务 -->
   <div v-if="isNew && !form.id" style="display:flex;justify-content:center;align-items:center;min-height:70vh">
-    <el-card header="提交盘点申请" style="width:600px">
+    <el-card header="提交盘点任务" style="width:600px">
       <el-form :model="form" ref="applyForm" :rules="applyRules" label-width="90px">
         <el-form-item label="仓库" prop="warehouseId">
           <el-select v-model="form.warehouseId" placeholder="请选择仓库" filterable style="width: 100%" @change="handleWarehouseChange">
@@ -19,16 +19,20 @@
                       :disabled="!form.areaId" />
         </el-form-item>
         <el-form-item label="盘点人" prop="checkerName">
-          <el-input v-model="form.checkerName" placeholder="请输入盘点人" />
+          <el-select v-model="form.checkerName" placeholder="请选择盘点人" filterable style="width: 100%">
+            <el-option v-for="u in userList" :key="u.userId" :label="u.nickName" :value="u.nickName" />
+          </el-select>
         </el-form-item>
         <el-form-item label="复核人" prop="reviewerName">
-          <el-input v-model="form.reviewerName" placeholder="请输入复核人" />
+          <el-select v-model="form.reviewerName" placeholder="请选择复核人" filterable style="width: 100%">
+            <el-option v-for="u in userList" :key="u.userId" :label="u.nickName" :value="u.nickName" />
+          </el-select>
         </el-form-item>
         <el-form-item label="备注" prop="remark">
           <el-input v-model="form.remark" placeholder="备注...100个字符以内" rows="3" maxlength="100" type="textarea" show-word-limit />
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" @click="submitApplication" style="width:100%">提交盘点申请</el-button>
+          <el-button type="primary" @click="submitApplication" style="width:100%">提交盘点任务</el-button>
         </el-form-item>
       </el-form>
     </el-card>
@@ -84,12 +88,16 @@
           </el-col>
           <el-col :span="6">
             <el-form-item label="盘点人" prop="checkerName">
-              <el-input v-model="form.checkerName" placeholder="请输入盘点人" />
+              <el-select v-model="form.checkerName" placeholder="请选择盘点人" filterable style="width: 100%">
+                <el-option v-for="u in userList" :key="u.userId" :label="u.nickName" :value="u.nickName" />
+              </el-select>
             </el-form-item>
           </el-col>
           <el-col :span="6">
             <el-form-item label="复核人" prop="reviewerName">
-              <el-input v-model="form.reviewerName" placeholder="请输入复核人" />
+              <el-select v-model="form.reviewerName" placeholder="请选择复核人" filterable style="width: 100%">
+                <el-option v-for="u in userList" :key="u.userId" :label="u.nickName" :value="u.nickName" />
+              </el-select>
             </el-form-item>
           </el-col>
         </el-row>
@@ -240,6 +248,7 @@
 <script setup name="CheckOrderEdit">
 import { computed, getCurrentInstance, onMounted, reactive, ref, toRefs, watch } from "vue";
 import { addCheckOrder, getCheckOrder, updateCheckOrder, startCheck, getInstancesBySku, check } from "@/api/wms/checkOrder";
+import { listUser } from "@/api/system/user";
 import { ElMessage } from "element-plus";
 import { Delete } from "@element-plus/icons-vue";
 import { useRoute, useRouter } from "vue-router";
@@ -286,6 +295,16 @@ const actualInstanceMap = reactive({});
 // 从后端详情恢复时的暂存数据（等待账面实例加载后组装 actualInstanceMap）
 const _pendingInstanceRestore = {};
 
+// ===== 用户下拉列表 =====
+const userList = ref([]);
+const loadUserList = () => {
+  listUser({ pageNum: 1, pageSize: 1000, status: '0' }).then(res => {
+    if (res.code === 200) {
+      userList.value = res.rows || [];
+    }
+  });
+};
+
 const close = () => {
   if (route.query.returnFullPath) { proxy?.$tab.closeOpenPage(route.query.returnFullPath); return; }
   proxy?.$tab.closePage();
@@ -325,7 +344,7 @@ const submitApplication = () => {
     };
     addCheckOrder(params).then(res => {
       if (res.code === 200) {
-        ElMessage.success('盘点申请已提交');
+        ElMessage.success('盘点任务已提交');
         close();
       } else {
         ElMessage.error(res.msg);
@@ -556,6 +575,7 @@ const loadDetail = (id) => {
 };
 
 onMounted(() => {
+  loadUserList();
   const id = route.query?.id;
   if (id) loadDetail(id);
 });
