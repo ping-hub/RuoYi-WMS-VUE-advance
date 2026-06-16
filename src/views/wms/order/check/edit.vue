@@ -113,58 +113,63 @@
     <!-- 盘点明细 -->
     <el-card v-if="form.details && form.details.length" header="盘点明细" class="mt10">
       <div class="mb8">
-        <el-tag type="info">按器材规格（SKU）汇总展示，修改实际数量后展开差异实例区域</el-tag>
+        <el-tag type="info">展开行可查看账面实例与实际实例对比，右侧可增删实际实例</el-tag>
       </div>
       <el-table :data="form.details" border empty-text="暂无盘点明细" row-key="skuId"
-                :row-class-name="detailRowClass">
+                :row-class-name="detailRowClass" @expand-change="onExpandChange">
         <el-table-column type="expand">
           <template #default="{ row }">
-            <div v-if="getDiff(row) !== 0" class="instance-panel">
-              <div class="instance-section">
-                <div class="section-title">
-                  <el-tag :type="getDiff(row) < 0 ? 'danger' : 'success'" size="small">
-                    {{ getDiff(row) < 0 ? '盘亏' : '盘盈' }}实例清单
-                  </el-tag>
-                  <el-button v-if="!isViewMode && canEdit" link type="primary" size="small"
-                             @click="loadInstances(row)">
-                    {{ skuInstanceCache[row.skuId] ? '刷新' : '加载' }}账面实例
-                  </el-button>
-                </div>
-                <!-- 加载中 -->
-                <div v-if="skuInstanceLoading[row.skuId]" class="mt10">
-                  <el-skeleton :rows="2" animated />
-                </div>
-                <!-- 实例列表 -->
-                <div v-else-if="hasInstancesData(row)" class="mt10">
-                  <div v-if="getDiff(row) < 0" class="instance-list">
-                    <div v-for="inst in getLossInstances(row)" :key="inst.instanceCode" class="instance-item">
-                      <el-icon color="#f56c6c"><Warning /></el-icon>
+            <div class="instance-panel">
+              <!-- 加载中 -->
+              <div v-if="skuInstanceLoading[row.skuId]" style="padding:12px 20px">
+                <el-skeleton :rows="3" animated />
+              </div>
+              <!-- 未加载 -->
+              <div v-else-if="!skuInstanceCache[row.skuId]" class="instance-panel-empty">
+                <span class="text-muted">点击「加载账面实例」按钮加载数据</span>
+              </div>
+              <!-- 双栏布局 -->
+              <div v-else class="instance-dual-panel">
+                <!-- 左侧：账面实例（只读） -->
+                <div class="instance-side-panel">
+                  <div class="section-title">
+                    <el-tag type="info" size="small">账面实例（{{ getBookInstanceCount(row) }}）</el-tag>
+                  </div>
+                  <div class="instance-scroll">
+                    <div v-for="inst in skuInstanceCache[row.skuId]" :key="inst.instanceCode" class="instance-item">
                       <span class="instance-code">{{ inst.instanceCode }}</span>
-                      <span class="instance-name">{{ inst.instanceItemName || '-' }}</span>
-                      <el-input v-if="!isViewMode && canEdit" v-model="inst.remark" placeholder="备注" size="small"
-                                style="width:180px;margin-left:auto" />
-                      <span v-else-if="inst.remark" class="instance-name" style="margin-left:auto">{{ inst.remark }}</span>
+                      <span class="instance-name">{{ inst.itemSku?.itemName || '-' }}</span>
                     </div>
-                    <el-empty v-if="!getLossInstances(row).length" description="无盘亏实例" :image-size="40" />
-                  </div>
-                  <div v-else class="instance-list">
-                    <div v-for="inst in getGainInstances(row)" :key="inst.instanceCode || inst._key" class="instance-item">
-                      <el-icon color="#67c23a"><Plus /></el-icon>
-                      <el-input v-if="!isViewMode && canEdit" v-model="inst.instanceCode" placeholder="实例编码" size="small"
-                                style="width:180px" />
-                      <span v-else class="instance-code">{{ inst.instanceCode }}</span>
-                      <el-input v-if="!isViewMode && canEdit" v-model="inst.remark" placeholder="备注" size="small"
-                                style="width:180px;margin-left:8px" />
-                      <span v-else-if="inst.remark" class="instance-name">{{ inst.remark }}</span>
-                    </div>
-                    <el-button v-if="!isViewMode && canEdit" link type="primary" size="small" @click="addGainInstance(row)" class="mt5">
-                      + 添加盘盈实例
-                    </el-button>
-                    <el-empty v-if="!getGainInstances(row).length && (isViewMode || !canEdit)" description="无盘盈实例" :image-size="40" />
+                    <el-empty v-if="!skuInstanceCache[row.skuId]?.length" description="无账面实例" :image-size="40" />
                   </div>
                 </div>
-                <div v-else class="mt10 text-muted">
-                  <span v-if="!isViewMode && canEdit">点击上方按钮加载账面实例，系统将自动比对差异</span>
+                <!-- 右侧：实际实例（可增删） -->
+                <div class="instance-side-panel">
+                  <div class="section-title">
+                    <el-tag type="warning" size="small">实际实例（{{ getActualInstanceCount(row) }}）</el-tag>
+                    <el-button v-if="!isViewMode && canEdit" link type="primary" size="small"
+                               @click="loadInstances(row)">
+                      {{ skuInstanceCache[row.skuId] ? '刷新' : '加载' }}账面实例
+                    </el-button>
+                  </div>
+                  <div class="instance-scroll">
+                    <div v-for="(inst, idx) in (actualInstanceMap[row.skuId] || [])" :key="inst.instanceCode || inst._key" class="instance-item">
+                      <el-input v-if="inst._isManual" v-model="inst.instanceCode" placeholder="实例编码" size="small"
+                                style="width:180px" :disabled="isViewMode || !canEdit" />
+                      <span v-else class="instance-code">{{ inst.instanceCode }}</span>
+                      <el-input v-model="inst.remark" placeholder="备注" size="small"
+                                style="width:150px;margin-left:8px" :disabled="isViewMode || !canEdit" />
+                      <el-button v-if="!isViewMode && canEdit" link type="danger" size="small"
+                                 style="margin-left:auto" @click="removeActualInstance(row, idx)">
+                        <el-icon><Delete /></el-icon>
+                      </el-button>
+                    </div>
+                    <el-empty v-if="!getActualInstanceCount(row)" description="无实际实例" :image-size="40" />
+                  </div>
+                  <el-button v-if="!isViewMode && canEdit" link type="primary" size="small"
+                             @click="addActualInstance(row)" class="mt5">
+                    + 添加实际实例
+                  </el-button>
                 </div>
               </div>
             </div>
@@ -186,12 +191,9 @@
             <el-statistic :value="Number(row.quantity)" :precision="0" />
           </template>
         </el-table-column>
-        <el-table-column label="实际数量" width="160">
+        <el-table-column label="实际数量" align="right" width="110">
           <template #default="{ row }">
-            <el-input-number v-if="!isViewMode && canEdit"
-              v-model="row.checkQuantity" placeholder="实际数量" :min="0"
-              @change="handleChangeQuantity(row)" />
-            <el-statistic v-else :value="Number(row.checkQuantity || 0)" :precision="0" />
+            <el-statistic :value="getCheckQuantity(row)" :precision="0" />
           </template>
         </el-table-column>
         <el-table-column label="盈亏数" align="right" width="110">
@@ -239,7 +241,7 @@
 import { computed, getCurrentInstance, onMounted, reactive, ref, toRefs, watch } from "vue";
 import { addCheckOrder, getCheckOrder, updateCheckOrder, startCheck, getInstancesBySku, check } from "@/api/wms/checkOrder";
 import { ElMessage } from "element-plus";
-import { Warning, Plus } from "@element-plus/icons-vue";
+import { Delete } from "@element-plus/icons-vue";
 import { useRoute, useRouter } from "vue-router";
 import { useWmsStore } from '@/store/modules/wms'
 import RackSelect from "@/views/components/RackSelect.vue";
@@ -279,10 +281,10 @@ const { form, applyRules, rules } = toRefs(data);
 // SKU实例懒加载缓存
 const skuInstanceCache = reactive({});
 const skuInstanceLoading = reactive({});
-// 盘盈时手动添加的实例
-const gainInstanceMap = reactive({});
-// 已保存的盘亏实例（从后端详情恢复）
-const lossInstanceMap = reactive({});
+// 实际实例（右侧面板，用户可增删）
+const actualInstanceMap = reactive({});
+// 从后端详情恢复时的暂存数据（等待账面实例加载后组装 actualInstanceMap）
+const _pendingInstanceRestore = {};
 
 const close = () => {
   if (route.query.returnFullPath) { proxy?.$tab.closeOpenPage(route.query.returnFullPath); return; }
@@ -351,12 +353,15 @@ const doStartCheck = () => {
   }).finally(() => starting.value = false);
 };
 
-// ===== 数量变更 =====
-const handleChangeQuantity = (row) => {
-  // 触发响应式更新
+// ===== 数量计算 =====
+// 实际数量 = 右侧实际实例列表的长度（若未加载则回退到 row.checkQuantity）
+const getCheckQuantity = (row) => {
+  if (actualInstanceMap[row.skuId]) return actualInstanceMap[row.skuId].length;
+  if (skuInstanceCache[row.skuId]) return skuInstanceCache[row.skuId].length; // 默认等于账面
+  return Number(row.checkQuantity || 0);
 };
 
-const getDiff = (row) => Number(row.checkQuantity || 0) - Number(row.quantity || 0);
+const getDiff = (row) => getCheckQuantity(row) - Number(row.quantity || 0);
 
 const lossCount = computed(() => form.value.details?.filter(r => getDiff(r) < 0).length || 0);
 const gainCount = computed(() => form.value.details?.filter(r => getDiff(r) > 0).length || 0);
@@ -370,6 +375,14 @@ const detailRowClass = ({ row }) => {
   return '';
 };
 
+// ===== 展开行自动加载 =====
+const onExpandChange = (row, expandedRows) => {
+  const isExpanded = expandedRows.some(r => r.skuId === row.skuId);
+  if (isExpanded && !skuInstanceCache[row.skuId] && !skuInstanceLoading[row.skuId]) {
+    loadInstances(row);
+  }
+};
+
 // ===== 实例懒加载 =====
 const loadInstances = async (row) => {
   if (skuInstanceLoading[row.skuId]) return;
@@ -378,46 +391,59 @@ const loadInstances = async (row) => {
     const res = await getInstancesBySku(form.value.id, row.skuId);
     if (res.code === 200) {
       skuInstanceCache[row.skuId] = res.data || [];
+      // 若有待恢复的实例数据，重建 actualInstanceMap
+      if (_pendingInstanceRestore[row.skuId]) {
+        const { loss, gain } = _pendingInstanceRestore[row.skuId];
+        const lossCodes = new Set(loss.map(l => l.instanceCode));
+        // 实际 = 账面 - 盘亏 + 盘盈
+        actualInstanceMap[row.skuId] = [
+          ...(res.data || [])
+            .filter(inst => !lossCodes.has(inst.instanceCode))
+            .map(inst => ({
+              instanceCode: inst.instanceCode,
+              itemName: inst.itemSku?.itemName || '',
+              remark: '',
+            })),
+          ...gain.map(inst => ({
+            instanceCode: inst.instanceCode,
+            remark: inst.remark || '',
+            _isManual: true,
+            _key: inst.id || Date.now() + Math.random(),
+          })),
+        ];
+        delete _pendingInstanceRestore[row.skuId];
+      } else if (!actualInstanceMap[row.skuId]) {
+        // 若实际实例尚未初始化，默认复制账面实例
+        actualInstanceMap[row.skuId] = (res.data || []).map(inst => ({
+          instanceCode: inst.instanceCode,
+          itemName: inst.itemSku?.itemName || '',
+          remark: '',
+        }));
+      }
     }
   } finally {
     skuInstanceLoading[row.skuId] = false;
   }
 };
 
-const getLossInstances = (row) => {
-  // 优先使用已保存的盘亏实例（已完成盘点单回显）
-  if (lossInstanceMap[row.skuId]) {
-    return lossInstanceMap[row.skuId];
-  }
-  // 编辑中的盘点单：从账面实例中排除已扫描的 = 盘亏实例
-  const bookInstances = skuInstanceCache[row.skuId] || [];
-  const scannedCodes = new Set(row.scannedInstanceCodes || []);
-  return bookInstances
-    .filter(inst => !scannedCodes.has(inst.instanceCode))
-    .map(inst => ({
-      instanceCode: inst.instanceCode,
-      instanceItemName: inst.itemSku?.itemName || '',
-      remark: inst._remark || '',
-    }));
-};
+// ===== 实际实例操作 =====
+const getBookInstanceCount = (row) => (skuInstanceCache[row.skuId] || []).length;
+const getActualInstanceCount = (row) => (actualInstanceMap[row.skuId] || []).length;
 
-const getGainInstances = (row) => {
-  // 返回手动添加的盘盈实例
-  return gainInstanceMap[row.skuId] || [];
-};
-
-// 判断某行是否有可用的实例数据（已保存或已加载）
-const hasInstancesData = (row) => {
-  return skuInstanceCache[row.skuId] || lossInstanceMap[row.skuId] || gainInstanceMap[row.skuId];
-};
-
-const addGainInstance = (row) => {
-  if (!gainInstanceMap[row.skuId]) gainInstanceMap[row.skuId] = [];
-  gainInstanceMap[row.skuId].push({
+const addActualInstance = (row) => {
+  if (!actualInstanceMap[row.skuId]) actualInstanceMap[row.skuId] = [];
+  actualInstanceMap[row.skuId].push({
     instanceCode: '',
     remark: '',
+    _isManual: true,
     _key: Date.now() + Math.random(),
   });
+};
+
+const removeActualInstance = (row, index) => {
+  if (actualInstanceMap[row.skuId]) {
+    actualInstanceMap[row.skuId].splice(index, 1);
+  }
 };
 
 // ===== 保存/完成/作废 =====
@@ -431,7 +457,7 @@ const save = async () => {
 const doSave = (checkOrderStatus) => {
   const details = (form.value.details || []).map(it => ({
     id: it.id, checkOrderId: form.value.id, skuId: it.skuId,
-    quantity: it.quantity, checkQuantity: it.checkQuantity,
+    quantity: it.quantity, checkQuantity: getCheckQuantity(it),
     warehouseId: form.value.warehouseId, areaId: it.areaId, rackId: it.rackId,
   }));
   const params = {
@@ -466,20 +492,15 @@ const doCheck = async () => {
   // 构建详情（含实例差异信息）
   const details = (form.value.details || []).map(it => {
     const diff = getDiff(it);
-    // 收集实例编码
-    let scannedCodes = it.scannedInstanceCodes || [];
-    // 盘亏：从账面实例中排除已扫描的 = 盘亏实例
-    // 盘盈：收集手动添加的盘盈实例编码
-    const gainInstances = gainInstanceMap[it.skuId] || [];
-    const gainCodes = gainInstances.filter(g => g.instanceCode).map(g => g.instanceCode);
-    // 合并：已扫描的 = 账面实例 - 盘亏 + 盘盈
-    // 对于Web端手动填写：scannedCodes需要由用户从展开区域标记
+    // 从实际实例列表收集实例编码
+    const actualInstances = actualInstanceMap[it.skuId] || [];
+    const scannedCodes = actualInstances.filter(i => i.instanceCode).map(i => i.instanceCode);
     return {
       id: it.id, checkOrderId: form.value.id, skuId: it.skuId,
-      quantity: it.quantity, checkQuantity: it.checkQuantity,
+      quantity: it.quantity, checkQuantity: getCheckQuantity(it),
       profitAndLoss: diff, differenceQuantity: diff,
       warehouseId: form.value.warehouseId, areaId: it.areaId, rackId: it.rackId,
-      scannedInstanceCodes: [...scannedCodes, ...gainCodes],
+      scannedInstanceCodes: scannedCodes,
     };
   });
   const params = {
@@ -512,24 +533,22 @@ const loadDetail = (id) => {
         }));
       }
       form.value = { ...data };
-      // 恢复盘盈/盘亏实例
+      // 恢复实际实例：从已保存的实例数据重建
+      // 实际实例 = 账面实例 - 盘亏实例 + 盘盈实例
       if (data.instances && data.instances.length) {
+        // 按skuId分组
+        const skuInstanceData = {};
         data.instances.forEach(inst => {
-          if (inst.resultType === 'gain') {
-            if (!gainInstanceMap[inst.skuId]) gainInstanceMap[inst.skuId] = [];
-            gainInstanceMap[inst.skuId].push({
-              instanceCode: inst.instanceCode,
-              remark: inst.remark || '',
-              _key: inst.id || Date.now(),
-            });
-          } else if (inst.resultType === 'loss') {
-            if (!lossInstanceMap[inst.skuId]) lossInstanceMap[inst.skuId] = [];
-            lossInstanceMap[inst.skuId].push({
-              instanceCode: inst.instanceCode,
-              instanceItemName: inst.itemSku?.itemName || inst.itemName || '',
-              remark: inst.remark || '',
-            });
+          if (!skuInstanceData[inst.skuId]) skuInstanceData[inst.skuId] = { loss: [], gain: [] };
+          if (inst.resultType === 'loss') {
+            skuInstanceData[inst.skuId].loss.push(inst);
+          } else if (inst.resultType === 'gain') {
+            skuInstanceData[inst.skuId].gain.push(inst);
           }
+        });
+        // 记录到临时变量，等 loadInstances 加载账面实例后再组装 actualInstanceMap
+        Object.keys(skuInstanceData).forEach(skuId => {
+          _pendingInstanceRestore[skuId] = skuInstanceData[skuId];
         });
       }
     }
@@ -551,6 +570,22 @@ onMounted(() => {
 }
 .instance-panel {
   padding: 12px 20px;
+}
+.instance-panel-empty {
+  padding: 20px; text-align: center;
+}
+.instance-dual-panel {
+  display: flex; gap: 16px;
+}
+.instance-side-panel {
+  flex: 1; min-width: 0;
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 6px; padding: 10px 12px;
+  background: var(--el-fill-color-lighter);
+}
+.instance-scroll {
+  max-height: 280px; overflow-y: auto;
+  display: flex; flex-direction: column; gap: 6px;
 }
 .section-title {
   display: flex; align-items: center; gap: 12px; margin-bottom: 8px;

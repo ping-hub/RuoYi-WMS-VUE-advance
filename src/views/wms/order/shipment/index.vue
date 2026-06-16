@@ -58,61 +58,48 @@
       </el-row>
 
       <el-table v-loading="loading" :data="shipmentOrderList" border class="mt20" empty-text="暂无出库单">
-        <el-table-column label="单号" align="left" width="150">
+        <el-table-column label="单号" align="left" min-width="130">
           <template #default="{ row }">
             <div>{{ row.shipmentOrderNo }}</div>
           </template>
         </el-table-column>
-        <el-table-column label="出库类型" width="95" align="left" prop="shipmentOrderType">
+        <el-table-column label="出库类型" min-width="85" align="left" prop="shipmentOrderType">
           <template #default="{ row }">
             <dict-tag :options="wms_shipment_type" :value="row.shipmentOrderType" />
           </template>
         </el-table-column>
-        <el-table-column label="仓库/库区" align="left" width="110">
+        <el-table-column label="仓库" align="left" min-width="90">
           <template #default="{ row }">
-            <div>仓库：{{ useWmsStore().warehouseMap.get(row.warehouseId)?.warehouseName }}</div>
-            <div v-if="row.areaId">库区：{{ useWmsStore().areaMap.get(row.areaId)?.areaName }}</div>
+            {{ useWmsStore().warehouseMap.get(row.warehouseId)?.warehouseName || '-' }}
           </template>
         </el-table-column>
-        <el-table-column label="单据信息" align="left" min-width="150">
+        <el-table-column label="库区" align="left" min-width="90">
           <template #default="{ row }">
-            <div v-if="row.basisNo">调拨根据：{{ row.basisNo }}</div>
-            <div v-if="row.receiveUnit">收物单位：{{ row.receiveUnit }}</div>
-            <div v-if="row.noticeOrg">通知机关：{{ row.noticeOrg }}</div>
-            <div v-if="row.dispatchMode">调拨方式：{{ row.dispatchMode }}</div>
-            <div v-if="row.shipmentDate">出库日期：{{ parseTime(row.shipmentDate, '{y}-{m}-{d}') }}</div>
+            {{ row.areaId ? useWmsStore().areaMap.get(row.areaId)?.areaName : '-' }}
           </template>
         </el-table-column>
-        <el-table-column label="出库状态" align="center" prop="shipmentOrderStatus" width="80">
+        <el-table-column label="出库日期" align="left" min-width="100">
+          <template #default="{ row }">
+            {{ row.shipmentDate ? parseTime(row.shipmentDate, '{y}-{m}-{d}') : '-' }}
+          </template>
+        </el-table-column>
+        <el-table-column label="出库状态" align="center" prop="shipmentOrderStatus" min-width="80">
           <template #default="{ row }">
             <dict-tag :options="wms_shipment_status" :value="row.shipmentOrderStatus" />
           </template>
         </el-table-column>
-        <el-table-column label="数量/金额(元)" align="left"  width="110">
+        <el-table-column label="数量" align="left" min-width="70">
           <template #default="{ row }">
-            <div class="flex-space-between">
-              <span>数量：</span>
-              <el-statistic :value="Number(row.totalQuantity)" :precision="0"/>
-            </div>
-            <div class="flex-space-between" v-if="row.receivableAmount || row.receivableAmount === 0">
-              <span>金额：</span>
-              <el-statistic :value="Number(row.receivableAmount)" :precision="2"/>
-            </div>
+            <el-statistic :value="Number(row.totalQuantity)" :precision="0"/>
           </template>
         </el-table-column>
-        <el-table-column label="创建/操作" align="left"  width="120">
+        <el-table-column label="金额(元)" align="left" min-width="90">
           <template #default="{ row }">
-            <div>创建：{{ row.createBy }}</div>
-            <div v-if="row.updateBy">操作：{{ row.updateBy }}</div>
+            <el-statistic v-if="row.receivableAmount || row.receivableAmount === 0" :value="Number(row.receivableAmount)" :precision="2"/>
+            <span v-else>-</span>
           </template>
         </el-table-column>
-        <el-table-column label="创建时间/操作时间" align="left" width="145">
-          <template #default="{ row }">
-            <div>创建：{{ parseTime(row.createTime, '{mm}-{dd} {hh}:{ii}') }}</div>
-            <div>操作：{{ parseTime(row.updateTime, '{mm}-{dd} {hh}:{ii}') }}</div>
-          </template>
-        </el-table-column>
-        <el-table-column label="备注" prop="remark" />
+        <el-table-column label="备注" prop="remark" min-width="100" show-overflow-tooltip />
         <el-table-column label="操作" align="right" class-name="small-padding fixed-width" width="120">
           <template #default="scope">
             <el-popover

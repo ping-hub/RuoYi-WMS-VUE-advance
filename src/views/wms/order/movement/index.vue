@@ -62,44 +62,44 @@
                 empty-text="暂无调拨单"
                 cell-class-name="vertical-top-cell"
       >
-        <el-table-column label="单号" align="left" min-width="180">
+        <el-table-column label="单号" align="left" min-width="120">
           <template #default="{ row }">
             <div>{{ row.movementOrderNo }}</div>
           </template>
         </el-table-column>
-        <el-table-column label="调拨信息" align="left" min-width="240">
+        <el-table-column label="源仓库" align="left" min-width="85">
           <template #default="{ row }">
-            <div v-if="row.dispatchBasis">依据：{{ row.dispatchBasis }}</div>
-            <div v-if="row.movementType">类型：{{ proxy.selectDictLabel(wms_movement_type, row.movementType) }}</div>
-            <div v-if="row.dispatchMode">方式：{{ row.dispatchMode }}</div>
-            <div v-if="row.dispatchDate">调拨日期：{{ parseTime(row.dispatchDate, '{y}-{m}-{d}') }}</div>
+            {{ wmsStore.warehouseMap.get(row.sourceWarehouseId)?.warehouseName || '-' }}
           </template>
         </el-table-column>
-        <el-table-column label="原位置" align="left" width="120">
+        <el-table-column label="源库区" align="left" min-width="85">
           <template #default="{ row }">
-            <div>仓库：{{ wmsStore.warehouseMap.get(row.sourceWarehouseId)?.warehouseName }}</div>
-            <div v-if="row.sourceAreaId">库区：{{ wmsStore.areaMap.get(row.sourceAreaId)?.areaName }}</div>
+            {{ row.sourceAreaId ? wmsStore.areaMap.get(row.sourceAreaId)?.areaName : '-' }}
           </template>
         </el-table-column>
-        <el-table-column label="目标位置" align="left" width="120">
+        <el-table-column label="目标仓库" align="left" min-width="85">
           <template #default="{ row }">
-            <div>仓库：{{ wmsStore.warehouseMap.get(row.targetWarehouseId)?.warehouseName }}</div>
-            <div v-if="row.targetAreaId">库区：{{ wmsStore.areaMap.get(row.targetAreaId)?.areaName }}</div>
+            {{ wmsStore.warehouseMap.get(row.targetWarehouseId)?.warehouseName || '-' }}
           </template>
         </el-table-column>
-        <el-table-column label="调拨状态" align="center" prop="movementOrderStatus" width="100">
+        <el-table-column label="目标库区" align="left" min-width="85">
+          <template #default="{ row }">
+            {{ row.targetAreaId ? wmsStore.areaMap.get(row.targetAreaId)?.areaName : '-' }}
+          </template>
+        </el-table-column>
+        <el-table-column label="调拨状态" align="center" prop="movementOrderStatus" min-width="85">
           <template #default="{ row }">
             <dict-tag :options="wms_movement_status" :value="row.movementOrderStatus" />
           </template>
         </el-table-column>
-        <el-table-column label="数量" align="left">
+        <el-table-column label="数量" align="left" min-width="65">
           <template #default="{ row }">
             <div class="flex-space-between">
               <el-statistic :value="Number(row.totalQuantity)" :precision="0"/>
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="备注" prop="remark" />
+        <el-table-column label="备注" prop="remark" min-width="80" show-overflow-tooltip />
         <el-table-column label="操作" align="right" class-name="small-padding fixed-width" width="120">
           <template #default="scope">
             <div>

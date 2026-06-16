@@ -234,22 +234,22 @@
               </template>
             </el-popover>
           </div>
-          <el-table :data="form.details" border empty-text="暂无调拨明细">
-            <el-table-column label="器材实例编码" prop="instanceCode" min-width="180" show-overflow-tooltip />
-            <el-table-column label="器材信息" min-width="150">
-              <template #default="scope">
-                <div>{{ scope.row.itemName || scope.row.itemSku?.item?.itemName || '-' }}</div>
-                <div v-if="scope.row.itemCode || scope.row.itemSku?.item?.itemCode" class="sub-text">器材编码：{{ scope.row.itemCode || scope.row.itemSku?.item?.itemCode }}</div>
-                <div v-if="scope.row.skuName || scope.row.itemSku?.skuName" class="sub-text">规格型号：{{ scope.row.skuName || scope.row.itemSku?.skuName }}</div>
-                <div v-if="scope.row.productIdentifier || scope.row.itemSku?.productIdentifier" class="sub-text">产品标识：{{ scope.row.productIdentifier || scope.row.itemSku?.productIdentifier }}</div>
-                <div v-if="scope.row.qualityGrade || scope.row.itemSku?.qualityGrade" class="sub-text">质量等级：{{ scope.row.qualityGrade || scope.row.itemSku?.qualityGrade }}</div>
+          <el-table
+            :data="form.details"
+            border
+            empty-text="暂无调拨明细"
+            @row-click="handleDetailRowClick"
+            style="cursor: pointer"
+          >
+            <el-table-column label="器材实例编码" prop="instanceCode" min-width="160" show-overflow-tooltip />
+            <el-table-column label="器材名称" min-width="140">
+              <template #default="{ row }">
+                <span>{{ row.itemName || row.itemSku?.item?.itemName || '-' }}</span>
               </template>
             </el-table-column>
-            <el-table-column label="源位置" min-width="180">
+            <el-table-column label="源货位" min-width="120">
               <template #default="{ row }">
-                <div>库区：{{ row.sourceAreaName || '-' }}</div>
-                <div class="table-tip">货架：{{ row.sourceRackName || '-' }}</div>
-                <div class="table-tip">货位：{{ row.sourceLocationName || '-' }}</div>
+                <span>{{ row.sourceLocationName || '-' }}</span>
               </template>
             </el-table-column>
             <el-table-column label="目标位置" min-width="260">
@@ -266,36 +266,48 @@
                 </div>
               </template>
             </el-table-column>
-            <el-table-column label="单价" prop="unitPrice" width="180">
-              <template #default="{ row }">
-                <el-input-number v-model="row.unitPrice" :precision="2" :min="0" :controls="false" :disabled="isViewMode" @change="handleDetailChange(row)" />
-              </template>
-            </el-table-column>
-            <el-table-column label="总价" prop="lineAmount" width="160">
-              <template #default="{ row }">
-                <el-input-number v-model="row.lineAmount" :precision="2" :controls="false" disabled />
-              </template>
-            </el-table-column>
-            <el-table-column label="调拨数量" prop="quantity" align="right" width="110">
+            <el-table-column label="调拨数量" prop="quantity" align="right" width="100">
               <template #default="{ row }">
                 <el-statistic :value="Number(row.quantity || 0)" :precision="0"/>
               </template>
             </el-table-column>
-            <el-table-column label="备注" width="180">
+            <el-table-column label="备注" min-width="140">
               <template #default="{ row }">
                 <el-input v-model="row.remark" placeholder="请输入备注" :disabled="isViewMode" />
               </template>
             </el-table-column>
-            <el-table-column label="操作" width="100" align="right" fixed="right">
+            <el-table-column v-if="!isViewMode" label="操作" width="88" align="right" fixed="right">
               <template #default="scope">
-                <el-button v-if="!isViewMode" icon="Delete" type="danger" plain size="small"
-                           @click="handleDeleteDetail(scope.row, scope.$index)" link>删除
+                <el-button icon="Delete" type="danger" plain size="small"
+                           @click.stop="handleDeleteDetail(scope.row, scope.$index)" link>删除
                 </el-button>
               </template>
             </el-table-column>
           </el-table>
         </div>
       </el-card>
+      <!-- 器材详情弹窗（点击明细行触发） -->
+      <el-dialog v-model="itemDetailDialog.visible" title="器材详情" width="520px" append-to-body>
+        <div v-loading="itemDetailDialog.loading">
+          <el-descriptions v-if="itemDetailDialog.data" :column="2" border>
+            <el-descriptions-item label="器材名称" :span="2">{{ itemDetailDialog.data.itemName || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="器材编码">{{ itemDetailDialog.data.itemCode || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="规格型号">{{ itemDetailDialog.data.skuName || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="计量单位">{{ itemDetailDialog.data.unit || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="产品标识">{{ itemDetailDialog.data.productIdentifier || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="质量等级">{{ itemDetailDialog.data.qualityGrade || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="实例编码">{{ itemDetailDialog.data.instanceCode || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="源库区">{{ itemDetailDialog.data.sourceAreaName || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="源货架">{{ itemDetailDialog.data.sourceRackName || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="源货位" :span="2">{{ itemDetailDialog.data.sourceLocationName || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="状态">{{ itemDetailDialog.data.instanceStatus || '-' }}</el-descriptions-item>
+          </el-descriptions>
+          <el-empty v-else-if="!itemDetailDialog.loading" description="暂无器材详情" />
+        </div>
+        <template #footer>
+          <el-button @click="itemDetailDialog.visible = false">关闭</el-button>
+        </template>
+      </el-dialog>
       <el-dialog v-model="itemInstanceDialog.visible" title="选择器材实例" width="1100px" append-to-body>
         <el-form :inline="true" :model="itemInstanceDialog.query" label-width="76px" class="item-instance-search-form">
           <el-form-item label="器材名称">
@@ -396,7 +408,8 @@ import {useRoute} from "vue-router";
 import {useWmsStore} from '@/store/modules/wms'
 import {numSub} from '@/utils/ruoyi'
 import {listInventoryDetailNoPage} from "@/api/wms/inventoryDetail";
-import {listItemInstance} from "@/api/wms/itemInstance";
+import {listItemInstance, getItemInstanceByCode} from "@/api/wms/itemInstance";
+import {getItem} from "@/api/wms/item";
 import RackSelect from "@/views/components/RackSelect.vue";
 import LocationSelect from "@/views/components/LocationSelect.vue";
 
@@ -451,6 +464,84 @@ const itemInstanceDialog = reactive({
     skuName: undefined
   }
 })
+
+// 器材详情弹窗（点击明细行触发）
+const itemDetailDialog = reactive({
+  visible: false,
+  loading: false,
+  data: null
+})
+
+const handleDetailRowClick = async (row) => {
+  itemDetailDialog.visible = true
+  itemDetailDialog.loading = true
+  itemDetailDialog.data = null
+  try {
+    if (row.instanceCode) {
+      try {
+        const res = await getItemInstanceByCode(row.instanceCode)
+        if (res.data) {
+          itemDetailDialog.data = {
+            itemName: res.data.itemName ?? row.itemName,
+            itemCode: res.data.itemCode ?? row.itemCode,
+            skuName: res.data.skuName ?? row.skuName,
+            unit: res.data.unit ?? row.unit,
+            productIdentifier: res.data.productIdentifier ?? row.productIdentifier,
+            qualityGrade: res.data.qualityGrade ?? row.qualityGrade,
+            instanceCode: res.data.instanceCode ?? row.instanceCode,
+            sourceAreaName: row.sourceAreaName ?? '-',
+            sourceRackName: row.sourceRackName ?? '-',
+            sourceLocationName: row.sourceLocationName ?? '-',
+            instanceStatus: res.data.instanceStatus ?? '-'
+          }
+          return
+        }
+      } catch (e) {
+        // fallback
+      }
+    }
+    if (row.skuId) {
+      try {
+        const res = await getItem(row.skuId)
+        if (res.data) {
+          itemDetailDialog.data = {
+            itemName: res.data.itemName ?? row.itemName,
+            itemCode: res.data.itemCode ?? row.itemCode,
+            skuName: res.data.skuName ?? row.skuName,
+            unit: res.data.unit ?? row.unit,
+            productIdentifier: res.data.productIdentifier ?? row.productIdentifier,
+            qualityGrade: res.data.qualityGrade ?? row.qualityGrade,
+            instanceCode: row.instanceCode,
+            sourceAreaName: row.sourceAreaName ?? '-',
+            sourceRackName: row.sourceRackName ?? '-',
+            sourceLocationName: row.sourceLocationName ?? '-',
+            instanceStatus: '-'
+          }
+          return
+        }
+      } catch (e) {
+        // fallback
+      }
+    }
+    itemDetailDialog.data = {
+      itemName: row.itemName ?? row.itemSku?.item?.itemName,
+      itemCode: row.itemCode ?? row.itemSku?.item?.itemCode,
+      skuName: row.skuName ?? row.itemSku?.skuName,
+      unit: row.unit ?? row.itemSku?.item?.unit,
+      productIdentifier: row.productIdentifier ?? row.itemSku?.productIdentifier,
+      qualityGrade: row.qualityGrade ?? row.itemSku?.qualityGrade,
+      instanceCode: row.instanceCode,
+      sourceAreaName: row.sourceAreaName ?? '-',
+      sourceRackName: row.sourceRackName ?? '-',
+      sourceLocationName: row.sourceLocationName ?? '-',
+      instanceStatus: '-'
+    }
+  } catch (e) {
+    itemDetailDialog.data = null
+  } finally {
+    itemDetailDialog.loading = false
+  }
+}
 const data = reactive({
   form: {...initFormData},
   rules: {

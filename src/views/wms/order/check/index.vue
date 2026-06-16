@@ -52,43 +52,42 @@
                 empty-text="暂无盘点单"
                 cell-class-name="vertical-top-cell"
       >
-        <el-table-column label="单号" align="left" prop="checkOrderNo" min-width="120" />
-        <el-table-column label="盘点范围" align="left" min-width="150">
-          <template #default="{ row }">
-            <div>仓库：{{ useWmsStore().warehouseMap.get(row.warehouseId)?.warehouseName }}</div>
-            <div v-if="row.areaId">库区：{{ useWmsStore().areaMap.get(row.areaId)?.areaName }}</div>
-            <div v-if="row.rackId">货架：{{ getRackName(row.rackId) }}</div>
-          </template>
-        </el-table-column>
-        <el-table-column label="范围类型" align="left" min-width="110">
+        <el-table-column label="单号" align="left" prop="checkOrderNo" min-width="110" />
+        <el-table-column label="范围类型" align="left" width="85">
           <template #default="{ row }">
             <span v-if="row.checkScopeType">{{ proxy.selectDictLabel(wms_check_scope_type, row.checkScopeType) }}</span>
             <span v-else>-</span>
           </template>
         </el-table-column>
-        <el-table-column label="盘点日期" align="left" min-width="140">
+        <el-table-column label="盘点范围" align="left" min-width="105">
+          <template #default="{ row }">
+            <span v-if="row.rackId">{{ getRackName(row.rackId) }}</span>
+            <span v-else-if="row.areaId">{{ useWmsStore().areaMap.get(row.areaId)?.areaName }}</span>
+            <span v-else>{{ useWmsStore().warehouseMap.get(row.warehouseId)?.warehouseName || '-' }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="盘点日期" align="left" min-width="105">
           <template #default="{ row }">
             <span>{{ row.checkDate ? parseTime(row.checkDate, '{y}-{m}-{d} {h}:{i}') : '-' }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="盘点人/复核人" align="left" min-width="140">
+        <el-table-column label="盘点人" align="left" min-width="85">
           <template #default="{ row }">
-            <div>盘点人：{{ row.checkerName || '-' }}</div>
-            <div class="sub-text">复核人：{{ row.reviewerName || '-' }}</div>
+            {{ row.checkerName || '-' }}
           </template>
         </el-table-column>
-        <el-table-column label="盘点状态" align="center" prop="checkOrderStatus" width="120">
+        <el-table-column label="盘点状态" align="center" prop="checkOrderStatus" min-width="85">
           <template #default="{ row }">
             <dict-tag :options="wms_check_status" :value="row.checkOrderStatus" />
           </template>
         </el-table-column>
-        <el-table-column label="盈亏数" align="center" width="100">
+        <el-table-column label="盈亏数" align="center" min-width="75">
           <template #default="{ row }">
             <el-statistic :value="Number(row.checkOrderTotal)" :precision="0"/>
           </template>
         </el-table-column>
-        <el-table-column label="备注" prop="remark" min-width="120" show-overflow-tooltip />
-        <el-table-column label="操作" align="right" class-name="small-padding fixed-width" width="180">
+        <el-table-column label="备注" prop="remark" min-width="100" show-overflow-tooltip />
+        <el-table-column label="操作" align="right" class-name="small-padding fixed-width" width="150">
           <template #default="scope">
             <div class="table-actions">
               <!-- 待盘点：去盘点 / 修改 / 删除 -->

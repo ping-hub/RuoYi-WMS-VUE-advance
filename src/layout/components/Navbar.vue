@@ -8,7 +8,7 @@
       <div class="avatar-container">
         <el-dropdown @command="handleCommand" class="right-menu-item hover-effect" trigger="click">
           <div class="avatar-wrapper">
-            <img :src="userStore.avatar" class="user-avatar" />
+            <span class="user-name">{{ userStore.nickName || userStore.name }}</span>
             <el-icon><caret-bottom /></el-icon>
           </div>
           <template #dropdown>
@@ -146,19 +146,21 @@ function setLayout() {
       .avatar-wrapper {
         margin-top: 5px;
         position: relative;
+        display: flex;
+        align-items: center;
+        height: 40px;
 
-        .user-avatar {
+        .user-name {
           cursor: pointer;
-          width: 40px;
-          height: 40px;
-          border-radius: 10px;
+          font-size: 16px;
+          font-weight: 500;
+          color: #303133;
+          margin-right: 4px;
         }
 
         i {
           cursor: pointer;
-          position: absolute;
-          right: -20px;
-          top: 25px;
+          position: static;
           font-size: 12px;
         }
       }

@@ -31,112 +31,53 @@
     </el-card>
 
     <el-card class="mt20">
-      <div class="item-layout">
-        <div class="category-panel">
-          <div class="panel-header">
-            <span class="panel-title">器材分类</span>
-            <el-button type="primary" plain icon="Plus" @click="handleAddType(false)">新增分类</el-button>
-          </div>
-          <el-tree
-            :data="categoryTreeWithRoot"
-            :props="{ value: 'id', label: 'label', children: 'children' }"
-            node-key="id"
-            default-expand-all
-            highlight-current
-            current-node-key="-1"
-            draggable
-            :allow-drop="collapse"
-            :expand-on-click-node="false"
-            @node-click="handleQueryType"
-            @node-drop="handleNodeDrop"
-          >
-            <template #default="{ node, data }">
-              <span class="custom-tree-node">
-                <span>{{ node.label }}</span>
-                <span>
-                  <el-button
-                    v-if="data.id !== -1 && node.level < 2"
-                    link
-                    type="primary"
-                    icon="Plus"
-                    style="font-size: 12px"
-                    @click.stop="append(data)"
-                  >新增子分类</el-button>
-                  <el-button
-                    v-if="data.id !== -1"
-                    link
-                    type="primary"
-                    icon="Edit"
-                    style="font-size: 12px"
-                    @click.stop="edit(node, data)"
-                  >修改</el-button>
-                  <el-button
-                    v-if="data.id !== -1"
-                    link
-                    type="primary"
-                    icon="Delete"
-                    style="font-size: 12px"
-                    @click.stop="remove(data)"
-                  >删除</el-button>
-                </span>
-              </span>
+      <div class="table-panel">
+        <div class="panel-header">
+          <span class="panel-title">器材管理</span>
+          <el-button type="primary" plain icon="Plus" @click="handleAdd" v-hasPermi="['wms:item:edit']">新增器材</el-button>
+        </div>
+
+        <el-table v-loading="loading" :data="itemList" border empty-text="暂无器材">
+          <el-table-column label="器材编码" prop="itemCode" min-width="120" show-overflow-tooltip />
+          <el-table-column label="器材名称" prop="itemName" min-width="140" show-overflow-tooltip />
+          <el-table-column label="规格信息" min-width="180" show-overflow-tooltip>
+            <template #default="{ row }">
+              <div v-if="row.sku?.length" class="sku-summary-cell">
+                <el-tag v-for="sku in row.sku" :key="sku.id || sku.skuName" class="mr6 mb6" type="info">
+                  {{ sku.skuName }}
+                </el-tag>
+              </div>
+              <span v-else>-</span>
             </template>
-          </el-tree>
-        </div>
+          </el-table-column>
+          <el-table-column label="器材类型" min-width="110" show-overflow-tooltip>
+            <template #default="{ row }">
+              <dict-tag :options="wms_equipment_type" :value="row.equipmentType" />
+            </template>
+          </el-table-column>
+          <el-table-column label="计量单位" prop="unit" min-width="100" show-overflow-tooltip />
+          <el-table-column label="启用状态" min-width="100">
+            <template #default="{ row }">
+              <dict-tag :options="wms_item_status" :value="row.status" />
+            </template>
+          </el-table-column>
+          <el-table-column label="备注" prop="remark" min-width="120" show-overflow-tooltip />
+          <el-table-column label="操作" align="right" width="260" fixed="right">
+            <template #default="{ row }">
+              <el-button link type="primary" icon="Printer" @click="handleBatchPrintQrCode(row)">批量打印二维码</el-button>
+              <el-button link type="primary" icon="Edit" @click="handleUpdate(row)" v-hasPermi="['wms:item:edit']">修改</el-button>
+              <el-button link type="primary" icon="Delete" @click="handleDelete(row)" v-hasPermi="['wms:item:edit']">删除</el-button>
+            </template>
+          </el-table-column>
+        </el-table>
 
-        <div class="table-panel">
-          <div class="panel-header">
-            <span class="panel-title">器材管理</span>
-            <el-button type="primary" plain icon="Plus" @click="handleAdd" v-hasPermi="['wms:item:edit']">新增器材</el-button>
-          </div>
-
-          <el-table v-loading="loading" :data="itemList" border empty-text="暂无器材">
-            <el-table-column label="器材编码" prop="itemCode" :width="100" show-overflow-tooltip />
-            <el-table-column label="器材名称" prop="itemName" :width="111" show-overflow-tooltip />
-            <el-table-column label="规格信息" :width="120" show-overflow-tooltip >
-              <template #default="{ row }">
-                <div v-if="row.sku?.length" class="sku-summary-cell">
-                  <el-tag v-for="sku in row.sku" :key="sku.id || sku.skuName" class="mr6 mb6" type="info">
-                    {{ sku.skuName }}
-                  </el-tag>
-                </div>
-                <span v-else>-</span>
-              </template>
-            </el-table-column>
-            <el-table-column label="器材类型" :width="getTableHeaderWidth('器材类型')" show-overflow-tooltip>
-              <template #default="{ row }">
-                <dict-tag :options="wms_equipment_type" :value="row.equipmentType" />
-              </template>
-            </el-table-column>
-            <el-table-column label="器材分类" :width="getTableHeaderWidth('器材分类')" show-overflow-tooltip>
-              <template #default="{ row }">
-                <div class="cell-ellipsis" :title="getCategoryName(resolveCategoryId(row))">{{ getCategoryName(resolveCategoryId(row)) }}</div>
-              </template>
-            </el-table-column>
-            <el-table-column label="计量单位" prop="unit" :width="getTableHeaderWidth('计量单位')" show-overflow-tooltip />
-            <el-table-column label="启用状态" :width="getTableHeaderWidth('启用状态')">
-              <template #default="{ row }">
-                <dict-tag :options="wms_item_status" :value="row.status" />
-              </template>
-            </el-table-column>
-            <el-table-column label="备注" prop="remark" :width="60" show-overflow-tooltip />
-            <el-table-column label="操作" align="right" width="260">
-              <template #default="{ row }">
-                <el-button link type="primary" icon="Printer" @click="handleBatchPrintQrCode(row)">批量打印二维码</el-button>
-                <el-button link type="primary" icon="Edit" @click="handleUpdate(row)" v-hasPermi="['wms:item:edit']">修改</el-button>
-                <el-button link type="primary" icon="Delete" @click="handleDelete(row)" v-hasPermi="['wms:item:edit']">删除</el-button>
-              </template>
-            </el-table-column>
-          </el-table>
-
-          <pagination
-            v-show="total > 0"
-            :total="total"
-            v-model:page="queryParams.pageNum"
-            v-model:limit="queryParams.pageSize"
-            @pagination="getList"
-          />
-        </div>
+        <pagination
+          v-show="total > 0"
+          :total="total"
+          v-model:page="queryParams.pageNum"
+          v-model:limit="queryParams.pageSize"
+          @pagination="getList"
+        />
       </div>
     </el-card>
 
@@ -340,7 +281,7 @@ import { computed, getCurrentInstance, nextTick, onMounted, reactive, ref, toRef
 import { useRoute } from 'vue-router';
 import { ElMessageBox } from 'element-plus';
 import { addItem, batchPrintItemQrCode, delItem, getItem, listItemPage, updateItem } from '@/api/wms/item';
-import { addItemCategory, delItemCategory, updateItemCategory, updateOrderNum } from '@/api/wms/itemCategory';
+import { addItemCategory, updateItemCategory } from '@/api/wms/itemCategory';
 import { useWmsStore } from '@/store/modules/wms';
 import { buildQrTscCommand, WssPrintClient } from '@/utils/wssPrintClient';
 
@@ -352,17 +293,6 @@ const { wms_equipment_type, wms_item_status, wms_item_sku_status } = proxy.useDi
   'wms_item_status',
   'wms_item_sku_status'
 );
-
-const getTableHeaderWidth = (label) => {
-  return [...label].reduce((total, char) => total + (/[^\x00-\xff]/.test(char) ? 14 : 8), 24);
-};
-
-const getSkuSummary = (skuList = []) => {
-  if (!skuList?.length) {
-    return '-';
-  }
-  return skuList.map(item => item.skuName).filter(Boolean).join('，') || '-';
-};
 
 const itemList = ref([]);
 const loading = ref(true);
@@ -475,15 +405,6 @@ const { form, queryParams, rules } = toRefs(data);
 const { form: categoryForm, rules: typeRules } = toRefs(categoryData);
 
 const categoryTreeOptions = computed(() => wmsStore.itemCategoryTreeList || []);
-const categoryTreeWithRoot = computed(() => {
-  return [
-    {
-      id: -1,
-      label: '全部',
-      children: categoryTreeOptions.value
-    }
-  ];
-});
 
 const resolveCategoryOption = (categoryId) => {
   if (categoryId === undefined || categoryId === null || categoryId === '') {
@@ -581,12 +502,6 @@ const resetQuery = () => {
   handleQuery();
 };
 
-const handleQueryType = (data) => {
-  queryParams.value.pageNum = 1;
-  queryParams.value.itemCategory = data.id === -1 ? undefined : data.id;
-  getList();
-};
-
 const handleAddType = (clearParent = false) => {
   resetType();
   categoryDialog.title = '新增器材分类';
@@ -594,52 +509,6 @@ const handleAddType = (clearParent = false) => {
   if (clearParent) {
     categoryForm.value.parentId = undefined;
   }
-};
-
-const append = (data) => {
-  resetType();
-  categoryDialog.title = '新增子分类';
-  categoryDialog.visible = true;
-  categoryForm.value.parentId = data.id;
-};
-
-const edit = (node, data) => {
-  resetType();
-  categoryDialog.title = '修改器材分类';
-  categoryDialog.visible = true;
-  categoryForm.value.id = data.id;
-  categoryForm.value.categoryName = data.label;
-  categoryForm.value.parentId = node.level > 1 ? node.parent.data.id : undefined;
-};
-
-const remove = async (data) => {
-  await proxy.$modal.confirm('确认删除分类【' + data.label + '】吗？');
-  await delItemCategory(data.id);
-  proxy.$modal.msgSuccess('删除成功');
-  await refreshCategoryData();
-  await getList();
-};
-
-const collapse = (draggingNode, dropNode, type) => {
-  if (draggingNode.data.id === -1) {
-    return false;
-  }
-  if (draggingNode.level === dropNode.level && draggingNode.parent.id === dropNode.parent.id) {
-    if (dropNode.data.id === -1) {
-      return type === 'next';
-    }
-    return type === 'prev' || type === 'next';
-  }
-  return false;
-};
-
-const handleNodeDrop = async (draggingNode, dropNode) => {
-  if (dropNode.level === 1) {
-    await updateOrderNum(dropNode.parent.data.filter(item => item.id !== -1));
-  } else {
-    await updateOrderNum(dropNode.parent.data.children);
-  }
-  await refreshCategoryData();
 };
 
 const handleAdd = () => {
@@ -927,20 +796,8 @@ const formatPrintSkuLabel = (sku) => {
 </script>
 
 <style scoped>
-.item-layout {
-  display: flex;
-  align-items: flex-start;
-  gap: 16px;
-}
-
-.category-panel {
-  width: 360px;
-  flex-shrink: 0;
-}
-
 .table-panel {
-  flex: 1;
-  min-width: 0;
+  width: 100%;
 }
 
 .panel-header {
@@ -953,19 +810,6 @@ const formatPrintSkuLabel = (sku) => {
 .panel-title {
   font-size: 16px;
   line-height: 16px;
-}
-
-.custom-tree-node {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 14px;
-  padding-right: 8px;
-}
-
-.el-tree-node__content {
-  height: 35px;
 }
 
 .sku-edit-card {
@@ -983,12 +827,6 @@ const formatPrintSkuLabel = (sku) => {
   align-items: center;
   justify-content: space-between;
   margin-bottom: 12px;
-}
-
-.cell-ellipsis {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .query-actions {
