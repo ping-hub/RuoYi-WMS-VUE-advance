@@ -4,12 +4,7 @@
     <div class="dashboard-header">
       <h1 class="dashboard-title">智慧仓储可视化看板</h1>
       <div class="header-time">{{ currentTime }}</div>
-      <button v-show="!exporting" class="export-btn" @click="exportImage">导出图片</button>
-      <button v-show="!exporting" class="fullscreen-btn" @click="toggleFullscreen" :title="isFullscreen ? '退出全屏' : '全屏展示'">
-        <svg v-if="!isFullscreen" viewBox="0 0 1024 1024" width="14" height="14"><path d="M192 192h192V128H128v256h64V192zM640 128v64h192v192h64V128H640zM192 640h-64v256h256v-64H192V640zM832 832H640v64h256V640h-64v192z" fill="currentColor"/></svg>
-        <svg v-else viewBox="0 0 1024 1024" width="14" height="14"><path d="M384 128v64H192v192h-64V128h256zM640 128h256v256h-64V192H640V128zM128 640h64v192h192v64H128V640zM832 640h64v256H640v-64h192V640z" fill="currentColor"/></svg>
-        {{ isFullscreen ? '退出全屏' : '全屏' }}
-      </button>
+      
     </div>
 
     <!-- 主体内容区 -->
@@ -49,7 +44,7 @@
           <div class="env-content">
             <div class="env-item">
               <div class="env-icon temp-icon">
-                <svg viewBox="0 0 1024 1024" width="28" height="28"><path d="M544 64h-64v544h-96l128 192 128-192h-96V64z" fill="#ff4d4f"/><rect x="480" y="128" width="64" height="320" fill="url(#tempGrad)"/><defs><linearGradient id="tempGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ff4d4f"/><stop offset="100%" stop-color="#2571e9"/></linearGradient></defs></svg>
+                <svg viewBox="0 0 1024 1024" width="72" height="72"><path d="M544 64h-64v544h-96l128 192 128-192h-96V64z" fill="#ff4d4f"/><rect x="480" y="128" width="64" height="320" fill="url(#tempGrad)"/><defs><linearGradient id="tempGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ff4d4f"/><stop offset="100%" stop-color="#2571e9"/></linearGradient></defs></svg>
               </div>
               <div class="env-info">
                 <div class="env-value">26℃</div>
@@ -58,7 +53,7 @@
             </div>
             <div class="env-item">
               <div class="env-icon humid-icon">
-                <svg viewBox="0 0 1024 1024" width="28" height="28"><path d="M512 64L320 448c0 106 86 192 192 192s192-86 192-192L512 64z" fill="url(#humidGrad)"/><defs><linearGradient id="humidGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#2571e9"/><stop offset="100%" stop-color="#00e7ff"/></linearGradient></defs></svg>
+                <svg viewBox="0 0 1024 1024" width="72" height="72"><path d="M512 64L320 448c0 106 86 192 192 192s192-86 192-192L512 64z" fill="url(#humidGrad)"/><defs><linearGradient id="humidGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#2571e9"/><stop offset="100%" stop-color="#00e7ff"/></linearGradient></defs></svg>
               </div>
               <div class="env-info">
                 <div class="env-value">46%</div>
@@ -81,30 +76,30 @@
         <div class="core-metrics">
           <div class="metric-card">
             <div class="metric-icon">
-              <svg viewBox="0 0 1024 1024" width="24" height="24"><path d="M192 192h640v64H192zM192 384h640v64H192zM192 576h640v64H192zM192 768h640v64H192z" fill="#fff"/></svg>
+              <svg viewBox="0 0 1024 1024" width="48" height="48"><path d="M192 192h640v64H192zM192 384h640v64H192zM192 576h640v64H192zM192 768h640v64H192z" fill="#fff"/></svg>
             </div>
             <div class="metric-value">4578</div>
             <div class="metric-label">总类</div>
           </div>
           <div class="metric-card">
             <div class="metric-icon">
-              <svg viewBox="0 0 1024 1024" width="24" height="24"><path d="M512 64l-64 128H256v64h128l-32 64H256v64h64l-96 192h64l96-192h64v192h128V384h64l96 192h64l-96-192h64v-64h-96l-32-64h128v-64H576L512 64z" fill="#fff"/></svg>
+              <svg viewBox="0 0 1024 1024" width="48" height="48"><path d="M512 64l-64 128H256v64h128l-32 64H256v64h64l-96 192h64l96-192h64v192h128V384h64l96 192h64l-96-192h64v-64h-96l-32-64h128v-64H576L512 64z" fill="#fff"/></svg>
             </div>
             <div class="metric-value">188888</div>
             <div class="metric-label">总价值</div>
           </div>
           <div class="metric-card">
             <div class="metric-icon">
-              <svg viewBox="0 0 1024 1024" width="24" height="24"><path d="M192 832V320h128v512H192zM384 832V192h128v640H384zM576 832V448h128v384H576zM768 832V256h128v576H768z" fill="#fff"/></svg>
+              <svg viewBox="0 0 1024 1024" width="48" height="48"><path d="M192 832V320h128v512H192zM384 832V192h128v640H384zM576 832V448h128v384H576zM768 832V256h128v576H768z" fill="#fff"/></svg>
             </div>
             <div class="metric-value">87138</div>
             <div class="metric-label">总数</div>
           </div>
         </div>
 
-        <!-- 物资种类及价值占比 -->
+        <!-- 物资种类占比 -->
         <div class="card card-category">
-          <div class="card-title">物资种类及价值占比</div>
+          <div class="card-title">物资种类占比</div>
           <div class="category-content">
             <div class="category-chart" ref="categoryChartRef"></div>
             <div class="category-table">
@@ -203,6 +198,8 @@ const tableData = ref([
   { category: 'B类', quantity: 299, value: 500 },
   { category: 'C类', quantity: 299, value: 500 },
   { category: 'D类', quantity: 299, value: 500 },
+  { category: 'E类', quantity: 299, value: 500 },
+  { category: 'F类', quantity: 299, value: 500 },
 ]);
 
 // 库存预警网格数据
@@ -236,7 +233,7 @@ const exportImage = async () => {
   await nextTick();
   try {
     const canvas = await html2canvas(containerRef.value, {
-      backgroundColor: '#000810',
+      backgroundColor: null,
       scale: 1,
       width: 1920,
       height: 1080,
@@ -265,7 +262,7 @@ const initCharts = () => {
     legend: {
       bottom: '2%', textStyle: { color: '#a0c4e8', fontSize: 18 },
       itemWidth: 10, itemHeight: 10,
-      data: ['A类','B类','C类','D类']
+      data: ['A类','B类','C类','D类','E类','F类']
     },
     series: [{
       type: 'pie', radius: ['35%', '65%'], center: ['50%', '45%'],
@@ -276,6 +273,8 @@ const initCharts = () => {
         { value: 2232, name: 'B类', itemStyle: { color: '#f97316' } },
         { value: 1234, name: 'C类', itemStyle: { color: '#22c55e' } },
         { value: 1234, name: 'D类', itemStyle: { color: '#a855f7' } },
+        { value: 1234, name: 'E类', itemStyle: { color: '#35e7beff' } },
+        { value: 1234, name: 'F类', itemStyle: { color: '#b8bf2cff' } },
       ]
     }]
   });
@@ -622,11 +621,11 @@ onUnmounted(() => {
 }
 
 .card-title {
-  font-size: 18px;
+  font-size: 24px;
   font-weight: 700;
   color: #00e7ff;
   letter-spacing: 2px;
-  padding-left: 10px;
+  padding-left: 16px;
   margin-bottom: 6px;
   flex-shrink: 0;
   text-shadow: 0 0 8px rgba(0,231,255,0.4);
@@ -642,21 +641,22 @@ onUnmounted(() => {
 .card-safe-days { flex: 2; min-height: 0; }
 
 .safe-days-value {
-  font-size: 40px;
+  font-size: 72px;
   font-weight: bold;
   color: #00e7ff;
   text-align: center;
   line-height: 1;
-  padding: 4px 0;
+  padding: 24px 0;
   text-shadow: 0 0 20px rgba(0,231,255,0.6), 0 0 40px rgba(0,231,255,0.3);
   font-family: 'Courier New', monospace;
-  letter-spacing: 4px;
+  letter-spacing: 6px;
 }
 
 .safe-days-time {
   text-align: center;
-  font-size: 18px;
-  color: rgba(160,196,232,0.6);
+  font-size: 20px;
+  color: rgba(160,196,232,0.7);
+  letter-spacing: 1px;
 }
 
 /* 待办事项 */
@@ -664,32 +664,34 @@ onUnmounted(() => {
 
 .todo-content {
   display: flex;
-  gap: 12px;
-  align-items: flex-start;
+  gap: 20px;
+  align-items: center;
+  flex: 1;
+  margin-left: 18px;
 }
 
 .todo-left { flex: 1; }
 .todo-right { flex: 1; }
 
 .todo-value {
-  font-size: 24px;
+  font-size: 32px;
   font-weight: bold;
   color: #fff;
+  margin-bottom: 6px;
+}
+
+.todo-unit { font-size: 20px; font-weight: normal; color: #a0c4e8; margin-left: 4px; }
+
+.progress-bar-wrapper { margin-top: 6px; }
+
+.progress-label {
+  font-size: 20px;
+  color: #a0c4e8;
   margin-bottom: 4px;
 }
 
-.todo-unit { font-size: 18px; font-weight: normal; color: #a0c4e8; margin-left: 4px; }
-
-.progress-bar-wrapper { margin-top: 3px; }
-
-.progress-label {
-  font-size: 18px;
-  color: #a0c4e8;
-  margin-bottom: 2px;
-}
-
 .progress-bar-bg {
-  height: 6px;
+  height: 8px;
   background: rgba(0,231,255,0.1);
   border-radius: 4px;
   overflow: hidden;
@@ -702,10 +704,10 @@ onUnmounted(() => {
   box-shadow: 0 0 8px rgba(249,115,22,0.4);
 }
 
-.todo-label { font-size: 18px; color: #a0c4e8; margin-bottom: 3px; }
+.todo-label { font-size: 20px; color: #a0c4e8; margin-bottom: 6px; }
 
 .todo-done-value {
-  font-size: 20px;
+  font-size: 28px;
   font-weight: bold;
   color: #fff;
 }
@@ -715,21 +717,23 @@ onUnmounted(() => {
 
 .env-content {
   display: flex;
-  gap: 16px;
+  gap: 32px;
   align-items: center;
+  flex: 1;
+  justify-content: center;
 }
 
 .env-item {
   flex: 1;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 20px;
 }
 
 .env-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
+  width: 64px;
+  height: 64px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -739,12 +743,12 @@ onUnmounted(() => {
 }
 
 .env-value {
-  font-size: 18px;
+  font-size: 36px;
   font-weight: bold;
   color: #fff;
 }
 
-.env-label { font-size: 18px; color: #a0c4e8; }
+.env-label { font-size: 26px; color: #a0c4e8; }
 
 /* 物资来源 */
 .card-source { flex: 4; min-height: 0; }
@@ -787,7 +791,7 @@ onUnmounted(() => {
 }
 
 .metric-value {
-  font-size: 16px;
+  font-size: 24px;
   font-weight: bold;
   color: #fff;
   letter-spacing: 1px;
@@ -795,7 +799,7 @@ onUnmounted(() => {
 }
 
 .metric-label {
-  font-size: 18px;
+  font-size: 24px;
   color: #a0c4e8;
 }
 
@@ -835,7 +839,7 @@ onUnmounted(() => {
   color: #a0c4e8;
   font-weight: 600;
   text-align: left;
-  padding: 5px 6px;
+  padding: 16px 12x;
   border-bottom: 1px solid rgba(0,231,255,0.2);
   position: sticky;
   top: 0;
@@ -843,7 +847,7 @@ onUnmounted(() => {
 }
 
 .category-table td {
-  padding: 4px 6px;
+  padding: 16px 12px;
   color: rgba(255,255,255,0.85);
   border-bottom: 1px solid rgba(0,231,255,0.06);
 }
@@ -856,7 +860,7 @@ onUnmounted(() => {
 .card-inout { flex: 5; min-height: 0; }
 
 /* 库存预警 */
-.card-stock-warning { flex: 1; min-height: 0; }
+.card-stock-warning { flex: 3; min-height: 0; }
 
 .stock-warning-content {
   flex: 1;
@@ -908,38 +912,38 @@ onUnmounted(() => {
 }
 
 .warning-cell-label {
-  font-size: 18px;
+  font-size: 28px;
   color: #a0c4e8;
   font-weight: 500;
-  margin-bottom: 3px;
+  margin-bottom: 4px;
 }
 
 .warning-cell-value {
-  font-size: 18px;
+  font-size: 32px;
   font-weight: bold;
   text-shadow: 0 0 8px currentColor;
 }
 
 /* 保质期预警 */
-.card-expiry { flex: 0 0 auto; }
+.card-expiry { flex: 3; min-height: 0; }
 
 .expiry-content {
   display: flex;
   justify-content: space-around;
   align-items: center;
-  padding: 4px 0;
+  flex: 1;
 }
 
 .expiry-gauge {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 10px;
 }
 
 .gauge-circle {
-  width: 56px;
-  height: 56px;
+  width: 120px;
+  height: 120px;
   position: relative;
 }
 
@@ -947,7 +951,7 @@ onUnmounted(() => {
   width: 100%;
   height: 100%;
   border-radius: 50%;
-  border: 4px solid rgba(0,231,255,0.15);
+  border: 6px solid rgba(0,231,255,0.15);
   border-top-color: var(--ring-color);
   border-right-color: var(--ring-color);
   display: flex;
@@ -972,17 +976,17 @@ onUnmounted(() => {
 }
 
 .gauge-num {
-  font-size: 18px;
+  font-size: 34px;
   font-weight: bold;
   color: #00e7ff;
   text-shadow: 0 0 8px rgba(0,231,255,0.5);
 }
 
 .gauge-label {
-  font-size: 18px;
+  font-size: 24px;
   color: #a0c4e8;
 }
 
 /* 质量等级 */
-.card-quality { flex: 1; min-height: 0; }
+.card-quality { flex: 4; min-height: 0; }
 </style>
