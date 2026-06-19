@@ -94,13 +94,6 @@
         <el-table-column label="操作" align="right" width="130">
           <template #default="{ row }">
             <el-button link type="primary" @click="handleView(row)">详情</el-button>
-            <el-button
-              v-if="canReturnRow(row)"
-              link
-              type="success"
-              @click="handleReturn(row)"
-              v-hasPermi="['wms:borrowRecord:edit']"
-            >归还</el-button>
             <el-popover
               placement="left"
               title="提示"
@@ -232,7 +225,7 @@
 
 <script setup name="ItemInstance">
 import { computed, getCurrentInstance, onMounted, reactive, ref, toRefs, watch } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+import { useRoute } from 'vue-router';
 import { getToken } from '@/utils/auth';
 import {
   getItemInstance,
@@ -242,7 +235,6 @@ import {
 import { listItemSku } from '@/api/wms/itemSku';
 import { useWmsStore } from '@/store/modules/wms';
 
-const router = useRouter();
 const { proxy } = getCurrentInstance();
 const route = useRoute();
 const { wms_item_instance_status } = proxy.useDict('wms_item_instance_status');
@@ -318,8 +310,6 @@ const queryAreaOptions = computed(() => {
 const hasBox = (row) => !!row?.boxId;
 
 const isBorrowed = (row) => row?.instanceStatus === '借出';
-
-const canReturnRow = (row) => isBorrowed(row);
 
 const canEditRow = (row) => row?.instanceStatus === '在库';
 
@@ -420,16 +410,6 @@ const handleView = async (row) => {
   const res = await getItemInstance(row.id);
   detailDialog.data = res.data || {};
   detailDialog.visible = true;
-};
-
-const handleReturn = (row) => {
-  router.push({
-    path: '/wms-borrow-record/index',
-    query: {
-      instanceCode: row.instanceCode,
-      borrowStatus: 'borrowed'
-    }
-  });
 };
 
 const handleExport = () => {

@@ -1,4 +1,35 @@
-const DEFAULT_WSS_PRINT_URL = 'ws://localhost:12353';
+import { getConfigKey } from '@/api/system/config';
+
+const FALLBACK_WSS_PRINT_URL = 'ws://localhost:12353';
+const CONFIG_KEY = 'wms.print.wssUrl';
+
+let cachedUrl = null;
+
+/**
+ * 从后端系统参数获取WSS打印服务地址，带缓存和降级
+ * 首次调用请求后端，后续使用缓存值
+ * 请求失败或未配置时降级到 localhost:12353
+ */
+export async function getPrintUrl() {
+  if (cachedUrl) return cachedUrl;
+  try {
+    const res = await getConfigKey(CONFIG_KEY);
+    const url = res?.msg || res?.data || res;
+    if (typeof url === 'string' && url.startsWith('ws')) {
+      cachedUrl = url;
+      return cachedUrl;
+    }
+  } catch (e) {
+    console.warn('获取WSS打印地址失败，使用默认地址', e);
+  }
+  cachedUrl = FALLBACK_WSS_PRINT_URL;
+  return cachedUrl;
+}
+
+/** 清除缓存，下次调用 getPrintUrl 时重新请求后端 */
+export function clearPrintUrlCache() {
+  cachedUrl = null;
+}
 
 function jsonStringifyWithoutEmpty(obj) {
   return JSON.stringify(obj, (key, value) => {
@@ -38,7 +69,7 @@ PRINT 1,1
 
 export class WssPrintClient {
   constructor(options = {}) {
-    this.url = options.url || DEFAULT_WSS_PRINT_URL;
+    this.url = options.url || FALLBACK_WSS_PRINT_URL;
     this.socket = undefined;
     this.opening = undefined;
     this.pendingQueue = [];

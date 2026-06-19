@@ -87,7 +87,7 @@
           </template>
         </el-table-column>
         <el-table-column label="备注" prop="remark" min-width="100" show-overflow-tooltip />
-        <el-table-column label="操作" align="right" class-name="small-padding fixed-width" width="150">
+        <el-table-column label="操作" align="right" class-name="small-padding fixed-width" width="200">
           <template #default="scope">
             <div class="table-actions">
               <!-- 待盘点：去盘点 / 修改 / 删除 -->

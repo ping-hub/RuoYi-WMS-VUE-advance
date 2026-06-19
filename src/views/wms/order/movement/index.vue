@@ -33,6 +33,13 @@
             </el-form-item>
           </el-col>
           <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
+            <el-form-item label="调拨范围" prop="transferScope">
+              <el-select v-model="queryParams.transferScope" placeholder="请选择调拨范围" clearable style="width: 100%" @change="handleQuery">
+                <el-option v-for="item in wms_transfer_scope" :key="item.value" :label="item.label" :value="item.value" />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
             <div class="query-actions">
               <el-button type="primary" icon="Search" @click="handleQuery">搜索</el-button>
               <el-button icon="Refresh" @click="resetQuery">重置</el-button>
@@ -77,6 +84,11 @@
             {{ row.sourceAreaId ? wmsStore.areaMap.get(row.sourceAreaId)?.areaName : '-' }}
           </template>
         </el-table-column>
+        <el-table-column label="调拨范围" align="center" prop="transferScope" min-width="85">
+          <template #default="{ row }">
+            <dict-tag :options="wms_transfer_scope" :value="row.transferScope" />
+          </template>
+        </el-table-column>
         <el-table-column label="目标仓库" align="left" min-width="85">
           <template #default="{ row }">
             {{ wmsStore.warehouseMap.get(row.targetWarehouseId)?.warehouseName || '-' }}
@@ -100,37 +112,33 @@
           </template>
         </el-table-column>
         <el-table-column label="备注" prop="remark" min-width="80" show-overflow-tooltip />
-        <el-table-column label="操作" align="right" class-name="small-padding fixed-width" width="120">
+        <el-table-column label="操作" align="right" class-name="small-padding fixed-width" width="200">
           <template #default="scope">
-            <div>
-              <el-popover
-                placement="left"
-                title="提示"
-                :width="300"
-                trigger="hover"
-                :disabled="scope.row.movementOrderStatus === 0"
-                :content="'调拨单【' + scope.row.movementOrderNo + '】已' + (scope.row.movementOrderStatus === 1 ? '调拨完成' : '作废') + '，无法修改！' "
-              >
-                <template #reference>
-                  <el-button link type="primary" @click="handleUpdate(scope.row)" v-hasPermi="['wms:movement:all']" :disabled="[-1, 1].includes(scope.row.movementOrderStatus)">修改</el-button>
-                </template>
-              </el-popover>
-              <el-button link type="primary" @click="handleGoDetail(scope.row)" v-hasPermi="['wms:movement:all']">查看</el-button>
-            </div>
-            <div class="mt10">
-              <el-popover
-                placement="left"
-                title="提示"
-                :width="300"
-                trigger="hover"
-                :disabled="scope.row.movementOrderStatus === 0"
-                :content="'调拨单【' + scope.row.movementOrderNo + '】已' + (scope.row.movementOrderStatus === 1 ? '调拨完成' : '作废') + '，无法删除！' "
-              >
-                <template #reference>
-                  <el-button link type="danger" @click="handleDelete(scope.row)" v-hasPermi="['wms:movement:all']" :disabled="[-1, 1].includes(scope.row.movementOrderStatus)">删除</el-button>
-                </template>
-              </el-popover>
-            </div>
+            <el-popover
+              placement="left"
+              title="提示"
+              :width="300"
+              trigger="hover"
+              :disabled="scope.row.movementOrderStatus === 0"
+              :content="'调拨单【' + scope.row.movementOrderNo + '】已' + (scope.row.movementOrderStatus === 1 ? '调拨完成' : '作废') + '，无法修改！' "
+            >
+              <template #reference>
+                <el-button link type="primary" @click="handleUpdate(scope.row)" v-hasPermi="['wms:movement:all']" :disabled="[-1, 1].includes(scope.row.movementOrderStatus)">修改</el-button>
+              </template>
+            </el-popover>
+            <el-button link type="primary" @click="handleGoDetail(scope.row)" v-hasPermi="['wms:movement:all']">查看</el-button>
+            <el-popover
+              placement="left"
+              title="提示"
+              :width="300"
+              trigger="hover"
+              :disabled="scope.row.movementOrderStatus === 0"
+              :content="'调拨单【' + scope.row.movementOrderNo + '】已' + (scope.row.movementOrderStatus === 1 ? '调拨完成' : '作废') + '，无法删除！' "
+            >
+              <template #reference>
+                <el-button link type="danger" @click="handleDelete(scope.row)" v-hasPermi="['wms:movement:all']" :disabled="[-1, 1].includes(scope.row.movementOrderStatus)">删除</el-button>
+              </template>
+            </el-popover>
           </template>
         </el-table-column>
       </el-table>
@@ -161,9 +169,10 @@ const { proxy } = getCurrentInstance();
 const route = useRoute();
 const router = useRouter();
 const wmsStore = useWmsStore();
-const { wms_movement_status, wms_movement_type } = proxy.useDict(
+const { wms_movement_status, wms_movement_type, wms_transfer_scope } = proxy.useDict(
   "wms_movement_status",
-  "wms_movement_type"
+  "wms_movement_type",
+  "wms_transfer_scope"
 );
 const movementOrderList = ref([]);
 const loading = ref(true);
@@ -177,7 +186,8 @@ const data = reactive({
     movementOrderStatus: undefined,
     sourcePlace: undefined,
     targetPlace: undefined,
-    movementType: undefined
+    movementType: undefined,
+    transferScope: undefined
   },
 });
 

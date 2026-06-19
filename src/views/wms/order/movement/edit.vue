@@ -1,7 +1,6 @@
 <template>
   <div>
     <div class="receipt-order-edit-wrapper app-container" :class="{ 'is-view-mode': isViewMode }" style="margin-bottom: 60px" v-loading="loading">
-      <el-alert v-if="isViewMode" class="mb10" type="info" :closable="false" title="当前为查看模式，已禁用编辑、作废和完成调拨操作。" />
       <el-card header="调拨单基本信息">
         <el-form label-width="108px" :model="form" ref="movementForm" :rules="rules" :disabled="isViewMode">
           <el-row :gutter="24">
@@ -11,12 +10,21 @@
               </el-form-item>
             </el-col>
             <el-col :span="6">
+              <el-form-item label="调拨范围" prop="transferScope">
+                <el-select v-model="form.transferScope" placeholder="请选择调拨范围" clearable style="width: 100%" @change="handleChangeTransferScope">
+                  <el-option v-for="item in wms_transfer_scope" :key="item.value" :label="item.label" :value="item.value" />
+                </el-select>
+              </el-form-item>
+            </el-col>
+            <el-col :span="6">
               <el-form-item label="调拨类型" prop="movementType">
                 <el-select v-model="form.movementType" placeholder="请选择调拨类型" clearable style="width: 100%">
                   <el-option v-for="item in wms_movement_type" :key="item.value" :label="item.label" :value="item.value" />
                 </el-select>
               </el-form-item>
             </el-col>
+          </el-row>
+          <el-row :gutter="24">
             <el-col :span="6">
               <el-form-item label="原仓库" prop="sourceWarehouseId">
                 <el-select v-model="form.sourceWarehouseId" placeholder="请选择源仓库" @change="handleChangeSourceWarehouse" filterable>
@@ -44,16 +52,14 @@
                 </el-select>
               </el-form-item>
             </el-col>
-          </el-row>
-          <el-row :gutter="24">
-            <el-col :span="6">
+            <el-col :span="6" v-if="!isExternalTransfer">
               <el-form-item label="目标仓库" prop="targetWarehouseId">
                 <el-select v-model="form.targetWarehouseId" placeholder="请选择目标仓库" @change="handleChangeTargetWarehouse" filterable>
                   <el-option v-for="item in useWmsStore().warehouseList" :key="item.id" :label="item.warehouseName" :value="item.id"/>
                 </el-select>
               </el-form-item>
             </el-col>
-            <el-col :span="6">
+            <el-col :span="6" v-if="!isExternalTransfer">
               <el-form-item label="目标库区" prop="targetAreaId">
                 <el-select
                   v-model="form.targetAreaId"
@@ -224,12 +230,12 @@
               title="提示"
               :width="200"
               trigger="hover"
-              :disabled="form.sourceWarehouseId && form.targetWarehouseId"
-              content="请先选择源仓库和目标仓库！"
+              :disabled="isExternalTransfer ? !!form.sourceWarehouseId : !!(form.sourceWarehouseId && form.targetWarehouseId)"
+              :content="isExternalTransfer ? '请先选择源仓库！' : '请先选择源仓库和目标仓库！'"
             >
               <template #reference>
                 <el-button type="primary" plain="plain" size="default" @click="showAddItem" icon="Plus"
-                           :disabled="!form.sourceWarehouseId || !form.targetWarehouseId || isViewMode">添加器材
+                           :disabled="isExternalTransfer ? (!form.sourceWarehouseId || isViewMode) : (!form.sourceWarehouseId || !form.targetWarehouseId || isViewMode)">添加器材
                 </el-button>
               </template>
             </el-popover>
@@ -252,18 +258,20 @@
                 <span>{{ row.sourceLocationName || '-' }}</span>
               </template>
             </el-table-column>
-            <el-table-column label="目标位置" min-width="260">
+            <el-table-column v-if="!isExternalTransfer" label="目标货架" min-width="140">
               <template #default="{ row }">
-                <div class="target-place-edit">
-                  <RackSelect v-model="row.targetRackId" :warehouse-id="form.targetWarehouseId" :area-id="row.targetAreaId || form.targetAreaId" :disabled="isViewMode" />
-                  <LocationSelect
-                    v-model="row.targetLocationId"
-                    :warehouse-id="form.targetWarehouseId"
-                    :area-id="row.targetAreaId || form.targetAreaId"
-                    :rack-id="row.targetRackId"
-                    :disabled="isViewMode"
-                  />
-                </div>
+                <RackSelect v-model="row.targetRackId" :warehouse-id="form.targetWarehouseId" :area-id="row.targetAreaId || form.targetAreaId" :disabled="isViewMode" />
+              </template>
+            </el-table-column>
+            <el-table-column v-if="!isExternalTransfer" label="目标货位" min-width="140">
+              <template #default="{ row }">
+                <LocationSelect
+                  v-model="row.targetLocationId"
+                  :warehouse-id="form.targetWarehouseId"
+                  :area-id="row.targetAreaId || form.targetAreaId"
+                  :rack-id="row.targetRackId"
+                  :disabled="isViewMode"
+                />
               </template>
             </el-table-column>
             <el-table-column label="调拨数量" prop="quantity" align="right" width="100">
@@ -402,6 +410,7 @@ import {addMovementOrder, getMovementOrder, updateMovementOrder, movement} from 
 import {delMovementOrderDetail} from "@/api/wms/movementOrderDetail";
 import {ElMessage} from "element-plus";
 import {useRoute} from "vue-router";
+import useTagsViewStore from "@/store/modules/tagsView";
 import {useWmsStore} from '@/store/modules/wms'
 import {numSub} from '@/utils/ruoyi'
 import {listInventoryDetailNoPage} from "@/api/wms/inventoryDetail";
@@ -411,9 +420,11 @@ import LocationSelect from "@/views/components/LocationSelect.vue";
 
 const {proxy} = getCurrentInstance();
 const route = useRoute();
+const tagsViewStore = useTagsViewStore();
 const isViewMode = computed(() => route.query.mode === 'view');
-const {wms_movement_type} = proxy.useDict(
-  "wms_movement_type"
+const {wms_movement_type, wms_transfer_scope} = proxy.useDict(
+  "wms_movement_type",
+  "wms_transfer_scope"
 );
 
 const loading = ref(false)
@@ -421,6 +432,7 @@ const initFormData = {
   id: undefined,
   movementOrderNo: undefined,
   movementType: undefined,
+  transferScope: '库外调拨',
   dispatchBasis: undefined,
   dispatchPurpose: undefined,
   dispatchMode: undefined,
@@ -521,14 +533,27 @@ const data = reactive({
       {required: true, message: "请选择源仓库", trigger: ['blur', 'change']}
     ],
     targetWarehouseId: [
-      {required: true, message: "请选择目标仓库", trigger: ['blur', 'change']}
+      {required: true, validator: (rule, value, callback) => {
+        if (!isExternalTransfer.value && !value) {
+          callback(new Error('请选择目标仓库'))
+        } else {
+          callback()
+        }
+      }, trigger: ['blur', 'change']}
     ],
     movementType: [
       {required: true, message: "请选择调拨类型", trigger: ['blur', 'change']}
     ],
+    transferScope: [
+      {required: true, message: "请选择调拨范围", trigger: ['blur', 'change']}
+    ],
   }
 });
 const {form, rules} = toRefs(data);
+
+// 库外调拨计算属性
+const isExternalTransfer = computed(() => form.value.transferScope === '库外调拨');
+
 const cancel = async () => {
   if (isViewMode.value) {
     close()
@@ -754,6 +779,7 @@ const doSave = (movementOrderStatus = 0) => {
     const params = {
       id: form.value.id,
       movementOrderNo: form.value.movementOrderNo,
+      transferScope: form.value.transferScope,
       movementType: form.value.movementType,
       dispatchBasis: form.value.dispatchBasis,
       dispatchPurpose: form.value.dispatchPurpose,
@@ -773,8 +799,8 @@ const doSave = (movementOrderStatus = 0) => {
       totalQuantity: form.value.totalQuantity,
       sourceWarehouseId: form.value.sourceWarehouseId,
       sourceAreaId: form.value.sourceAreaId,
-      targetWarehouseId: form.value.targetWarehouseId,
-      targetAreaId: form.value.targetAreaId,
+      targetWarehouseId: isExternalTransfer.value ? undefined : form.value.targetWarehouseId,
+      targetAreaId: isExternalTransfer.value ? undefined : form.value.targetAreaId,
       details: details
     }
     if (params.id) {
@@ -851,6 +877,7 @@ const doMovement = async () => {
     const params = {
       id: form.value.id,
       movementOrderNo: form.value.movementOrderNo,
+      transferScope: form.value.transferScope,
       movementType: form.value.movementType,
       dispatchBasis: form.value.dispatchBasis,
       dispatchPurpose: form.value.dispatchPurpose,
@@ -869,8 +896,8 @@ const doMovement = async () => {
       totalQuantity: form.value.totalQuantity,
       sourceWarehouseId: form.value.sourceWarehouseId,
       sourceAreaId: form.value.sourceAreaId,
-      targetWarehouseId: form.value.targetWarehouseId,
-      targetAreaId: form.value.targetAreaId,
+      targetWarehouseId: isExternalTransfer.value ? undefined : form.value.targetWarehouseId,
+      targetAreaId: isExternalTransfer.value ? undefined : form.value.targetAreaId,
       details: details
     }
     movement(params).then((res) => {
@@ -885,6 +912,10 @@ const doMovement = async () => {
 }
 
 onMounted(() => {
+  if (route.query.mode === 'view') {
+    route.meta.title = '查看调拨单'
+    tagsViewStore.updateVisitedView(route)
+  }
   const id = route.query && route.query.id;
   if (id) {
     loadDetail(id)
@@ -921,6 +952,20 @@ const handleChangeSourceWarehouse = (e) => {
 const handleChangeSourceArea = (e) => {
   form.value.details = e ? form.value.details.filter(it => it.sourceAreaId === e) : form.value.details
   refreshInventoryOptions()
+}
+
+const handleChangeTransferScope = () => {
+  if (isExternalTransfer.value) {
+    // 切换到库外调拨：清空目标仓库/库区
+    form.value.targetWarehouseId = undefined
+    form.value.targetAreaId = undefined
+    form.value.details.forEach(it => {
+      it.targetWarehouseId = undefined
+      it.targetAreaId = undefined
+      it.targetRackId = undefined
+      it.targetLocationId = undefined
+    })
+  }
 }
 
 const handleChangeTargetWarehouse = (e) => {

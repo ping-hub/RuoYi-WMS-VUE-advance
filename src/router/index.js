@@ -43,6 +43,11 @@ export const constantRoutes = [
     hidden: true
   },
   {
+    path: '/license/activate',
+    component: () => import('@/views/license/activate'),
+    hidden: true
+  },
+  {
     path: '/register',
     component: () => import('@/views/register'),
     hidden: true
@@ -159,20 +164,6 @@ export const dynamicRoutes = [
     ]
   },
   {
-    path: '/wms-item-instance',
-    component: Layout,
-    hidden: true,
-    permissions: ['wms:itemInstance:list'],
-    children: [
-      {
-        path: 'index',
-        component: () => import('@/views/wms/itemInstance/index.vue'),
-        name: 'WmsItemInstance',
-        meta: { title: '器材实例编码' }
-      }
-    ]
-  },
-  {
     path: '/wms-box',
     component: Layout,
     hidden: true,
@@ -194,9 +185,22 @@ export const dynamicRoutes = [
     children: [
       {
         path: 'index',
-        component: () => import('@/views/wms/business/borrow-record/index.vue'),
+        component: () => import('@/views/wms/order/borrow/index.vue'),
         name: 'WmsBorrowRecord',
         meta: { title: '器材借用' }
+      }
+    ]
+  },
+  {
+    path: '/license-manage',
+    component: Layout,
+    hidden: true,
+    children: [
+      {
+        path: 'status',
+        component: () => import('@/views/license/status.vue'),
+        name: 'LicenseStatus',
+        meta: { title: 'License授权信息' }
       }
     ]
   },

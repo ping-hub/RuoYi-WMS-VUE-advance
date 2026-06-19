@@ -1,9 +1,8 @@
 <template>
   <div>
     <div class="receipt-order-edit-wrapper app-container" :class="{ 'is-view-mode': isViewMode }" style="margin-bottom: 60px" v-loading="loading">
-      <el-alert v-if="isViewMode" class="mb10" type="info" :closable="false" title="当前为联查查看模式，已禁用编辑、作废和完成出库操作。" />
       <el-card header="出库单基本信息">
-        <el-form label-width="108px" :model="form" ref="shipmentForm" :rules="rules" :disabled="isViewMode">
+        <el-form label-width="108px" :model="form" ref="shipmentForm" :rules="rules" :disabled="formReadonly">
           <el-row :gutter="24">
             <el-col :span="6">
               <el-form-item label="出库单号" prop="shipmentOrderNo">
@@ -82,7 +81,55 @@
               </el-form-item>
             </el-col>
           </el-row>
+          <!-- 草稿/已驳回：审批人下拉选择 -->
+          <el-row :gutter="24" v-if="[0, -2].includes(Number(form.shipmentOrderStatus))">
+            <el-col :span="6">
+              <el-form-item label="审批人" prop="approverId">
+                <el-select v-model="form.approverId" placeholder="请选择审批人" filterable clearable style="width: 100%" @change="handleApproverFieldChange">
+                  <el-option v-for="u in userList" :key="u.userId" :label="u.nickName" :value="u.userId" />
+                </el-select>
+              </el-form-item>
+            </el-col>
+          </el-row>
+          <!-- 已审批/已出库：审批人+操作人只读 -->
+          <el-row :gutter="24" v-if="[2, 3].includes(Number(form.shipmentOrderStatus)) && (form.approverId || form.executorId)">
+            <el-col :span="6" v-if="form.approverId">
+              <el-form-item label="审批人">
+                <el-input :model-value="getNickNameById(form.approverId)" disabled />
+              </el-form-item>
+            </el-col>
+            <el-col :span="6" v-if="form.executorId">
+              <el-form-item label="操作人">
+                <el-input :model-value="getNickNameById(form.executorId)" disabled />
+              </el-form-item>
+            </el-col>
+          </el-row>
+          <!-- 已驳回：显示驳回原因 -->
+          <el-row :gutter="24" v-if="Number(form.shipmentOrderStatus) === -2 && form.approveRemark">
+            <el-col :span="12">
+              <el-form-item label="驳回原因">
+                <el-input :model-value="form.approveRemark" type="textarea" :rows="2" disabled />
+              </el-form-item>
+            </el-col>
+          </el-row>
         </el-form>
+        <!-- 待审批：操作人 + 驳回原因（在 el-form 外部，不受 disabled 影响） -->
+        <el-row :gutter="24" v-if="form.shipmentOrderStatus == 1 && !isViewMode" class="approval-controls">
+          <el-col :span="6">
+            <div class="approval-form-item">
+              <label><span style="color: #f56c6c">*</span> 操作人：</label>
+              <el-select v-model="form.executorId" placeholder="请指定操作人" filterable clearable style="width: 100%" @change="handleExecutorFieldChange">
+                <el-option v-for="u in userList" :key="u.userId" :label="u.nickName" :value="u.userId" />
+              </el-select>
+            </div>
+          </el-col>
+          <el-col :span="12" v-if="rejectRemarkVisible">
+            <div class="approval-form-item">
+              <label>驳回原因：</label>
+              <el-input v-model="rejectRemark" type="textarea" :rows="2" placeholder="请输入驳回原因" />
+            </div>
+          </el-col>
+        </el-row>
       </el-card>
       <el-card header="器材明细" class="mt10">
         <div class="receipt-order-content">
@@ -91,7 +138,7 @@
               <el-tag type="info">支持“选择器材实例”或扫码枪扫二维码直接新增，当前只允许选择在库实例</el-tag>
             </div>
             <div class="add-actions">
-              <el-button type="primary" plain size="default" @click="showAddItemInstance" icon="Tickets" :disabled="!form.warehouseId || !form.areaId || isViewMode">
+              <el-button type="primary" plain size="default" @click="showAddItemInstance" icon="Tickets" :disabled="!form.warehouseId || !form.areaId || formReadonly">
                 选择器材实例
               </el-button>
             </div>
@@ -109,17 +156,22 @@
                 <span>{{ row.itemName || '-' }}</span>
               </template>
             </el-table-column>
-            <el-table-column label="货位" min-width="140">
+            <el-table-column label="货架" min-width="120">
+              <template #default="{ row }">
+                <span>{{ row.rackName || '-' }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="货位" min-width="120">
               <template #default="{ row }">
                 <span>{{ row.locationName || '-' }}</span>
               </template>
             </el-table-column>
             <el-table-column label="备注" min-width="150">
               <template #default="{ row }">
-                <el-input v-model="row.remark" placeholder="请输入备注" :disabled="isViewMode" />
+                <el-input v-model="row.remark" placeholder="请输入备注" :disabled="formReadonly" />
               </template>
             </el-table-column>
-            <el-table-column v-if="!isViewMode" label="操作" width="88" align="right">
+            <el-table-column v-if="!formReadonly" label="操作" width="88" align="right">
               <template #default="scope">
                 <el-button icon="Delete" type="danger" plain size="small"
                            @click.stop="handleDeleteDetail(scope.row, scope.$index)" link>删除
@@ -218,12 +270,22 @@
     </div>
     <div class="footer-global">
       <div class="btn-box">
-        <div v-if="!isViewMode">
-          <el-button @click="doShipment" type="primary" class="ml10">完成出库</el-button>
-          <el-button @click="updateToInvalid" type="danger" v-if="form.id">作废</el-button>
+        <!-- 草稿/已驳回：暂存 + 提交审批 + 作废 -->
+        <div v-if="!isViewMode && [0, -2].includes(Number(form.shipmentOrderStatus))">
+          <el-button @click="save" type="primary">暂存</el-button>
+          <el-button @click="handleSubmitApproval" type="warning">提交审批</el-button>
+          <el-button @click="handleVoid" type="danger" v-if="form.id">作废</el-button>
+        </div>
+        <!-- 待审批：审批通过 + 驳回 -->
+        <div v-if="!isViewMode && form.shipmentOrderStatus == 1">
+          <el-button @click="handleApproveInEdit" type="success">审批通过</el-button>
+          <el-button @click="handleRejectInEdit" type="danger">{{ rejectRemarkVisible ? '确认驳回' : '驳回' }}</el-button>
+        </div>
+        <!-- 已审批：完成出库（仅指定操作人可操作） -->
+        <div v-if="!isViewMode && form.shipmentOrderStatus == 2 && isCurrentExecutor">
+          <el-button @click="doShipment" type="primary">完成出库</el-button>
         </div>
         <div>
-          <el-button v-if="!isViewMode" @click="save" type="primary">暂存</el-button>
           <el-button @click="cancel" class="mr10">{{ isViewMode ? '关闭' : '取消' }}</el-button>
         </div>
       </div>
@@ -233,10 +295,13 @@
 
 <script setup name="ShipmentOrderEdit">
 import {computed, getCurrentInstance, onBeforeUnmount, onMounted, reactive, ref, toRefs} from "vue";
-import {addShipmentOrder, getShipmentOrder, updateShipmentOrder, shipment} from "@/api/wms/shipmentOrder";
+import {addShipmentOrder, getShipmentOrder, updateShipmentOrder, shipment, submitForApproval, approveOrder, rejectOrder, voidOrder} from "@/api/wms/shipmentOrder";
+import {getUserSelectList} from "@/api/wms/common";
 import {delShipmentOrderDetail} from "@/api/wms/shipmentOrderDetail";
 import {ElMessage, ElMessageBox} from "element-plus";
 import {useRoute} from "vue-router";
+import useUserStore from "@/store/modules/user";
+import useTagsViewStore from "@/store/modules/tagsView";
 import {useWmsStore} from '@/store/modules/wms'
 import {numSub} from '@/utils/ruoyi'
 import {listInventoryDetailNoPage} from "@/api/wms/inventoryDetail";
@@ -245,10 +310,35 @@ import RackSelect from "@/views/components/RackSelect.vue";
 
 const {proxy} = getCurrentInstance();
 const route = useRoute();
+const userStore = useUserStore();
+const tagsViewStore = useTagsViewStore();
+// 当前用户是否为指定操作人
+const isCurrentExecutor = computed(() => {
+  if (!userStore.id || !form.value.executorId) return false
+  return String(userStore.id) === String(form.value.executorId)
+})
+// 根据用户ID查找昵称
+const getNickNameById = (userId) => {
+  if (!userId) return '-'
+  const u = userList.value.find(x => String(x.userId) === String(userId))
+  return u ? u.nickName : '-'
+}
 const isViewMode = computed(() => route.query.mode === 'view');
-const {wms_item_instance_status, wms_shipment_type} = proxy.useDict(
+// 表单只读：查看模式 或 非草稿/已驳回状态
+const formReadonly = computed(() => {
+  if (isViewMode.value) return true
+  const s = Number(form.value.shipmentOrderStatus)
+  return !isNaN(s) && s !== 0 && s !== -2
+})
+const statusLabel = computed(() => {
+  if (!wms_shipment_status.value?.length) return ''
+  const item = wms_shipment_status.value.find(i => String(i.value) === String(form.value.shipmentOrderStatus))
+  return item?.label || ''
+})
+const {wms_item_instance_status, wms_shipment_type, wms_shipment_status} = proxy.useDict(
   "wms_item_instance_status",
-  "wms_shipment_type"
+  "wms_shipment_type",
+  "wms_shipment_status"
 );
 
 const loading = ref(false)
@@ -269,8 +359,22 @@ const initFormData = {
   areaId: undefined,
   totalQuantity: 0,
   details: [],
+  workflowLogs: [],
+  applicantId: undefined,
+  applicantName: undefined,
+  submitTime: undefined,
+  approverId: undefined,
+  approverName: undefined,
+  approveTime: undefined,
+  approveRemark: undefined,
+  executorId: undefined,
+  executorName: undefined,
+  executeTime: undefined,
 }
 const inventoryDetailOptions = ref([])
+const userList = ref([])
+const rejectRemark = ref('')
+const rejectRemarkVisible = ref(false)
 const itemInstanceDialog = reactive({
   visible: false,
   loading: false,
@@ -364,7 +468,7 @@ const data = reactive({
 });
 const {form, rules} = toRefs(data);
 const cancel = async () => {
-  if (isViewMode.value) {
+  if (formReadonly.value) {
     close()
     return
   }
@@ -500,7 +604,7 @@ const save = async () => {
   doSave()
 }
 
-const doSave = (shipmentOrderStatus = 0) => {
+const doSave = (shipmentOrderStatus = 0, onSuccess = null) => {
   //验证shipmentForm表单
   shipmentForm.value?.validate((valid) => {
     // 校验
@@ -532,6 +636,8 @@ const doSave = (shipmentOrderStatus = 0) => {
           instanceCode: it.instanceCode,
           warehouseId: form.value.warehouseId,
           areaId: it.areaId,
+          rackId: it.rackId,
+          locationId: it.locationId,
           remark: it.remark
         }
       })
@@ -555,13 +661,15 @@ const doSave = (shipmentOrderStatus = 0) => {
       totalQuantity: form.value.totalQuantity,
       warehouseId: form.value.warehouseId,
       areaId: form.value.areaId,
+      approverId: form.value.approverId,
+      approverName: form.value.approverName,
       details: details
     }
     if (params.id) {
       updateShipmentOrder(params).then((res) => {
         if (res.code === 200) {
-          ElMessage.success(res.msg)
-          close()
+          if (onSuccess) onSuccess()
+          else { ElMessage.success(res.msg); close() }
         } else {
           ElMessage.error(res.msg)
         }
@@ -569,8 +677,10 @@ const doSave = (shipmentOrderStatus = 0) => {
     } else {
       addShipmentOrder(params).then((res) => {
         if (res.code === 200) {
-          ElMessage.success(res.msg)
-          close()
+          // 后端返回新建ID，更新到表单
+          if (res.data) form.value.id = res.data
+          if (onSuccess) onSuccess()
+          else { ElMessage.success(res.msg); close() }
         } else {
           ElMessage.error(res.msg)
         }
@@ -581,8 +691,91 @@ const doSave = (shipmentOrderStatus = 0) => {
 
 
 const updateToInvalid = async () => {
+  // 已废弃，保留兼容
+  await handleVoid()
+}
+
+/** 提交审批 */
+const handleSubmitApproval = async () => {
+  if (!form.value.approverId) {
+    return ElMessage.warning('请先选择审批人')
+  }
+  await proxy?.$modal.confirm('确认提交审批吗？');
+  const doSubmit = (id) => {
+    submitForApproval(id, form.value.approverId, form.value.approverName).then((res) => {
+      if (res.code === 200) {
+        ElMessage.success('提交成功')
+        close()
+      } else {
+        ElMessage.error(res.msg)
+      }
+    })
+  }
+  if (!form.value.id) {
+    doSave(0, () => doSubmit(form.value.id))
+  } else {
+    doSubmit(form.value.id)
+  }
+}
+
+/** 审批人下拉变化时同步 approverName */
+const handleApproverFieldChange = (userId) => {
+  const u = userList.value.find(x => x.userId === userId)
+  form.value.approverName = u ? u.nickName : ''
+}
+
+/** 操作人下拉变化时同步 executorName */
+const handleExecutorFieldChange = (userId) => {
+  const u = userList.value.find(x => x.userId === userId)
+  form.value.executorName = u ? u.nickName : ''
+}
+
+/** 审批通过（编辑页内） */
+const handleApproveInEdit = async () => {
+  if (!form.value.executorId) {
+    return ElMessage.warning('请先指定操作人')
+  }
+  await proxy?.$modal.confirm('确认审批通过吗？');
+  // 清空驳回原因，避免误传
+  rejectRemark.value = ''
+  rejectRemarkVisible.value = false
+  approveOrder(form.value.id, null, form.value.executorId, form.value.executorName).then((res) => {
+    if (res.code === 200) {
+      ElMessage.success('审批通过')
+      close()
+    } else {
+      ElMessage.error(res.msg)
+    }
+  })
+}
+
+/** 驳回（编辑页内） */
+const handleRejectInEdit = () => {
+  if (!rejectRemarkVisible.value) {
+    rejectRemarkVisible.value = true
+    return
+  }
+  rejectOrder(form.value.id, rejectRemark.value).then((res) => {
+    if (res.code === 200) {
+      ElMessage.success('已驳回')
+      close()
+    } else {
+      ElMessage.error(res.msg)
+    }
+  })
+}
+
+/** 作废 */
+const handleVoid = async () => {
   await proxy?.$modal.confirm('确认作废出库单吗？');
-  doSave(-1)
+  voidOrder(form.value.id).then((res) => {
+    if (res.code === 200) {
+      ElMessage.success('已作废')
+      close()
+    } else {
+      ElMessage.error(res.msg)
+    }
+  })
 }
 
 const doShipment = async () => {
@@ -617,7 +810,9 @@ const doShipment = async () => {
         inventoryDetailId: it.inventoryDetailId,
         instanceCode: it.instanceCode,
         warehouseId: form.value.warehouseId,
-        areaId: it.areaId
+        areaId: it.areaId,
+        rackId: it.rackId,
+        locationId: it.locationId
       }
     })
 
@@ -654,10 +849,19 @@ const doShipment = async () => {
 }
 
 onMounted(() => {
+  // 查看模式下修改标签页标题
+  if (route.query.mode === 'view') {
+    route.meta.title = '查看出库单'
+    tagsViewStore.updateVisitedView(route)
+  }
   window.addEventListener('keydown', handleShipmentScanKeydown)
+  // 加载用户列表（审批人下拉用），加载完后再加载详情以确保回显
+  const loadUserListPromise = getUserSelectList().then(res => {
+    userList.value = (res.data || []).map(u => ({ userId: u.userId, nickName: u.nickName, userName: u.userName }))
+  })
   const id = route.query && route.query.id;
   if (id) {
-    loadDetail(id)
+    loadUserListPromise.then(() => loadDetail(id))
   } else {
     form.value.shipmentOrderType = wms_shipment_type.value?.[0]?.value
     refreshInventoryOptions()
@@ -804,7 +1008,7 @@ const handleScanAddItemInstance = async (instanceCode) => {
 }
 
 const handleShipmentScanKeydown = async (event) => {
-  if (isViewMode.value || loading.value || shipmentScanBuffer.pending || isTypingTarget(event)) {
+  if (formReadonly.value || loading.value || shipmentScanBuffer.pending || isTypingTarget(event)) {
     return
   }
   const now = Date.now()
@@ -954,6 +1158,33 @@ const handleConfirmItemInstance = async () => {
 @media (max-width: 1280px) {
   .item-instance-search-form :deep(.el-form-item) {
     margin-right: 12px;
+  }
+}
+
+.approval-controls {
+  padding-top: 8px;
+  border-top: 1px solid var(--el-border-color-lighter);
+  margin-top: 12px;
+}
+
+.approval-form-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 18px;
+
+  > label {
+    font-size: 14px;
+    color: var(--el-text-color-regular);
+    white-space: nowrap;
+    line-height: 32px;
+    min-width: 80px;
+    text-align: right;
+  }
+
+  .el-select,
+  .el-input {
+    flex: 1;
   }
 }
 </style>

@@ -67,56 +67,38 @@
         </el-col>
       </el-row>
 
-      <el-table v-loading="loading" :data="borrowRecordList" border empty-text="暂无借用记录" cell-class-name="vertical-top-cell" class="borrow-table">
-        <el-table-column label="器材实例编码" min-width="180">
-          <template #default="{ row }">
-            <div>{{ row.instanceCode || '-' }}</div>
-            <div v-if="row.itemName" class="sub-text">器材：{{ row.itemName }}</div>
-            <div v-if="row.skuName" class="sub-text">器材规格：{{ row.skuName }}</div>
-            <div v-if="row.borrowNo" class="sub-text">借用单号：{{ row.borrowNo }}</div>
-          </template>
-        </el-table-column>
-        <el-table-column label="借用状态" width="90">
+      <el-table v-loading="loading" :data="borrowRecordList" border empty-text="暂无借用记录" class="borrow-table">
+        <el-table-column label="借用单号" prop="borrowNo" min-width="150" show-overflow-tooltip />
+        <el-table-column label="器材实例编码" prop="instanceCode" min-width="160" show-overflow-tooltip />
+        <el-table-column label="器材名称" prop="itemName" min-width="80" show-overflow-tooltip />
+        <el-table-column label="借用状态" width="90" align="center">
           <template #default="{ row }">
             <dict-tag :options="wms_borrow_status" :value="row.borrowStatus" />
           </template>
         </el-table-column>
-        <el-table-column label="预警" width="90" align="center">
+        <el-table-column label="预警" width="80" align="center">
           <template #default="{ row }">
             <el-tag v-if="row.overdueFlag === 1" type="danger">超期{{ row.overdueDays || 0 }}天</el-tag>
             <el-tag v-else type="success">正常</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="借用信息" min-width="180">
+        <el-table-column label="借用人" prop="borrower" width="80" show-overflow-tooltip />
+        <el-table-column label="借用时间" width="160">
           <template #default="{ row }">
-            <div>借用人：{{ row.borrower }}</div>
-            <div v-if="row.fromUnit || row.toUnit" class="sub-text">单位：{{ row.fromUnit || '-' }} -> {{ row.toUnit || '-' }}</div>
-            <div v-if="row.fromPerson || row.toPerson" class="sub-text">经手：{{ row.fromPerson || '-' }} / {{ row.toPerson || '-' }}</div>
-            <div v-if="row.docDate" class="sub-text">单据日期：{{ parseTime(row.docDate, '{y}-{m}-{d}') }}</div>
-            <div v-if="row.planReturnDate" class="sub-text">计划归还：{{ parseTime(row.planReturnDate, '{y}-{m}-{d}') }}</div>
-            <div class="sub-text">借用时间：{{ row.borrowTime ? parseTime(row.borrowTime, '{y}-{m}-{d} {h}:{i}:{s}') : '-' }}</div>
-            <div v-if="row.borrowRemark" class="sub-text">借用备注：{{ row.borrowRemark }}</div>
+            {{ row.borrowTime ? parseTime(row.borrowTime, '{y}-{m}-{d} {h}:{i}:{s}') : '-' }}
           </template>
         </el-table-column>
-        <el-table-column label="原位置" min-width="150">
+        <el-table-column label="计划归还" width="110">
           <template #default="{ row }">
-            <div v-if="row.originalWarehouseName">仓库：{{ row.originalWarehouseName }}</div>
-            <div v-if="row.originalAreaName">库区：{{ row.originalAreaName }}</div>
-            <div v-if="row.originalRackName">货架：{{ row.originalRackName }}</div>
-            <div v-if="row.originalLocationName">货位：{{ row.originalLocationName }}</div>
+            {{ row.planReturnDate ? parseTime(row.planReturnDate, '{y}-{m}-{d}') : '-' }}
           </template>
         </el-table-column>
-        <el-table-column label="归还信息" min-width="180">
+        <el-table-column label="归还时间" width="160">
           <template #default="{ row }">
-            <div>{{ row.returnTime ? ('归还时间：' + parseTime(row.returnTime, '{y}-{m}-{d} {h}:{i}:{s}')) : '未归还' }}</div>
-            <div class="sub-text">归还方式：原位归还</div>
-            <div v-if="row.returnedWarehouseName || row.returnedAreaName || row.returnedRackName || row.returnedLocationName" class="sub-text">
-              归还位置：{{ getReturnedLocationText(row) }}
-            </div>
-            <div v-if="row.returnRemark" class="sub-text">归还备注：{{ row.returnRemark }}</div>
+            {{ row.returnTime ? parseTime(row.returnTime, '{y}-{m}-{d} {h}:{i}:{s}') : '-' }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" align="center" width="180">
+        <el-table-column label="操作" align="center" width="120">
           <template #default="{ row }">
             <div class="table-actions">
               <el-button link type="primary" @click="handleView(row)">详情</el-button>
@@ -127,7 +109,6 @@
                 @click="handleReturn(row)"
                 v-hasPermi="['wms:borrowRecord:edit']"
               >归还</el-button>
-              <el-button link type="primary" @click="handleOpenItem(row)">明细</el-button>
             </div>
           </template>
         </el-table-column>
@@ -158,7 +139,7 @@
               v-for="item in borrowDialog.instanceOptions"
               :key="item.id"
               :label="item.instanceCode + (item.itemName ? ' / ' + item.itemName : '')"
-              :value="item.id"
+              :value="item.instanceCode"
             />
           </el-select>
         </el-form-item>
@@ -462,6 +443,7 @@ const borrowRules = {
 
 const itemInstanceStatusOptions = computed(() => wms_item_instance_status.value);
 
+
 const padDateValue = (value) => String(value).padStart(2, '0');
 
 const formatCurrentDateTime = (date = new Date()) => {
@@ -574,7 +556,9 @@ const loadBorrowableInstances = async () => {
     pageSize: 200,
     instanceStatus: '在库'
   });
-  borrowDialog.instanceOptions = (res.rows || []).filter(item => item.instanceStatus === '在库');
+  borrowDialog.instanceOptions = (res.rows || []).filter(
+    item => item.instanceStatus === '在库' && !item.shipmentOrderDetailId && !item.movementOrderDetailId
+  );
 };
 
 const loadReturnableInstances = async () => {
@@ -638,6 +622,7 @@ const handleBorrow = async (row) => {
   borrowDialog.visible = true;
   borrowDialog.form = {
     instanceCode: row?.instanceCode,
+    borrowStatus: 'borrowed',
     borrower: undefined,
     fromUnit: undefined,
     toUnit: undefined,
@@ -767,10 +752,6 @@ const openDetailById = async (id) => {
 
 const handleView = async (row) => {
   await openDetailById(row.id);
-};
-
-const handleOpenItem = (row) => {
-  router.push({ path: '/wms-item-instance/index', query: { instanceCode: row.instanceCode } });
 };
 
 onMounted(async () => {

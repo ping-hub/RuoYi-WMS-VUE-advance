@@ -78,7 +78,7 @@
         </el-col>
       </el-row>
 
-      <el-table v-loading="loading" :data="boxList" border empty-text="暂无箱体" cell-class-name="vertical-top-cell">
+      <el-table v-loading="loading" :data="boxList" border empty-text="暂无箱体">
         <el-table-column label="箱码" prop="boxCode" min-width="180" />
         <el-table-column label="箱体名称" prop="boxName" min-width="140" />
         <el-table-column label="状态" width="100">
@@ -86,17 +86,13 @@
             <dict-tag :options="wms_box_status" :value="row.boxStatus" />
           </template>
         </el-table-column>
-        <el-table-column label="位置" min-width="220">
-          <template #default="{ row }">
-            <div v-if="row.warehouseName">仓库：{{ row.warehouseName }}</div>
-            <div v-if="row.areaName">库区：{{ row.areaName }}</div>
-            <div v-if="row.rackName">货架：{{ row.rackName }}</div>
-            <div v-if="row.locationName">货位：{{ row.locationName }}</div>
-          </template>
-        </el-table-column>
-        <el-table-column label="当前装箱数" prop="itemCount" width="110" align="right" />
-        <el-table-column label="备注" prop="remark" min-width="160" show-overflow-tooltip />
-        <el-table-column label="操作" align="right" width="260">
+        <el-table-column label="仓库" prop="warehouseName" min-width="100" show-overflow-tooltip />
+        <el-table-column label="库区" prop="areaName" min-width="100" show-overflow-tooltip />
+        <el-table-column label="货架" prop="rackName" min-width="100" show-overflow-tooltip />
+        <el-table-column label="货位" prop="locationName" min-width="100" show-overflow-tooltip />
+        <el-table-column label="器材实例数" prop="itemCount" width="90" align="right" />
+        <el-table-column label="备注" prop="remark" min-width="80" show-overflow-tooltip />
+        <el-table-column label="操作" align="right" width="180">
           <template #default="{ row }">
             <el-button link type="primary" @click="handleView(row)">详情</el-button>
             <el-button link type="primary" @click="handleUpdate(row)" v-hasPermi="['wms:box:edit']">修改</el-button>
@@ -181,156 +177,29 @@
         <el-descriptions-item label="库区">{{ detailDialog.data.areaName || '-' }}</el-descriptions-item>
         <el-descriptions-item label="货架">{{ detailDialog.data.rackName || '-' }}</el-descriptions-item>
         <el-descriptions-item label="货位">{{ detailDialog.data.locationName || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="当前装箱数">{{ detailDialog.data.itemCount || 0 }}</el-descriptions-item>
+        <el-descriptions-item label="器材实例数">{{ detailDialog.data.itemCount || 0 }}</el-descriptions-item>
         <el-descriptions-item label="备注">{{ detailDialog.data.remark || '-' }}</el-descriptions-item>
       </el-descriptions>
 
       <div class="detail-header">
-        <span class="detail-title">当前装箱关系</span>
+        <span class="detail-title">器材实例清单</span>
       </div>
-      <el-table :data="detailDialog.data.items || []" border empty-text="箱内暂无器材实例" cell-class-name="vertical-top-cell">
-        <el-table-column label="器材实例编码" prop="instanceCode" min-width="180" />
-        <el-table-column label="器材信息" min-width="220">
+      <el-table :data="detailDialog.data.items || []" border empty-text="箱内暂无器材实例">
+        <el-table-column label="器材实例编码" prop="instanceCode" min-width="180">
           <template #default="{ row }">
-            <div class="item-title">{{ row.itemName || '-' }}</div>
-            <div v-if="row.itemCode" class="sub-text">器材编码：{{ row.itemCode }}</div>
-            <div v-if="row.skuName" class="sub-text">规格型号：{{ row.skuName }}</div>
-            <div v-if="row.productIdentifier" class="sub-text">产品标识：{{ row.productIdentifier }}</div>
-            <div v-if="row.qualityGrade" class="sub-text">质量等级：{{ row.qualityGrade }}</div>
+            <el-button link type="primary" @click="handleOpenItemInstance(row)">{{ row.instanceCode }}</el-button>
           </template>
         </el-table-column>
-        <el-table-column label="状态" width="100">
-          <template #default="{ row }">
-            <dict-tag :options="itemInstanceStatusOptions" :value="row.instanceStatus" />
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="100" align="right">
-          <template #default="{ row }">
-            <el-button link type="primary" @click="handleOpenItemInstance(row)">查看</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-    </el-dialog>
-
-    <el-dialog title="装箱" v-model="packDialog.visible" width="1100px" append-to-body :close-on-click-modal="false">
-      <el-alert
-        :closable="false"
-        type="info"
-        class="mb16"
-        :title="packDialog.boxCode ? '当前箱体：' + packDialog.boxCode + '，仅维护当前装箱关系' : '请选择需要建立装箱关系的器材实例编码'"
-      />
-      <el-form :inline="true" :model="packDialog.query" label-width="80px">
-        <el-form-item label="器材实例编码">
-          <el-input v-model="packDialog.query.instanceCode" placeholder="请输入器材实例编码" clearable @keyup.enter="getPackCandidates" />
-        </el-form-item>
-        <el-form-item label="器材">
-          <el-select v-model="packDialog.query.itemId" placeholder="请选择器材" clearable filterable style="width: 180px" @change="handlePackItemChange">
-            <el-option
-              v-for="item in itemOptions"
-              :key="item.id"
-              :label="item.itemCode ? item.itemName + ' (' + item.itemCode + ')' : item.itemName"
-              :value="item.id"
-            />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="器材规格">
-          <el-select v-model="packDialog.query.skuId" placeholder="请选择器材规格" clearable filterable style="width: 180px">
-            <el-option
-              v-for="item in packDialog.skuOptions"
-              :key="item.id"
-              :label="item.skuCode ? item.skuName + ' (' + item.skuCode + ')' : item.skuName"
-              :value="item.id"
-            />
-          </el-select>
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" icon="Search" @click="getPackCandidates">搜索</el-button>
-          <el-button icon="Refresh" @click="resetPackQuery">重置</el-button>
-        </el-form-item>
-      </el-form>
-
-      <el-table
-        ref="packTableRef"
-        v-loading="packDialog.loading"
-        :data="packDialog.list"
-        border
-        class="mt20"
-        empty-text="暂无可装箱器材实例"
-        @selection-change="handlePackSelectionChange"
-      >
-        <el-table-column type="selection" width="55" />
-        <el-table-column label="器材实例编码" prop="instanceCode" min-width="180" />
-        <el-table-column label="器材信息" min-width="220">
-          <template #default="{ row }">
-            <div class="item-title">{{ row.itemName || '-' }}</div>
-            <div v-if="row.itemCode" class="sub-text">器材编码：{{ row.itemCode }}</div>
-            <div v-if="row.skuName" class="sub-text">规格型号：{{ row.skuName }}</div>
-            <div v-if="row.productIdentifier" class="sub-text">产品标识：{{ row.productIdentifier }}</div>
-            <div v-if="row.qualityGrade" class="sub-text">质量等级：{{ row.qualityGrade }}</div>
-          </template>
-        </el-table-column>
-        <el-table-column label="状态" width="100">
-          <template #default="{ row }">
-            <dict-tag :options="itemInstanceStatusOptions" :value="row.instanceStatus" />
-          </template>
-        </el-table-column>
-        <el-table-column label="位置" min-width="220">
-          <template #default="{ row }">
-            <div v-if="row.warehouseName">仓库：{{ row.warehouseName }}</div>
-            <div v-if="row.areaName">库区：{{ row.areaName }}</div>
-            <div v-if="row.rackName">货架：{{ row.rackName }}</div>
-            <div v-if="row.locationName">货位：{{ row.locationName }}</div>
-          </template>
-        </el-table-column>
-      </el-table>
-
-      <template #footer>
-        <div class="dialog-footer">
-          <el-button :loading="buttonLoading" type="primary" @click="submitPack">确 定</el-button>
-          <el-button @click="packDialog.visible = false">取 消</el-button>
-        </div>
-      </template>
-    </el-dialog>
-
-    <el-dialog title="拆箱" v-model="unpackDialog.visible" width="960px" append-to-body :close-on-click-modal="false">
-      <el-alert
-        :closable="false"
-        type="warning"
-        class="mb16"
-        :title="unpackDialog.boxCode ? '当前箱体：' + unpackDialog.boxCode + '，仅解除当前装箱关系' : '请选择要解除装箱关系的器材实例编码'"
-      />
-      <el-table
-        ref="unpackTableRef"
-        v-loading="unpackDialog.loading"
-        :data="unpackDialog.list"
-        border
-        empty-text="箱内暂无可拆出的器材实例"
-        @selection-change="handleUnpackSelectionChange"
-      >
-        <el-table-column type="selection" width="55" />
-        <el-table-column label="器材实例编码" prop="instanceCode" min-width="180" />
-        <el-table-column label="器材信息" min-width="220">
-          <template #default="{ row }">
-            <div class="item-title">{{ row.itemName || '-' }}</div>
-            <div v-if="row.itemCode" class="sub-text">器材编码：{{ row.itemCode }}</div>
-            <div v-if="row.skuName" class="sub-text">规格型号：{{ row.skuName }}</div>
-            <div v-if="row.productIdentifier" class="sub-text">产品标识：{{ row.productIdentifier }}</div>
-            <div v-if="row.qualityGrade" class="sub-text">质量等级：{{ row.qualityGrade }}</div>
-          </template>
-        </el-table-column>
+        <el-table-column label="器材名称" prop="itemName" min-width="120" show-overflow-tooltip />
+        <el-table-column label="规格型号" prop="skuName" min-width="120" show-overflow-tooltip />
         <el-table-column label="状态" width="100">
           <template #default="{ row }">
             <dict-tag :options="itemInstanceStatusOptions" :value="row.instanceStatus" />
           </template>
         </el-table-column>
       </el-table>
-      <template #footer>
-        <div class="dialog-footer">
-          <el-button :loading="buttonLoading" type="primary" @click="submitUnpack">确 定</el-button>
-          <el-button @click="unpackDialog.visible = false">取 消</el-button>
-        </div>
-      </template>
     </el-dialog>
+
   </div>
 </template>
 
@@ -338,10 +207,7 @@
 import { computed, getCurrentInstance, onMounted, reactive, ref, toRefs, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessageBox } from 'element-plus';
-import { addBox, delBox, getBox, listBox, packBox, unpackBox, updateBox } from '@/api/wms/box';
-import { listItem } from '@/api/wms/item';
-import { listItemSku } from '@/api/wms/itemSku';
-import { listItemInstance } from '@/api/wms/itemInstance';
+import { addBox, delBox, getBox, listBox, updateBox } from '@/api/wms/box';
 import { useWmsStore } from '@/store/modules/wms';
 import RackSelect from '@/views/components/RackSelect.vue';
 import LocationSelect from '@/views/components/LocationSelect.vue';
@@ -356,11 +222,8 @@ const loading = ref(true);
 const buttonLoading = ref(false);
 const total = ref(0);
 const boxList = ref([]);
-const itemOptions = ref([]);
 const queryRef = ref();
 const boxFormRef = ref();
-const packTableRef = ref();
-const unpackTableRef = ref();
 
 const dialog = reactive({
   visible: false,
@@ -370,30 +233,6 @@ const dialog = reactive({
 const detailDialog = reactive({
   visible: false,
   data: {}
-});
-
-const packDialog = reactive({
-  visible: false,
-  boxId: undefined,
-  boxCode: '',
-  loading: false,
-  list: [],
-  selectedIds: [],
-  skuOptions: [],
-  query: {
-    instanceCode: undefined,
-    itemId: undefined,
-    skuId: undefined
-  }
-});
-
-const unpackDialog = reactive({
-  visible: false,
-  boxId: undefined,
-  boxCode: '',
-  loading: false,
-  list: [],
-  selectedIds: []
 });
 
 const initFormData = () => ({
@@ -463,21 +302,6 @@ const getList = async () => {
   }
 };
 
-const loadItemOptions = async () => {
-  const res = await listItem({});
-  itemOptions.value = res.data || [];
-};
-
-const loadPackSkuOptions = async () => {
-  packDialog.query.skuId = undefined;
-  if (!packDialog.query.itemId) {
-    packDialog.skuOptions = [];
-    return;
-  }
-  const res = await listItemSku({ itemId: packDialog.query.itemId });
-  packDialog.skuOptions = res.data || [];
-};
-
 const handleQuery = () => {
   queryParams.value.pageNum = 1;
   getList();
@@ -517,10 +341,18 @@ const handleAdd = () => {
   dialog.title = '新增箱体';
 };
 
+const originalLocation = ref({});
+
 const handleUpdate = async (row) => {
   reset();
   const res = await getBox(row.id);
   form.value = { ...initFormData(), ...res.data };
+  originalLocation.value = {
+    warehouseId: res.data.warehouseId,
+    areaId: res.data.areaId,
+    rackId: res.data.rackId,
+    locationId: res.data.locationId,
+  };
   dialog.visible = true;
   dialog.title = '修改箱体';
 };
@@ -540,10 +372,28 @@ const handleFormRackChange = () => {
   form.value.locationId = undefined;
 };
 
+const isLocationChanged = () => {
+  const orig = originalLocation.value;
+  return form.value.warehouseId !== orig.warehouseId
+    || form.value.areaId !== orig.areaId
+    || form.value.rackId !== orig.rackId
+    || form.value.locationId !== orig.locationId;
+};
+
 const submitForm = () => {
   boxFormRef.value.validate(async valid => {
     if (!valid) {
       return;
+    }
+    // 修改时检测位置变更
+    if (form.value.id && isLocationChanged()) {
+      try {
+        await ElMessageBox.confirm(
+          '修改箱体位置后，箱内器材的位置不会随之变动，确认继续？',
+          '提示',
+          { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' }
+        );
+      } catch { return; }
     }
     buttonLoading.value = true;
     try {
@@ -574,145 +424,25 @@ const handleView = async (row) => {
 };
 
 const handleDelete = async (row) => {
-  await proxy.$modal.confirm('确认删除箱体【' + row.boxCode + '】吗？');
-  try {
-    await delBox(row.id);
-    proxy.$modal.msgSuccess('删除成功');
-    await getList();
-  } catch (e) {
-    if (e === 409) {
-      return ElMessageBox.alert(
-        '<div>箱体【' + row.boxCode + '】内仍有器材，不能删除。</div><div>请先执行拆箱操作。</div>',
-        '系统提示',
-        { dangerouslyUseHTMLString: true }
-      );
-    }
-    throw e;
-  }
-};
-
-const handlePack = async (row) => {
-  packDialog.visible = true;
-  packDialog.boxId = row.id;
-  packDialog.boxCode = row.boxCode;
-  packDialog.selectedIds = [];
-  packDialog.query.instanceCode = undefined;
-  packDialog.query.itemId = undefined;
-  packDialog.query.skuId = undefined;
-  packDialog.skuOptions = [];
-  await getPackCandidates();
-};
-
-const handlePackItemChange = async () => {
-  await loadPackSkuOptions();
-};
-
-const resetPackQuery = async () => {
-  packDialog.query.instanceCode = undefined;
-  packDialog.query.itemId = undefined;
-  packDialog.query.skuId = undefined;
-  packDialog.skuOptions = [];
-  await getPackCandidates();
-};
-
-const getPackCandidates = async () => {
-  packDialog.loading = true;
-  try {
-    const res = await listItemInstance({
-      pageNum: 1,
-      pageSize: 200,
-      instanceCode: packDialog.query.instanceCode,
-      itemId: packDialog.query.itemId,
-      skuId: packDialog.query.skuId,
-      instanceStatus: '在库'
-    });
-    packDialog.list = (res.rows || []).filter(item => item.instanceStatus === '在库' && !item.boxId);
-  } finally {
-    packDialog.loading = false;
-  }
-};
-
-const handlePackSelectionChange = (selection) => {
-  packDialog.selectedIds = selection.map(item => item.instanceCode);
-};
-
-const submitPack = async () => {
-  if (!packDialog.selectedIds.length) {
-    proxy.$modal.msgError('请先选择要装箱的器材实例编码');
-    return;
-  }
-  buttonLoading.value = true;
-  try {
-    await packBox({
-      boxId: packDialog.boxId,
-      instanceCodes: packDialog.selectedIds
-    });
-    proxy.$modal.msgSuccess('装箱成功');
-    packDialog.visible = false;
-    await Promise.all([getList(), refreshDetailIfOpened(packDialog.boxId)]);
-  } finally {
-    buttonLoading.value = false;
-  }
-};
-
-const handleUnpack = async (row) => {
-  unpackDialog.visible = true;
-  unpackDialog.boxId = row.id;
-  unpackDialog.boxCode = row.boxCode;
-  unpackDialog.selectedIds = [];
-  await getUnpackItems(row.id);
-};
-
-const getUnpackItems = async (boxId) => {
-  unpackDialog.loading = true;
-  try {
-    const res = await getBox(boxId);
-    unpackDialog.list = res.data?.items || [];
-  } finally {
-    unpackDialog.loading = false;
-  }
-};
-
-const handleUnpackSelectionChange = (selection) => {
-  unpackDialog.selectedIds = selection.map(item => item.instanceCode);
-};
-
-const submitUnpack = async () => {
-  if (!unpackDialog.selectedIds.length) {
-    proxy.$modal.msgError('请先选择要拆出的器材实例编码');
-    return;
-  }
-  buttonLoading.value = true;
-  try {
-    await unpackBox({
-      boxId: unpackDialog.boxId,
-      instanceCodes: unpackDialog.selectedIds
-    });
-    proxy.$modal.msgSuccess('拆箱成功');
-    unpackDialog.visible = false;
-    await Promise.all([getList(), refreshDetailIfOpened(unpackDialog.boxId)]);
-  } finally {
-    buttonLoading.value = false;
-  }
-};
-
-const refreshDetailIfOpened = async (boxId) => {
-  if (detailDialog.visible && detailDialog.data.id === boxId) {
-    const res = await getBox(boxId);
-    detailDialog.data = res.data || {};
-  }
+  const hasItems = row.itemCount > 0;
+  const msg = hasItems
+    ? '确认删除箱体【' + row.boxCode + '】吗？箱内器材将自动解除装箱关系，器材自身位置不受影响。'
+    : '确认删除箱体【' + row.boxCode + '】吗？';
+  await proxy.$modal.confirm(msg);
+  await delBox(row.id);
+  proxy.$modal.msgSuccess('删除成功');
+  await getList();
 };
 
 const handleOpenItemInstance = (row) => {
-  router.push({ path: '/wms-item-instance/index', query: { instanceCode: row.instanceCode } });
+  router.push({ path: '/inventoryCenter/inventoryDetail', query: { instanceCode: row.instanceCode } });
 };
 
 onMounted(async () => {
   applyRouteQuery();
   await Promise.all([
     wmsStore.getWarehouseList(),
-    wmsStore.getAreaList(),
-    loadItemOptions()
+    wmsStore.getAreaList()
   ]);
   await getList();
 });
@@ -727,23 +457,6 @@ watch(
 </script>
 
 <style scoped>
-.item-title {
-  color: var(--el-text-color-primary);
-  font-size: 14px;
-  font-weight: 600;
-  line-height: 1.5;
-}
-
-.sub-text {
-  color: var(--el-text-color-secondary);
-  font-size: 12px;
-  line-height: 1.5;
-}
-
-.vertical-top-cell {
-  vertical-align: top;
-}
-
 .detail-header {
   display: flex;
   align-items: center;

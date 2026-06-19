@@ -228,7 +228,7 @@ import { getRack } from '@/api/wms/rack';
 import { useWmsStore } from '@/store/modules/wms';
 import RackSelect from '@/views/components/RackSelect.vue';
 import FormLabelHelp from '@/views/components/FormLabelHelp.vue'
-import { buildQrTscCommand, WssPrintClient } from '@/utils/wssPrintClient';
+import { buildQrTscCommand, WssPrintClient, getPrintUrl } from '@/utils/wssPrintClient';
 
 const { proxy } = getCurrentInstance();
 const route = useRoute();
@@ -395,7 +395,8 @@ function handleSelectionChange(selection) {
 
 async function ensurePrintClient() {
   if (!printClient) {
-    printClient = new WssPrintClient();
+    const url = await getPrintUrl();
+    printClient = new WssPrintClient({ url });
   }
   await printClient.connect();
 }

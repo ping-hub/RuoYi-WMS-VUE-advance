@@ -1,7 +1,6 @@
 <template>
   <div>
     <div class="receipt-order-edit-wrapper app-container" :class="{ 'is-view-mode': isViewMode }" style="margin-bottom: 60px" v-loading="loading">
-      <el-alert v-if="isViewMode" class="mb10" type="info" :closable="false" title="当前为联查查看模式，已禁用编辑、作废和完成入库操作。" />
       <el-card header="入库单基本信息">
         <el-form label-width="108px" :model="form" ref="receiptForm" :rules="rules" :disabled="isViewMode">
           <el-row :gutter="24">
@@ -137,6 +136,7 @@
                 <LocationSelect
                   v-model="row.locationId"
                   :warehouse-id="form.warehouseId"
+                  :area-id="form.areaId"
                   placeholder="货位"
                   :disabled="isViewMode"
                   @change="(val) => handleLocationSelectChange(row, val)"
@@ -268,6 +268,7 @@ import {ElMessage} from "element-plus";
 import LocationSelect from "@/views/components/LocationSelect.vue";
 import { getLocation, listLocationNoPage } from '@/api/wms/location'
 import {useRoute} from "vue-router";
+import useTagsViewStore from "@/store/modules/tagsView";
 import {useWmsStore} from '@/store/modules/wms'
 import { numSub } from '@/utils/ruoyi'
 import { delReceiptOrderDetail } from '@/api/wms/receiptOrderDetail'
@@ -277,6 +278,7 @@ import { getItemInstanceByCode, listItemInstance } from "@/api/wms/itemInstance"
 
 const {proxy} = getCurrentInstance();
 const route = useRoute();
+const tagsViewStore = useTagsViewStore();
 const isViewMode = computed(() => route.query.mode === 'view');
 const { wms_receipt_type } = proxy.useDict("wms_receipt_type");
 const loading = ref(false)
@@ -933,6 +935,10 @@ const doWarehousing = async () => {
 }
 
 onMounted(() => {
+  if (route.query.mode === 'view') {
+    route.meta.title = '查看入库单'
+    tagsViewStore.updateVisitedView(route)
+  }
   window.addEventListener('keydown', handleReceiptScanKeydown)
   const id = route.query && route.query.id;
   if (id) {

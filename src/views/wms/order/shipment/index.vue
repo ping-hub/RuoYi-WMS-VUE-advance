@@ -88,46 +88,57 @@
             <dict-tag :options="wms_shipment_status" :value="row.shipmentOrderStatus" />
           </template>
         </el-table-column>
+        <el-table-column label="申请人" align="left" min-width="70" show-overflow-tooltip>
+          <template #default="{ row }">
+            {{ getNickNameById(row.applicantId) }}
+          </template>
+        </el-table-column>
         <el-table-column label="数量" align="left" min-width="70">
           <template #default="{ row }">
             <el-statistic :value="Number(row.totalQuantity)" :precision="0"/>
           </template>
         </el-table-column>
-        <el-table-column label="金额(元)" align="left" min-width="90">
+        <el-table-column label="金额(元)" align="left" min-width="70">
           <template #default="{ row }">
             <el-statistic v-if="row.receivableAmount || row.receivableAmount === 0" :value="Number(row.receivableAmount)" :precision="2"/>
             <span v-else>-</span>
           </template>
         </el-table-column>
-        <el-table-column label="备注" prop="remark" min-width="100" show-overflow-tooltip />
-        <el-table-column label="操作" align="right" class-name="small-padding fixed-width" width="120">
+        <el-table-column label="备注" prop="remark" min-width="60" show-overflow-tooltip />
+        <el-table-column label="操作" align="right" class-name="small-padding fixed-width" width="200">
           <template #default="scope">
             <el-popover
               placement="left"
               title="提示"
               :width="300"
               trigger="hover"
-              :disabled="scope.row.shipmentOrderStatus === 0"
-              :content="'出库单【' + scope.row.shipmentOrderNo + '】已' + (scope.row.shipmentOrderStatus === 1 ? '出库' : '作废') + '，无法修改！' "
+              :disabled="[0, -2].includes(Number(scope.row.shipmentOrderStatus))"
+              :content="getDisabledTip(scope.row)"
             >
               <template #reference>
-                <el-button link type="primary" @click="handleUpdate(scope.row)" v-hasPermi="['wms:shipment:all']" :disabled="[-1, 1].includes(scope.row.shipmentOrderStatus)">修改</el-button>
+                <el-button link type="primary" @click="handleUpdate(scope.row)" v-hasPermi="['wms:shipment:all']" :disabled="!canEdit(scope.row)">修改</el-button>
               </template>
             </el-popover>
             <el-button link type="primary" @click="handleView(scope.row)" v-hasPermi="['wms:shipment:all']">查看</el-button>
+            <!-- 提交审批：草稿/已驳回 -->
+            <el-button v-if="[0, -2].includes(Number(scope.row.shipmentOrderStatus))" link type="warning" @click="handleSubmit(scope.row)" v-hasPermi="['wms:shipment:submit']">提交</el-button>
+            <!-- 审批/驳回：待审批 -->
+            <el-button v-if="scope.row.shipmentOrderStatus == 1" link type="success" @click="handleApprove(scope.row)" v-hasPermi="['wms:shipment:approve']">审批</el-button>
+            <!-- 完成出库：已审批，仅指定操作人可见 -->
+            <el-button v-if="scope.row.shipmentOrderStatus == 2 && isRowExecutor(scope.row)" link type="primary" @click="handleDoShipment(scope.row)" v-hasPermi="['wms:shipment:execute']">出库</el-button>
             <el-popover
               placement="left"
               title="提示"
               :width="300"
               trigger="hover"
-              :disabled="scope.row.shipmentOrderStatus === 0"
-              :content="'出库单【' + scope.row.shipmentOrderNo + '】已' + (scope.row.shipmentOrderStatus === 1 ? '出库' : '作废') + '，无法删除！' "
+              :disabled="canDelete(scope.row)"
+              :content="getDisabledTip(scope.row)"
             >
               <template #reference>
-                <el-button link type="danger" @click="handleDelete(scope.row)" v-hasPermi="['wms:shipment:all']" :disabled="[-1, 1].includes(scope.row.shipmentOrderStatus)">删除</el-button>
+                <el-button link type="danger" @click="handleDelete(scope.row)" v-hasPermi="['wms:shipment:all']" :disabled="!canDelete(scope.row)">删除</el-button>
               </template>
             </el-popover>
-            <el-button link type="primary" @click="handlePrint(scope.row)" v-hasPermi="['wms:shipment:all']">打印</el-button>
+            <el-button v-if="scope.row.shipmentOrderStatus == 3" link type="primary" @click="handlePrint(scope.row)" v-hasPermi="['wms:shipment:all']">打印</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -146,10 +157,12 @@
 </template>
 
 <script setup name="ShipmentOrder">
-import {listShipmentOrder, delShipmentOrder, getShipmentOrder} from "@/api/wms/shipmentOrder";
+import {listShipmentOrder, delShipmentOrder, getShipmentOrder, submitForApproval, voidOrder} from "@/api/wms/shipmentOrder";
+import {getUserSelectList} from "@/api/wms/common";
 import {getCurrentInstance, reactive, ref, toRefs} from "vue";
 import { useRoute, useRouter } from "vue-router";
 import {useWmsStore} from "../../../../store/modules/wms";
+import useUserStore from "@/store/modules/user";
 import {ElMessageBox} from "element-plus";
 import shipmentPanel from "@/components/PrintTemplate/shipment-panel";
 import { resolveRoutePath } from "@/utils/routeResolver";
@@ -157,6 +170,17 @@ import { resolveRoutePath } from "@/utils/routeResolver";
 const { proxy } = getCurrentInstance();
 const route = useRoute();
 const router = useRouter();
+const userStore = useUserStore();
+// 用户列表，用于显示中文昵称
+const userList = ref([]);
+// 根据用户ID查找昵称
+const getNickNameById = (userId) => {
+  if (!userId) return '-'
+  const u = userList.value.find(x => String(x.userId) === String(userId))
+  return u ? u.nickName : '-'
+};
+// 判断当前用户是否为该行指定操作人
+const isRowExecutor = (row) => userStore.id && row.executorId && String(userStore.id) === String(row.executorId);
 const { wms_shipment_status, wms_shipment_type } = proxy.useDict(
   "wms_shipment_status",
   "wms_shipment_type"
@@ -250,6 +274,45 @@ function handleView(row) {
   router.push({ path: resolveShipmentOrderEditPath(), query: { id: row.id, mode: 'view', returnFullPath: route.fullPath } });
 }
 
+/** 状态判断辅助函数 */
+function canEdit(row) {
+  return [0, -2].includes(Number(row.shipmentOrderStatus))
+}
+
+function canDelete(row) {
+  return [0, -2].includes(Number(row.shipmentOrderStatus))
+}
+
+function getDisabledTip(row) {
+  const statusMap = { 1: '待审批中', 2: '已审批', 3: '已出库', '-1': '已作废', '-2': '已驳回' }
+  const label = statusMap[row.shipmentOrderStatus] || '未知状态'
+  return '出库单【' + row.shipmentOrderNo + '】' + label + '，无法操作！'
+}
+
+/** 提交审批 */
+function handleSubmit(row) {
+  proxy.$modal.confirm('确认提交出库单【' + row.shipmentOrderNo + '】审批吗？').then(() => {
+    return submitForApproval(row.id)
+  }).then((res) => {
+    if (res.code === 200) {
+      proxy.$modal.msgSuccess('提交成功')
+      getList()
+    } else {
+      proxy.$modal.msgError(res.msg)
+    }
+  })
+}
+
+/** 审批 - 跳转到编辑页进行操作 */
+function handleApprove(row) {
+  router.push({ path: resolveShipmentOrderEditPath(), query: { id: row.id, returnFullPath: route.fullPath } });
+}
+
+/** 完成出库 - 跳转到编辑页进行操作 */
+function handleDoShipment(row) {
+  router.push({ path: resolveShipmentOrderEditPath(), query: { id: row.id, returnFullPath: route.fullPath } });
+}
+
 /** 导出按钮操作 */
 async function handlePrint(row) {
   const topValueFields = new Set(['basisNo', 'dispatchMode', 'noticeOrg', 'receiveUnit', 'purchaseDate', 'shipmentDate'])
@@ -337,6 +400,10 @@ async function handlePrint(row) {
     }
   })
 }
+// 加载用户列表
+getUserSelectList().then(res => {
+  userList.value = res.data || []
+})
 getList();
 </script>
 <style lang="scss">

@@ -90,7 +90,14 @@ service.interceptors.response.use(res => {
     }
       return Promise.reject('无效的会话，或者会话已过期，请重新登录。')
     } else if (code === 409) {
-      return Promise.reject(409)
+      ElMessage.error({ message: msg, duration: 3000 })
+      return Promise.reject(new Error(msg))
+    } else if (code === 501) {
+      ElMessage.error({ message: msg || 'License未激活或已过期，写操作被禁止', duration: 3000 })
+      return Promise.reject(new Error(msg || 'License无效'))
+    } else if (code === 502) {
+      ElMessage.error({ message: msg || 'License机器码不匹配，请联系管理员', duration: 3000 })
+      return Promise.reject(new Error(msg || '机器码不匹配'))
     } else if (code === 500) {
       ElMessage({ message: msg, type: 'error' })
       return Promise.reject(new Error(msg))

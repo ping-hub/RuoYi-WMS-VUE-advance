@@ -265,7 +265,7 @@ import { ElMessageBox } from 'element-plus';
 import { addItem, batchPrintItemQrCode, delItem, getItem, listItemPage, updateItem } from '@/api/wms/item';
 import { addItemCategory, updateItemCategory } from '@/api/wms/itemCategory';
 import { useWmsStore } from '@/store/modules/wms';
-import { buildQrTscCommand, WssPrintClient } from '@/utils/wssPrintClient';
+import { buildQrTscCommand, WssPrintClient, getPrintUrl } from '@/utils/wssPrintClient';
 
 const route = useRoute();
 const { proxy } = getCurrentInstance();
@@ -550,7 +550,8 @@ const handleBatchPrintQrCode = async (row) => {
 
 async function ensurePrintClient() {
   if (!printClient) {
-    printClient = new WssPrintClient();
+    const url = await getPrintUrl();
+    printClient = new WssPrintClient({ url });
   }
   await printClient.connect();
 }

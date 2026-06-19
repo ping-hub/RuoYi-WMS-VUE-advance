@@ -100,7 +100,7 @@
           </template>
         </el-table-column>
         <el-table-column label="备注" prop="remark" min-width="100" show-overflow-tooltip />
-        <el-table-column label="操作" align="right" class-name="small-padding fixed-width" width="120">
+        <el-table-column label="操作" align="right" class-name="small-padding fixed-width" width="200">
           <template #default="scope">
             <el-popover
               placement="left"
@@ -127,7 +127,7 @@
                 <el-button link type="danger" @click="handleDelete(scope.row)" v-hasPermi="['wms:receipt:all']" :disabled="[-1, 1].includes(scope.row.receiptOrderStatus)">删除</el-button>
               </template>
             </el-popover>
-            <el-button link type="primary" @click="handlePrint(scope.row)" v-hasPermi="['wms:receipt:all']">打印</el-button>
+            <el-button v-if="scope.row.receiptOrderStatus === 1" link type="primary" @click="handlePrint(scope.row)" v-hasPermi="['wms:receipt:all']">打印</el-button>
           </template>
         </el-table-column>
       </el-table>

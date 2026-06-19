@@ -3,5 +3,5 @@
 </template>
 
 <script setup name="Index">
-import SmartWms from '@/views/wms/dashboard/inventoryDashboard.vue'
+import SmartWms from '@/views/wms/dashboard/inventoryDashboardAuto.vue'
 </script>

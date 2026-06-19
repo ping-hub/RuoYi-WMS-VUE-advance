@@ -59,23 +59,6 @@
         </div>
       </el-form-item>
     </el-form>
-    <el-dialog
-      title="公众号二维码"
-      v-model="dialogVisible"
-      append-to-body
-      :show-close="false"
-      width="30%">
-      <div style="text-align: center">
-        <span class="font-title-large"><span class="color-main font-extra-large">关注公众号</span>回复<span class="color-main font-extra-large">仓库</span>获取体验账号</span>
-        <br>
-        <img src="@/assets/logo/gzh.jpg" width="160" height="160" style="margin-top: 10px">
-      </div>
-      <template #footer>
-        <div class="dialog-footer">
-          <el-button type="primary" @click="dialogConfirm">确定</el-button>
-        </div>
-      </template>
-    </el-dialog>
     <!--  底部  -->
     <div class="el-login-footer">
     </div>
@@ -113,14 +96,6 @@ const captchaEnabled = ref(true);
 // 注册开关
 const register = ref(false);
 const redirect = ref(undefined);
-const dialogVisible = ref(false);
-
-function handleTry(){
-  dialogVisible.value =true
-}
-function dialogConfirm(){
-  dialogVisible.value =false;
-}
 
 function handleLogin() {
   proxy.$refs.loginRef.validate(valid => {
@@ -177,12 +152,6 @@ getCookie();
 </script>
 
 <style lang='scss' scoped>
-.color-main {
-  color: #409EFF;
-}
-.font-extra-large {
-  font-size: 20px;
-}
 .login {
   display: flex;
   justify-content: center;

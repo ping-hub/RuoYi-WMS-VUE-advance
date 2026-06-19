@@ -248,16 +248,18 @@
 <script setup name="CheckOrderEdit">
 import { computed, getCurrentInstance, onMounted, reactive, ref, toRefs, watch } from "vue";
 import { addCheckOrder, getCheckOrder, updateCheckOrder, startCheck, getInstancesBySku, check } from "@/api/wms/checkOrder";
-import { listUser } from "@/api/system/user";
+import { getUserSelectList } from "@/api/wms/common";
 import { ElMessage } from "element-plus";
 import { Delete } from "@element-plus/icons-vue";
 import { useRoute, useRouter } from "vue-router";
+import useTagsViewStore from "@/store/modules/tagsView";
 import { useWmsStore } from '@/store/modules/wms'
 import RackSelect from "@/views/components/RackSelect.vue";
 
 const { proxy } = getCurrentInstance();
 const router = useRouter();
 const route = useRoute();
+const tagsViewStore = useTagsViewStore();
 const wmsStore = useWmsStore();
 const isViewMode = computed(() => route.query.mode === 'view');
 const isNew = computed(() => !route.query.id);
@@ -298,10 +300,8 @@ const _pendingInstanceRestore = {};
 // ===== 用户下拉列表 =====
 const userList = ref([]);
 const loadUserList = () => {
-  listUser({ pageNum: 1, pageSize: 1000, status: '0' }).then(res => {
-    if (res.code === 200) {
-      userList.value = res.rows || [];
-    }
+  getUserSelectList().then(res => {
+    userList.value = res.data || [];
   });
 };
 
@@ -409,35 +409,40 @@ const loadInstances = async (row) => {
   try {
     const res = await getInstancesBySku(form.value.id, row.skuId);
     if (res.code === 200) {
-      skuInstanceCache[row.skuId] = res.data || [];
-      // 若有待恢复的实例数据，重建 actualInstanceMap
+      const resData = res.data || [];
+
+      // 已完成的盘点单：后端返回的是存储的账面实例快照
+      if (form.value.checkOrderStatus !== 0) {
+        skuInstanceCache[row.skuId] = resData;
+        // 实际实例从 loadDetail 已恢复的 loss/gain 数据计算
+        if (_pendingInstanceRestore[row.skuId]) {
+          const { loss, gain } = _pendingInstanceRestore[row.skuId];
+          const lossCodes = new Set(loss.map(l => l.instanceCode));
+          actualInstanceMap[row.skuId] = [
+            ...resData.filter(inst => !lossCodes.has(inst.instanceCode))
+              .map(inst => ({ instanceCode: inst.instanceCode, itemName: inst.itemSku?.itemName || '', remark: '' })),
+            ...gain.map(inst => ({ instanceCode: inst.instanceCode, remark: inst.remark || '', _isManual: true, _key: inst.id || Date.now() + Math.random() })),
+          ];
+          delete _pendingInstanceRestore[row.skuId];
+        } else if (!actualInstanceMap[row.skuId]) {
+          actualInstanceMap[row.skuId] = resData.map(inst => ({ instanceCode: inst.instanceCode, itemName: inst.itemSku?.itemName || '', remark: '' }));
+        }
+        return;
+      }
+
+      // 待盘点：查询实时库存实例
+      skuInstanceCache[row.skuId] = resData;
       if (_pendingInstanceRestore[row.skuId]) {
         const { loss, gain } = _pendingInstanceRestore[row.skuId];
         const lossCodes = new Set(loss.map(l => l.instanceCode));
-        // 实际 = 账面 - 盘亏 + 盘盈
         actualInstanceMap[row.skuId] = [
-          ...(res.data || [])
-            .filter(inst => !lossCodes.has(inst.instanceCode))
-            .map(inst => ({
-              instanceCode: inst.instanceCode,
-              itemName: inst.itemSku?.itemName || '',
-              remark: '',
-            })),
-          ...gain.map(inst => ({
-            instanceCode: inst.instanceCode,
-            remark: inst.remark || '',
-            _isManual: true,
-            _key: inst.id || Date.now() + Math.random(),
-          })),
+          ...resData.filter(inst => !lossCodes.has(inst.instanceCode))
+            .map(inst => ({ instanceCode: inst.instanceCode, itemName: inst.itemSku?.itemName || '', remark: '' })),
+          ...gain.map(inst => ({ instanceCode: inst.instanceCode, remark: inst.remark || '', _isManual: true, _key: inst.id || Date.now() + Math.random() })),
         ];
         delete _pendingInstanceRestore[row.skuId];
       } else if (!actualInstanceMap[row.skuId]) {
-        // 若实际实例尚未初始化，默认复制账面实例
-        actualInstanceMap[row.skuId] = (res.data || []).map(inst => ({
-          instanceCode: inst.instanceCode,
-          itemName: inst.itemSku?.itemName || '',
-          remark: '',
-        }));
+        actualInstanceMap[row.skuId] = resData.map(inst => ({ instanceCode: inst.instanceCode, itemName: inst.itemSku?.itemName || '', remark: '' }));
       }
     }
   } finally {
@@ -474,11 +479,19 @@ const save = async () => {
 };
 
 const doSave = (checkOrderStatus) => {
-  const details = (form.value.details || []).map(it => ({
-    id: it.id, checkOrderId: form.value.id, skuId: it.skuId,
-    quantity: it.quantity, checkQuantity: getCheckQuantity(it),
-    warehouseId: form.value.warehouseId, areaId: it.areaId, rackId: it.rackId,
-  }));
+  const details = (form.value.details || []).map(it => {
+    // 若已加载实际实例列表，将编码传给后端以暂存实例级增删
+    const actualList = actualInstanceMap[it.skuId];
+    const scannedInstanceCodes = actualList
+      ? actualList.filter(i => i.instanceCode).map(i => i.instanceCode)
+      : undefined;
+    return {
+      id: it.id, checkOrderId: form.value.id, skuId: it.skuId,
+      quantity: it.quantity, checkQuantity: getCheckQuantity(it),
+      warehouseId: form.value.warehouseId, areaId: it.areaId, rackId: it.rackId,
+      scannedInstanceCodes,
+    };
+  });
   const params = {
     id: form.value.id, checkOrderNo: form.value.checkOrderNo,
     checkOrderStatus: checkOrderStatus ?? form.value.checkOrderStatus,
@@ -508,6 +521,10 @@ const updateToInvalid = async () => {
 
 const doCheck = async () => {
   await proxy?.$modal.confirm('确认盘点结束吗？完成后不可修改。');
+  // 盘点完成时自动赋值当前时间
+  const now = new Date();
+  const pad = (n) => String(n).padStart(2, '0');
+  form.value.checkDate = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
   // 构建详情（含实例差异信息）
   const details = (form.value.details || []).map(it => {
     const diff = getDiff(it);
@@ -575,6 +592,10 @@ const loadDetail = (id) => {
 };
 
 onMounted(() => {
+  if (route.query.mode === 'view') {
+    route.meta.title = '查看盘点单'
+    tagsViewStore.updateVisitedView(route)
+  }
   loadUserList();
   const id = route.query?.id;
   if (id) loadDetail(id);

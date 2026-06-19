@@ -46,22 +46,6 @@ export function updateBox(data) {
   });
 }
 
-export function packBox(data) {
-  return request({
-    url: '/wms/box/pack',
-    method: 'post',
-    data
-  });
-}
-
-export function unpackBox(data) {
-  return request({
-    url: '/wms/box/unpack',
-    method: 'post',
-    data
-  });
-}
-
 export function delBox(id) {
   return request({
     url: '/wms/box/' + id,
