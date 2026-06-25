@@ -324,7 +324,6 @@ async function handlePrint(row) {
     )
   }
   const printData = {
-    attachmentLabel: '附件 24',
     receiptOrderNo: receiptOrder.receiptOrderNo,
     receiptOrderType: receiptOrder.receiptOrderType,
     receiptOrderStatus: proxy.selectDictLabel(wms_receipt_status.value, receiptOrder.receiptOrderStatus),

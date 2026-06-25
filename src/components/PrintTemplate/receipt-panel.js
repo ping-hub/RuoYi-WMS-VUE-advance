@@ -119,7 +119,7 @@ export default {
       paperHeader: 35,
       paperFooter: 780,
       printElements: [
-        createFieldText(16, 16, 120, 18, "附件", "attachmentLabel", { fontSize: 11 }),
+        
         createStaticText(220, 40, 150, 24, "器材入库单", {
           fontSize: 18,
           fontWeight: "700",

@@ -383,7 +383,6 @@ async function handlePrint(row) {
     )
   }
   const printData = {
-    attachmentLabel: '附件 25',
     shipmentOrderNo: shipmentOrder.shipmentOrderNo,
     shipmentOrderType: shipmentOrder.shipmentOrderType,
     shipmentOrderStatus: proxy.selectDictLabel(wms_shipment_status.value, shipmentOrder.shipmentOrderStatus),

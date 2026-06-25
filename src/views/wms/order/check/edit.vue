@@ -150,7 +150,6 @@
                   <div class="instance-scroll">
                     <div v-for="inst in skuInstanceCache[row.skuId]" :key="inst.instanceCode" class="instance-item">
                       <span class="instance-code">{{ inst.instanceCode }}</span>
-                      <span class="instance-name">{{ inst.itemSku?.itemName || '-' }}</span>
                     </div>
                     <el-empty v-if="!skuInstanceCache[row.skuId]?.length" description="无账面器材" :image-size="40" />
                   </div>
@@ -167,7 +166,8 @@
                   <div class="instance-scroll">
                     <div v-for="(inst, idx) in (actualInstanceMap[row.skuId] || [])" :key="inst.instanceCode || inst._key" class="instance-item">
                       <el-input v-if="inst._isManual" v-model="inst.instanceCode" placeholder="实例编码" size="small"
-                                style="width:180px" :disabled="!canEditInstances" />
+                                style="width:180px" :disabled="!canEditInstances"
+                                @blur="onInstanceCodeBlur(row, inst)" />
                       <span v-else class="instance-code">{{ inst.instanceCode }}</span>
                       <el-input v-model="inst.remark" placeholder="备注" size="small"
                                 style="width:150px;margin-left:8px" :disabled="!canEditInstances" />
@@ -372,9 +372,9 @@ const doStartCheck = () => {
 };
 
 // ===== 数量计算 =====
-// 实际数量 = 右侧实际实例列表的长度（若未加载则回退到 row.checkQuantity）
+// 实际数量 = 右侧实际实例列表中有编码的行数（若未加载则回退到 row.checkQuantity）
 const getCheckQuantity = (row) => {
-  if (actualInstanceMap[row.skuId]) return actualInstanceMap[row.skuId].length;
+  if (actualInstanceMap[row.skuId]) return actualInstanceMap[row.skuId].filter(i => i.instanceCode).length;
   if (skuInstanceCache[row.skuId]) return skuInstanceCache[row.skuId].length; // 默认等于账面
   return Number(row.checkQuantity || 0);
 };
@@ -461,6 +461,22 @@ const addActualInstance = (row) => {
     _isManual: true,
     _key: Date.now() + Math.random(),
   });
+};
+
+// 手动输入编码失焦时校验：空白则移除该行，重复则提示并清空
+const onInstanceCodeBlur = (row, inst) => {
+  const list = actualInstanceMap[row.skuId] || [];
+  if (!inst.instanceCode?.trim()) {
+    // 空白行直接移除
+    const idx = list.indexOf(inst);
+    if (idx !== -1) list.splice(idx, 1);
+    return;
+  }
+  const duplicate = list.some(other => other !== inst && other.instanceCode === inst.instanceCode);
+  if (duplicate) {
+    ElMessage.warning('编码 ' + inst.instanceCode + ' 已存在，不允许重复添加');
+    inst.instanceCode = '';
+  }
 };
 
 const removeActualInstance = (row, index) => {
