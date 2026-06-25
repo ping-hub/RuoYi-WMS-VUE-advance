@@ -68,3 +68,56 @@ export function check(data) {
     data: data
   })
 }
+
+// 提交盘点（草稿/已驳回 → 待盘点）
+export function submitForApproval(id, executorId, executorName) {
+  return request({
+    url: '/wms/checkOrder/submit/' + id,
+    method: 'put',
+    params: { executorId, executorName }
+  })
+}
+
+// 完成盘点并提交复核（待盘点 → 待复核）
+export function completeCheck(data, reviewerId, reviewerName) {
+  return request({
+    url: '/wms/checkOrder/complete',
+    method: 'post',
+    data: data,
+    params: { reviewerId, reviewerName }
+  })
+}
+
+// 复核通过（待复核 → 已完成）
+export function approveOrder(id, remark) {
+  return request({
+    url: '/wms/checkOrder/approve/' + id,
+    method: 'put',
+    params: { remark }
+  })
+}
+
+// 驳回（待盘点/待复核 → 已驳回）
+export function rejectOrder(id, remark) {
+  return request({
+    url: '/wms/checkOrder/reject/' + id,
+    method: 'put',
+    params: { remark }
+  })
+}
+
+// 作废（草稿/已驳回 → 作废）
+export function voidOrder(id) {
+  return request({
+    url: '/wms/checkOrder/void/' + id,
+    method: 'put'
+  })
+}
+
+// 获取用户下拉列表
+export function userSelectList() {
+  return request({
+    url: '/wms/checkOrder/userSelectList',
+    method: 'get'
+  })
+}

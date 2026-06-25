@@ -248,7 +248,13 @@
         </el-form-item>
       </el-form>
       <el-alert v-if="printDialog.errorMessage" :title="printDialog.errorMessage" type="error" :closable="false" class="mb12" show-icon />
-      <div v-if="printDialog.total" class="mb12">进度：{{ printDialog.current }}/{{ printDialog.total }}</div>
+      <div v-if="printDialog.phase || printDialog.total" class="mb12">
+        <span v-if="printDialog.phase === 'generating'">正在生成编码，请稍候…</span>
+        <template v-else>
+          <span>打印进度：{{ printDialog.current }}/{{ printDialog.total }}</span>
+          <el-progress v-if="printDialog.total" :percentage="Math.round(printDialog.current / printDialog.total * 100)" :stroke-width="8" style="margin-top:4px" />
+        </template>
+      </div>
       <template #footer>
         <el-button :loading="printDialog.loading" :disabled="printDialog.sending" @click="loadPrinters">刷新</el-button>
         <el-button :disabled="printDialog.sending" @click="printDialog.visible = false">取消</el-button>
@@ -308,6 +314,7 @@ const printDialog = reactive({
   printerId: '',
   total: 0,
   current: 0,
+  phase: '',
   errorMessage: ''
 });
 
@@ -604,13 +611,15 @@ async function handleConfirmPrint() {
   localStorage.setItem('wss_print_printer_id', printDialog.printerId);
   printDialog.sending = true;
   printDialog.errorMessage = '';
+  printDialog.phase = 'generating';
   try {
     const payload = {
       row: { ...printDialog.row },
       skuId: printDialog.skuId,
       qrCodeCount: Number(printDialog.qrCodeCount)
     };
-    const res = await batchPrintItemQrCode(payload);
+    // 后端已批量优化，增大超时保护大批量场景（60秒）
+    const res = await batchPrintItemQrCode(payload, { timeout: 60000 });
     const details = res?.data?.details || [];
     const codes = details.map(item => item.instanceCode).filter(Boolean);
     if (!codes.length) {
@@ -619,6 +628,7 @@ async function handleConfirmPrint() {
     }
     printCodes.value = codes;
     openPrintDialog();
+    printDialog.phase = 'printing';
     await ensurePrintClient();
     for (const code of printCodes.value) {
       const command = buildQrTscCommand(code);
@@ -640,6 +650,7 @@ async function handleConfirmPrint() {
     }
   } finally {
     printDialog.sending = false;
+    printDialog.phase = '';
     try {
       printClient?.disconnect();
     } finally {
@@ -652,6 +663,7 @@ function handlePrintDialogClosed() {
   printDialog.errorMessage = '';
   printDialog.loading = false;
   printDialog.sending = false;
+  printDialog.phase = '';
   printDialog.row = null;
   printDialog.itemName = '';
   printDialog.skuId = undefined;

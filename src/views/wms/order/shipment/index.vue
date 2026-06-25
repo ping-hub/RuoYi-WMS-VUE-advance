@@ -58,27 +58,22 @@
       </el-row>
 
       <el-table v-loading="loading" :data="shipmentOrderList" border class="mt20" empty-text="暂无出库单">
-        <el-table-column label="单号" align="left" min-width="130">
+        <el-table-column label="单号" align="left" min-width="120">
           <template #default="{ row }">
             <div>{{ row.shipmentOrderNo }}</div>
           </template>
         </el-table-column>
-        <el-table-column label="出库类型" min-width="85" align="left" prop="shipmentOrderType">
+        <el-table-column label="出库类型" min-width="80" align="left" prop="shipmentOrderType">
           <template #default="{ row }">
             <dict-tag :options="wms_shipment_type" :value="row.shipmentOrderType" />
           </template>
         </el-table-column>
-        <el-table-column label="仓库" align="left" min-width="90">
+        <el-table-column label="仓库" align="left" min-width="85">
           <template #default="{ row }">
             {{ useWmsStore().warehouseMap.get(row.warehouseId)?.warehouseName || '-' }}
           </template>
         </el-table-column>
-        <el-table-column label="库区" align="left" min-width="90">
-          <template #default="{ row }">
-            {{ row.areaId ? useWmsStore().areaMap.get(row.areaId)?.areaName : '-' }}
-          </template>
-        </el-table-column>
-        <el-table-column label="出库日期" align="left" min-width="100">
+        <el-table-column label="出库日期" align="left" min-width="95">
           <template #default="{ row }">
             {{ row.shipmentDate ? parseTime(row.shipmentDate, '{y}-{m}-{d}') : '-' }}
           </template>
@@ -88,23 +83,28 @@
             <dict-tag :options="wms_shipment_status" :value="row.shipmentOrderStatus" />
           </template>
         </el-table-column>
-        <el-table-column label="申请人" align="left" min-width="70" show-overflow-tooltip>
-          <template #default="{ row }">
-            {{ getNickNameById(row.applicantId) }}
-          </template>
-        </el-table-column>
-        <el-table-column label="数量" align="left" min-width="70">
+        <el-table-column label="数量" align="left" min-width="60">
           <template #default="{ row }">
             <el-statistic :value="Number(row.totalQuantity)" :precision="0"/>
           </template>
         </el-table-column>
-        <el-table-column label="金额(元)" align="left" min-width="70">
+        <el-table-column label="金额(元)" align="left" min-width="80">
           <template #default="{ row }">
             <el-statistic v-if="row.receivableAmount || row.receivableAmount === 0" :value="Number(row.receivableAmount)" :precision="2"/>
             <span v-else>-</span>
           </template>
         </el-table-column>
-        <el-table-column label="备注" prop="remark" min-width="60" show-overflow-tooltip />
+        <el-table-column label="备注" prop="remark" min-width="80" show-overflow-tooltip />
+        <el-table-column label="提交人" min-width="70" show-overflow-tooltip>
+          <template #default="{ row }">
+            {{ getNickNameByUserName(row.createBy) }}
+          </template>
+        </el-table-column>
+        <el-table-column label="提交日期" min-width="100">
+          <template #default="{ row }">
+            {{ row.createTime ? parseTime(row.createTime, '{y}-{m}-{d} {h}:{i}') : '-' }}
+          </template>
+        </el-table-column>
         <el-table-column label="操作" align="right" class-name="small-padding fixed-width" width="200">
           <template #default="scope">
             <el-popover
@@ -178,6 +178,12 @@ const getNickNameById = (userId) => {
   if (!userId) return '-'
   const u = userList.value.find(x => String(x.userId) === String(userId))
   return u ? u.nickName : '-'
+};
+// 根据登录名查找中文昵称
+const getNickNameByUserName = (userName) => {
+  if (!userName) return '-'
+  const u = userList.value.find(x => x.userName === userName)
+  return u ? u.nickName : userName
 };
 // 判断当前用户是否为该行指定操作人
 const isRowExecutor = (row) => userStore.id && row.executorId && String(userStore.id) === String(row.executorId);
@@ -320,19 +326,41 @@ async function handlePrint(row) {
   const shipmentOrder = res.data
   let table = []
   if (shipmentOrder.details?.length) {
-    table = shipmentOrder.details.map((detail, index) => {
+    // 按SKU聚合：以skuId为key分组，汇总数量和金额
+    const skuMap = new Map()
+    shipmentOrder.details.forEach(detail => {
+      const skuId = detail.skuId ?? detail.itemSku?.id ?? detail.id
+      if (!skuMap.has(skuId)) {
+        skuMap.set(skuId, {
+          skuId,
+          itemName: detail.itemSku?.item?.itemName ?? detail.itemName,
+          skuName: detail.itemSku?.skuName ?? detail.skuName,
+          unitName: detail.itemSku?.item?.unitOfMeasure || detail.itemSku?.item?.unit || '',
+          qualityLevel: detail.qualityGrade ?? detail.itemSku?.qualityGrade ?? '',
+          unitPrice: detail.unitPrice,
+          totalQuantity: 0,
+          totalLineAmount: 0,
+          remark: detail.remark || ''
+        })
+      }
+      const group = skuMap.get(skuId)
+      group.totalQuantity += Number(detail.quantity || 0)
+      group.totalLineAmount += Number(detail.lineAmount || 0)
+    })
+    const skuList = Array.from(skuMap.values())
+    table = skuList.map((sku, index) => {
       return {
         serialNo: String(index + 1),
-        itemName: detail.itemSku.item.itemName,
-        skuName: detail.itemSku.skuName,
-        unitName: detail.itemSku?.item?.unitOfMeasure || detail.itemSku?.item?.unit || '',
+        itemName: sku.itemName,
+        skuName: sku.skuName,
+        unitName: sku.unitName,
         dispatchLevel: '',
         dispatchQuantity: '',
-        shipmentLevel: detail.qualityLevel || '',
-        shipmentQuantity: Number(detail.quantity).toFixed(0),
-        unitPrice: detail.unitPrice,
-        lineAmount: detail.lineAmount,
-        remark: detail.remark || ''
+        shipmentLevel: sku.qualityLevel,
+        shipmentQuantity: sku.totalQuantity.toFixed(0),
+        unitPrice: sku.unitPrice,
+        lineAmount: sku.totalLineAmount ? Number(sku.totalLineAmount.toFixed(2)) : '',
+        remark: sku.remark
       }
     })
   }

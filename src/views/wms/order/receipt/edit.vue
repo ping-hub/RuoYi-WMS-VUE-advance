@@ -81,11 +81,9 @@
                 <el-input
                   v-model="form.remark"
                   placeholder="备注...100个字符以内"
-                  rows="2"
                   maxlength="100"
-                  type="textarea"
-                  show-word-limit="show-word-limit"
-                ></el-input>
+                  show-word-limit
+                />
               </el-form-item>
             </el-col>
           </el-row>
@@ -137,6 +135,7 @@
                   v-model="row.locationId"
                   :warehouse-id="form.warehouseId"
                   :area-id="form.areaId"
+                  :options="locationOptions"
                   placeholder="货位"
                   :disabled="isViewMode"
                   @change="(val) => handleLocationSelectChange(row, val)"
@@ -282,6 +281,24 @@ const tagsViewStore = useTagsViewStore();
 const isViewMode = computed(() => route.query.mode === 'view');
 const { wms_receipt_type } = proxy.useDict("wms_receipt_type");
 const loading = ref(false)
+/** 统一加载的货位列表，传给 LocationSelect 避免 N 次重复请求 */
+const locationOptions = ref([])
+const loadLocationOptions = async () => {
+  if (!form.value.warehouseId) {
+    locationOptions.value = []
+    return
+  }
+  try {
+    const query = { warehouseId: form.value.warehouseId }
+    if (form.value.areaId) {
+      query.areaId = form.value.areaId
+    }
+    const res = await listLocationNoPage(query)
+    locationOptions.value = res.data || []
+  } catch (e) {
+    locationOptions.value = []
+  }
+}
 const initFormData = {
   id: undefined,
   receiptOrderNo: undefined,
@@ -522,6 +539,36 @@ const loadRecommendTargets = async (detail) => {
   }
 }
 
+/**
+ * 批量加载推荐货位：按查询参数分组，每组只发一次请求
+ * 替代 Promise.all(details.map(loadRecommendTargets))
+ */
+const batchLoadRecommendTargets = async (details) => {
+  if (!form.value.warehouseId || !details.length) return
+  // 按查询参数分组
+  const groups = new Map()
+  details.forEach(detail => {
+    const q = buildRecommendQuery(detail)
+    const key = `${q.warehouseId || ''}_${q.areaId || ''}_${q.rackId || ''}`
+    if (!groups.has(key)) {
+      groups.set(key, { query: q, details: [] })
+    }
+    groups.get(key).details.push(detail)
+  })
+  // 每组发一次请求
+  await Promise.all(
+    Array.from(groups.values()).map(async ({ query, details: groupDetails }) => {
+      try {
+        const res = await listReceiptTargets(query)
+        const targets = (res.data || []).slice(0, 5)
+        groupDetails.forEach(d => { d.recommendTargets = targets })
+      } catch (e) {
+        groupDetails.forEach(d => { d.recommendTargets = [] })
+      }
+    })
+  )
+}
+
 const recalculateOrderSummary = () => {
   let quantitySum = 0
   let amountSum = 0
@@ -592,7 +639,7 @@ const handleConfirmReceiptItemInstance = () => {
   const newDetails = itemInstanceSelectDialog.selection.map(item => createReceiptDetailFromInstance(item))
   form.value.details.push(...newDetails)
   itemInstanceSelectDialog.visible = false
-  Promise.all(newDetails.map(detail => loadRecommendTargets(detail)))
+  batchLoadRecommendTargets(newDetails)
   recalculateOrderSummary()
 }
 // 选择器材实例 end
@@ -965,7 +1012,9 @@ const loadDetail = (id) => {
         generatedInstanceQuantity: it.generatedInstanceQuantity ?? 0
       }))
     }
-    Promise.all(form.value.details.map(detail => loadRecommendTargets(detail)))
+    // 统一加载一次货位列表，避免每行明细各自请求
+    loadLocationOptions()
+    batchLoadRecommendTargets(form.value.details)
     recalculateOrderSummary()
     Promise.resolve();
   }).then(() => {
@@ -982,6 +1031,8 @@ const handleChangeWarehouse = (e) => {
     it.locationId = undefined
     it.recommendTargets = []
   })
+  // 仓库切换后重新加载货位列表
+  loadLocationOptions()
 }
 
 const handleChangeArea = (e) => {
@@ -990,7 +1041,9 @@ const handleChangeArea = (e) => {
     it.rackId = undefined
     it.locationId = undefined
   })
-  Promise.all(form.value.details.map(detail => loadRecommendTargets(detail)))
+  // 库区切换后重新加载货位列表
+  loadLocationOptions()
+  batchLoadRecommendTargets(form.value.details)
 }
 
 const handleAutoCalc = () => {

@@ -192,6 +192,20 @@ export const dynamicRoutes = [
     ]
   },
   {
+    path: '/wms-borrow-order',
+    component: Layout,
+    hidden: true,
+    permissions: ['wms:borrowOrder:list'],
+    children: [
+      {
+        path: 'index',
+        component: () => import('@/views/wms/order/borrowOrder/index.vue'),
+        name: 'WmsBorrowOrder',
+        meta: { title: '器材借用单' }
+      }
+    ]
+  },
+  {
     path: '/license-manage',
     component: Layout,
     hidden: true,

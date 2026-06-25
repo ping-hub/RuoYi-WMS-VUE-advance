@@ -19,8 +19,8 @@
         <!-- 安全运行天数 -->
         <div class="card card-safe-days">
           <div class="card-title">安全运行天数</div>
-          <div class="safe-days-value">244</div>
-          <div class="safe-days-time">2025/10/15 星期三 09:37</div>
+          <div class="safe-days-value">{{ safeDays }}</div>
+          <div class="safe-days-time">{{ safeDaysTime }}</div>
         </div>
 
         <!-- 待办事项 -->
@@ -28,17 +28,17 @@
           <div class="card-title">待办事项（件）</div>
           <div class="todo-content">
             <div class="todo-left">
-              <div class="todo-value">2345<span class="todo-unit">件</span></div>
+              <div class="todo-value">{{ todoPendingCount }}<span class="todo-unit">件</span></div>
               <div class="progress-bar-wrapper">
-                <div class="progress-label">63%</div>
+                <div class="progress-label">{{ todoPercent }}%</div>
                 <div class="progress-bar-bg">
-                  <div class="progress-bar" style="width: 63%"></div>
+                  <div class="progress-bar" :style="{ width: todoPercent + '%' }"></div>
                 </div>
               </div>
             </div>
             <div class="todo-right">
               <div class="todo-label">已办理事项（件）</div>
-              <div class="todo-done-value">1478<span class="todo-unit">件</span></div>
+              <div class="todo-done-value">{{ todoDoneCount }}<span class="todo-unit">件</span></div>
             </div>
           </div>
         </div>
@@ -52,7 +52,7 @@
                 <svg viewBox="0 0 1024 1024" width="28" height="28"><path d="M544 64h-64v544h-96l128 192 128-192h-96V64z" fill="#ff4d4f"/><rect x="480" y="128" width="64" height="320" fill="url(#tempGrad)"/><defs><linearGradient id="tempGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ff4d4f"/><stop offset="100%" stop-color="#2571e9"/></linearGradient></defs></svg>
               </div>
               <div class="env-info">
-                <div class="env-value">26℃</div>
+                <div class="env-value">{{ envTemp }}</div>
                 <div class="env-label">当前温度</div>
               </div>
             </div>
@@ -61,16 +61,16 @@
                 <svg viewBox="0 0 1024 1024" width="28" height="28"><path d="M512 64L320 448c0 106 86 192 192 192s192-86 192-192L512 64z" fill="url(#humidGrad)"/><defs><linearGradient id="humidGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#2571e9"/><stop offset="100%" stop-color="#00e7ff"/></linearGradient></defs></svg>
               </div>
               <div class="env-info">
-                <div class="env-value">46%</div>
+                <div class="env-value">{{ envHum }}</div>
                 <div class="env-label">当前湿度</div>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- 物资来源 -->
+        <!-- 器材来源 -->
         <div class="card card-source">
-          <div class="card-title">物资来源</div>
+          <div class="card-title">器材来源</div>
           <div class="chart-wrapper" ref="sourceChartRef"></div>
         </div>
       </div>
@@ -83,34 +83,34 @@
             <div class="metric-icon">
               <svg viewBox="0 0 1024 1024" width="24" height="24"><path d="M192 192h640v64H192zM192 384h640v64H192zM192 576h640v64H192zM192 768h640v64H192z" fill="#fff"/></svg>
             </div>
-            <div class="metric-value">4578</div>
+            <div class="metric-value">{{ coreMetrics.totalCategories }}</div>
             <div class="metric-label">总类</div>
           </div>
           <div class="metric-card">
             <div class="metric-icon">
               <svg viewBox="0 0 1024 1024" width="24" height="24"><path d="M512 64l-64 128H256v64h128l-32 64H256v64h64l-96 192h64l96-192h64v192h128V384h64l96 192h64l-96-192h64v-64h-96l-32-64h128v-64H576L512 64z" fill="#fff"/></svg>
             </div>
-            <div class="metric-value">188888</div>
+            <div class="metric-value">{{ coreMetrics.totalValue }}</div>
             <div class="metric-label">总价值</div>
           </div>
           <div class="metric-card">
             <div class="metric-icon">
               <svg viewBox="0 0 1024 1024" width="24" height="24"><path d="M192 832V320h128v512H192zM384 832V192h128v640H384zM576 832V448h128v384H576zM768 832V256h128v576H768z" fill="#fff"/></svg>
             </div>
-            <div class="metric-value">87138</div>
+            <div class="metric-value">{{ coreMetrics.totalQuantity }}</div>
             <div class="metric-label">总数</div>
           </div>
         </div>
 
-        <!-- 物资种类及价值占比 -->
+        <!-- 器材种类 -->
         <div class="card card-category">
-          <div class="card-title">物资种类及价值占比</div>
+          <div class="card-title">器材种类</div>
           <div class="category-content">
             <div class="category-chart" ref="categoryChartRef"></div>
             <div class="category-table">
               <table>
                 <thead>
-                  <tr><th>物资分类</th><th>物料数量</th></tr>
+                  <tr><th>器材名称</th><th>库存数量</th></tr>
                 </thead>
                 <tbody>
                   <tr v-for="(row, idx) in tableData" :key="idx" :class="{ 'even-row': idx % 2 === 1 }">
@@ -179,13 +179,34 @@
 import { ref, nextTick, onMounted, onUnmounted } from 'vue';
 import * as echarts from 'echarts';
 import html2canvas from 'html2canvas';
+import { getSafeDays, getSourceStats, getCategoryStats, getInoutTrend, getQualityStats, getEnvLatest } from '@/api/wms/dashboard';
+import { getWarningSummary } from '@/api/wms/inventoryWarning';
+import { getMyTasksSummary } from '@/api/wms/myTasks';
 
 const containerRef = ref(null);
 const currentTime = ref('');
 const exporting = ref(false);
 const isFullscreen = ref(false);
 let timeTimer = null;
+let envTimer = null;
 
+// ========== 环境监测实时数据 ==========
+const envTemp = ref('--');
+const envHum = ref('--');
+const envUpdateTime = ref('');
+
+// ========== 待办事项真实数据 ==========
+const todoPendingCount = ref(0);
+const todoDoneCount = ref(0);
+const todoPercent = ref(0);
+
+// ========== 真实数据 ref ==========
+const safeDays = ref(0);
+const safeDaysTime = ref('');
+const coreMetrics = ref({ totalCategories: 0, totalQuantity: 0, totalValue: 0 });
+const tableData = ref([]);
+
+const WEEK_DAYS = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
 const updateTime = () => {
   const now = new Date();
   const y = now.getFullYear();
@@ -195,27 +216,19 @@ const updateTime = () => {
   const m = String(now.getMinutes()).padStart(2, '0');
   const s = String(now.getSeconds()).padStart(2, '0');
   currentTime.value = `${y}/${M}/${d} ${h}:${m}:${s}`;
+  // 安全运行天数下方的当前时间（含星期）
+  safeDaysTime.value = `${y}/${M}/${d} ${WEEK_DAYS[now.getDay()]} ${h}:${m}`;
 };
 
-// 表格数据
-const tableData = ref([
-  { category: 'A类', quantity: 299, value: 500 },
-  { category: 'B类', quantity: 299, value: 500 },
-  { category: 'C类', quantity: 299, value: 500 },
-  { category: 'D类', quantity: 299, value: 500 },
-  { category: 'E类', quantity: 299, value: 500 },
-  { category: 'F类', quantity: 299, value: 500 },
-]);
+// 库存预警网格数据（从后端实时获取，显示触发预警的器材及其当前库存）
+const warningGridData = ref([]);
+const warningTotal = ref(0);
+let stockGaugeInstance = null;
 
-// 库存预警网格数据
-const warningGridData = ref([
-  { category: 'A类', count: 20, color: '#ff4d4f' },
-  { category: 'B类', count: 40, color: '#faad14' },
-  { category: 'C类', count: 15, color: '#f97316' },
-  { category: 'D类', count: 8,  color: '#00e7ff' },
-]);
+// 预警等级对应颜色
+const warningLevelColor = { critical: '#ff4d4f', warning: '#faad14', notice: '#f97316' };
 
-// 保质期预警数据
+// 保质期预警数据（暂未接入，保持静态）
 const expiryGauges = ref([
   { value: 3456, label: '已到期', color: '#ff4d4f' },
   { value: 1234, label: '本月到期', color: '#faad14' },
@@ -256,8 +269,32 @@ const exportImage = async () => {
   }
 };
 
-const initCharts = () => {
-  // 物资种类环形图
+const CHART_COLORS = ['#3b82f6','#f97316','#22c55e','#a855f7','#35e7be','#b8bf2c','#ef4444','#6366f1','#ec4899','#14b8a6'];
+
+/**
+ * 并发加载5个看板接口，返回所有数据
+ */
+const loadDashboardData = async () => {
+  const [safeDaysRes, sourceRes, categoryRes, inoutRes, qualityRes] = await Promise.allSettled([
+    getSafeDays(),
+    getSourceStats(),
+    getCategoryStats(),
+    getInoutTrend(7),
+    getQualityStats(),
+  ]);
+  const ok = (r) => r.status === 'fulfilled' ? r.value?.data : null;
+  return {
+    safeDays: ok(safeDaysRes),
+    source: ok(sourceRes),
+    category: ok(categoryRes),
+    inout: ok(inoutRes),
+    quality: ok(qualityRes),
+  };
+};
+
+const initCharts = ({ source = [], category = {}, inout = {}, quality = [] } = {}) => {
+  // 器材种类环形图
+  const categoryList = category?.categories || [];
   const categoryChart = echarts.init(categoryChartRef.value);
   categoryChart.setOption({
     backgroundColor: 'transparent',
@@ -265,25 +302,27 @@ const initCharts = () => {
     legend: {
       bottom: '2%', textStyle: { color: '#a0c4e8', fontSize: 11 },
       itemWidth: 10, itemHeight: 10,
-      data: ['A类','B类','C类','D类','E类','F类']
+      data: categoryList.map(c => c.name)
     },
     series: [{
       type: 'pie', radius: ['35%', '65%'], center: ['50%', '45%'],
       label: { show: true, color: '#a0c4e8', fontSize: 10, formatter: '{b}\n{c}' },
       labelLine: { lineStyle: { color: 'rgba(160,196,232,0.4)' } },
-      data: [
-        { value: 2232, name: 'A类', itemStyle: { color: '#3b82f6' } },
-        { value: 2232, name: 'B类', itemStyle: { color: '#f97316' } },
-        { value: 1234, name: 'C类', itemStyle: { color: '#22c55e' } },
-        { value: 1234, name: 'D类', itemStyle: { color: '#a855f7' } },
-        { value: 1234, name: 'E类', itemStyle: { color: '#35e7beff' } },
-        { value: 1234, name: 'F类', itemStyle: { color: '#b8bf2cff' } },
-      ]
+      data: categoryList.map((c, i) => ({
+        value: Number(c.quantity) || 0,
+        name: c.name,
+        itemStyle: { color: CHART_COLORS[i % CHART_COLORS.length] }
+      }))
     }]
   });
   charts.push(categoryChart);
 
   // 出入库折线图
+  const inoutDates = inout?.dates || [];
+  const inQtyArr = inout?.inQty || [];
+  const outQtyArr = inout?.outQty || [];
+  const maxVal = Math.max(100, ...inQtyArr, ...outQtyArr);
+  const yMax = Math.ceil(maxVal / 100) * 100 + 100;
   const inoutChart = echarts.init(inoutChartRef.value);
   inoutChart.setOption({
     backgroundColor: 'transparent',
@@ -291,12 +330,12 @@ const initCharts = () => {
     legend: { data: ['入库', '出库'], textStyle: { color: '#a0c4e8' }, top: 0 },
     grid: { top: '18%', left: '8%', right: '4%', bottom: '10%', containLabel: true },
     xAxis: {
-      type: 'category', data: ['0801','0802','0803','0804','0805','0806','0807'],
+      type: 'category', data: inoutDates,
       axisLine: { lineStyle: { color: 'rgba(0,231,255,0.3)' } },
       axisLabel: { color: '#a0c4e8' }
     },
     yAxis: {
-      type: 'value', max: 1600, interval: 200,
+      type: 'value', max: yMax,
       axisLine: { lineStyle: { color: 'rgba(0,231,255,0.3)' } },
       axisLabel: { color: '#a0c4e8' },
       splitLine: { lineStyle: { color: 'rgba(0,231,255,0.1)' } }
@@ -304,14 +343,14 @@ const initCharts = () => {
     series: [
       {
         name: '入库', type: 'line', smooth: true,
-        data: [800, 1200, 600, 1400, 1000, 800, 1200],
+        data: inQtyArr,
         lineStyle: { color: '#e8d56b', width: 2 },
         itemStyle: { color: '#e8d56b' },
         areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: 'rgba(232,213,107,0.3)' }, { offset: 1, color: 'rgba(232,213,107,0)' }] } }
       },
       {
         name: '出库', type: 'line', smooth: true,
-        data: [600, 1000, 800, 1200, 700, 900, 1100],
+        data: outQtyArr,
         lineStyle: { color: '#6be8a0', width: 2, type: 'dashed' },
         itemStyle: { color: '#6be8a0' },
         areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: 'rgba(107,232,160,0.2)' }, { offset: 1, color: 'rgba(107,232,160,0)' }] } }
@@ -320,7 +359,7 @@ const initCharts = () => {
   });
   charts.push(inoutChart);
 
-  // 物资来源环形图
+  // 器材来源环形图
   const sourceChart = echarts.init(sourceChartRef.value);
   sourceChart.setOption({
     backgroundColor: 'transparent',
@@ -329,11 +368,11 @@ const initCharts = () => {
     series: [{
       type: 'pie', radius: ['35%', '65%'], center: ['50%', '42%'],
       label: { show: true, color: '#a0c4e8', fontSize: 10, formatter: '{d}%' },
-      data: [
-        { value: 4567, name: '自采', itemStyle: { color: '#3b82f6' } },
-        { value: 1234, name: '调拨', itemStyle: { color: '#22c55e' } },
-        { value: 2000, name: '赠送', itemStyle: { color: '#f97316' } },
-      ]
+      data: (source || []).map((s, i) => ({
+        value: Number(s.value) || 0,
+        name: s.name,
+        itemStyle: { color: CHART_COLORS[i % CHART_COLORS.length] }
+      }))
     }]
   });
   charts.push(sourceChart);
@@ -348,12 +387,11 @@ const initCharts = () => {
       type: 'pie', radius: ['35%', '65%'], center: ['50%', '42%'],
       label: { show: true, color: '#a0c4e8', fontSize: 10, formatter: '{b}\n{c}' },
       labelLine: { lineStyle: { color: 'rgba(160,196,232,0.4)' } },
-      data: [
-        { value: 2232, name: 'A品', itemStyle: { color: '#3b82f6' } },
-        { value: 2232, name: 'B品', itemStyle: { color: '#a855f7' } },
-        { value: 700, name: 'C品', itemStyle: { color: '#22c55e' } },
-        { value: 300, name: 'D品', itemStyle: { color: '#6b7280' } },
-      ]
+      data: (quality || []).map((q, i) => ({
+        value: Number(q.value) || 0,
+        name: q.name,
+        itemStyle: { color: CHART_COLORS[i % CHART_COLORS.length] }
+      }))
     }]
   });
   charts.push(qualityChart);
@@ -378,9 +416,10 @@ const initCharts = () => {
         formatter: '{value}',
         textShadowColor: 'rgba(0,231,255,0.5)', textShadowBlur: 10
       },
-      data: [{ value: 1234 }]
+      data: [{ value: warningTotal.value }]
     }]
   });
+  stockGaugeInstance = stockGauge;
   charts.push(stockGauge);
 };
 
@@ -403,14 +442,89 @@ onMounted(() => {
   updateTime();
   timeTimer = setInterval(updateTime, 1000);
   document.addEventListener('fullscreenchange', onFullscreenChange);
-  setTimeout(() => {
-    initCharts();
+  setTimeout(async () => {
+    const data = await loadDashboardData();
+    // 安全运行天数
+    if (data.safeDays) {
+      safeDays.value = data.safeDays.days;
+    }
+    // 核心指标 + 表格数据
+    if (data.category) {
+      coreMetrics.value = {
+        totalCategories: data.category.totalCategories || 0,
+        totalQuantity: Number(data.category.totalQuantity) || 0,
+        totalValue: Number(data.category.totalValue) || 0,
+      };
+      tableData.value = (data.category.categories || []).map(c => ({
+        category: c.name,
+        quantity: Number(c.quantity) || 0,
+        value: Number(c.value) || 0,
+      }));
+    }
+    initCharts(data);
     window.addEventListener('resize', handleResize);
+    // 异步加载预警数据
+    loadWarningData();
+    // 加载待办统计
+    loadTodoSummary();
+    // 加载环境监测实时数据，每30秒刷新
+    loadEnvData();
+    envTimer = setInterval(loadEnvData, 30000);
   }, 200);
 });
 
+const loadEnvData = async () => {
+  try {
+    const res = await getEnvLatest();
+    const list = res.data || [];
+    // 从返回列表中找到温度/湿度传感器的最新数据（deviceType 为"温度"或"湿度"）
+    const tempHum = list.find(item => item.deviceType === '温度' || item.deviceType === '湿度');
+    if (tempHum) {
+      envTemp.value = tempHum.temp != null ? `${tempHum.temp}℃` : '--';
+      envHum.value  = tempHum.hum  != null ? `${tempHum.hum}%`  : '--';
+      envUpdateTime.value = tempHum.collectTime || '';
+    }
+  } catch (e) {
+    console.warn('加载环境监测数据失败:', e);
+  }
+};
+
+const loadTodoSummary = async () => {
+  try {
+    const res = await getMyTasksSummary();
+    const data = res.data || {};
+    todoPendingCount.value = data.pendingCount || 0;
+    todoDoneCount.value = data.doneCount || 0;
+    todoPercent.value = data.percent || 0;
+  } catch (e) {
+    console.warn('加载待办统计数据失败:', e);
+  }
+};
+
+const loadWarningData = async () => {
+  try {
+    const res = await getWarningSummary();
+    const resultData = res.data || {};
+    const total = resultData.total || 0;
+    const items = resultData.items || [];
+    warningTotal.value = total;
+    // 取前4个预警器材，显示器材名称 + 当前库存数量
+    warningGridData.value = items.slice(0, 4).map(item => ({
+      category: item.itemName || '—',
+      count: Number(item.currentStock) || 0,
+      color: warningLevelColor[item.warningLevel] || '#00e7ff',
+    }));
+    if (stockGaugeInstance) {
+      stockGaugeInstance.setOption({ series: [{ data: [{ value: total }] }] });
+    }
+  } catch (e) {
+    console.warn('加载库存预警数据失败:', e);
+  }
+};
+
 onUnmounted(() => {
   if (timeTimer) clearInterval(timeTimer);
+  if (envTimer) clearInterval(envTimer);
   window.removeEventListener('resize', handleResize);
   document.removeEventListener('fullscreenchange', onFullscreenChange);
   charts.forEach(c => c?.dispose());
@@ -748,7 +862,7 @@ onUnmounted(() => {
 
 .env-label { font-size: 11px; color: #a0c4e8; }
 
-/* 物资来源 */
+/* 器材来源 */
 .card-source { flex: 1; min-height: 0; }
 
 /* 核心指标 */
@@ -801,7 +915,7 @@ onUnmounted(() => {
   color: #a0c4e8;
 }
 
-/* 物资种类 */
+/* 器材种类 */
 .card-category { flex: 6; min-height: 0; }
 
 .category-content {

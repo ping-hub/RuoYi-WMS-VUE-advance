@@ -8,3 +8,11 @@ export function listMyTasks(query) {
     params: query
   })
 }
+
+// 我的待办统计（看板用）
+export function getMyTasksSummary() {
+  return request({
+    url: '/wms/myTasks/summary',
+    method: 'get'
+  })
+}

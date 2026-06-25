@@ -52,55 +52,72 @@
                 empty-text="暂无盘点单"
                 cell-class-name="vertical-top-cell"
       >
-        <el-table-column label="单号" align="left" prop="checkOrderNo" min-width="110" />
+        <el-table-column label="单号" align="left" prop="checkOrderNo" min-width="120" />
         <el-table-column label="范围类型" align="left" width="85">
           <template #default="{ row }">
             <span v-if="row.checkScopeType">{{ proxy.selectDictLabel(wms_check_scope_type, row.checkScopeType) }}</span>
             <span v-else>-</span>
           </template>
         </el-table-column>
-        <el-table-column label="盘点范围" align="left" min-width="105">
+        <el-table-column label="盘点范围" align="left" min-width="90">
           <template #default="{ row }">
             <span v-if="row.rackId">{{ getRackName(row.rackId) }}</span>
             <span v-else-if="row.areaId">{{ useWmsStore().areaMap.get(row.areaId)?.areaName }}</span>
             <span v-else>{{ useWmsStore().warehouseMap.get(row.warehouseId)?.warehouseName || '-' }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="盘点日期" align="left" min-width="105">
+        <el-table-column label="盘点日期" align="left" min-width="130">
           <template #default="{ row }">
             <span>{{ row.checkDate ? parseTime(row.checkDate, '{y}-{m}-{d} {h}:{i}') : '-' }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="盘点人" align="left" min-width="85">
-          <template #default="{ row }">
-            {{ row.checkerName || '-' }}
-          </template>
-        </el-table-column>
-        <el-table-column label="盘点状态" align="center" prop="checkOrderStatus" min-width="85">
+        <el-table-column label="盘点状态" align="center" prop="checkOrderStatus" min-width="90">
           <template #default="{ row }">
             <dict-tag :options="wms_check_status" :value="row.checkOrderStatus" />
           </template>
         </el-table-column>
-        <el-table-column label="盈亏数" align="center" min-width="75">
+        <el-table-column label="盈亏数" align="center" min-width="60">
           <template #default="{ row }">
             <el-statistic :value="Number(row.checkOrderTotal)" :precision="0"/>
           </template>
         </el-table-column>
-        <el-table-column label="备注" prop="remark" min-width="100" show-overflow-tooltip />
-        <el-table-column label="操作" align="right" class-name="small-padding fixed-width" width="200">
+        <el-table-column label="备注" prop="remark" min-width="70" show-overflow-tooltip />
+        <el-table-column label="提交人" min-width="100" show-overflow-tooltip>
+          <template #default="{ row }">
+            {{ getNickNameByUserName(row.createBy) }}
+          </template>
+        </el-table-column><el-table-column label="提交日期" min-width="125">
+          <template #default="{ row }">
+            {{ row.createTime ? parseTime(row.createTime, '{y}-{m}-{d} {h}:{i}') : '-' }}
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" align="right" class-name="small-padding fixed-width" width="220">
           <template #default="scope">
-            <div class="table-actions">
-              <!-- 待盘点：去盘点 / 修改 / 删除 -->
-              <template v-if="scope.row.checkOrderStatus === 0">
-                <el-button link type="primary" @click="handleGoCheck(scope.row)" v-hasPermi="['wms:check:all']">去盘点</el-button>
-                <el-button link type="primary" @click="handleUpdate(scope.row)" v-hasPermi="['wms:check:all']">修改</el-button>
-                <el-button link type="danger" @click="handleDelete(scope.row)" v-hasPermi="['wms:check:all']">删除</el-button>
+            <el-popover
+              placement="left" title="提示" :width="300" trigger="hover"
+              :disabled="[0, -2].includes(Number(scope.row.checkOrderStatus))"
+              :content="getDisabledTip(scope.row)"
+            >
+              <template #reference>
+                <el-button link type="primary" @click="handleUpdate(scope.row)" v-hasPermi="['wms:check:all']" :disabled="!canEditRow(scope.row)">修改</el-button>
               </template>
-              <!-- 已完成 / 已作废：只查看 -->
-              <template v-else>
-                <el-button link type="primary" @click="handleGoDetail(scope.row)" v-hasPermi="['wms:check:all']">查看</el-button>
+            </el-popover>
+            <el-button link type="primary" @click="handleGoDetail(scope.row)" v-hasPermi="['wms:check:all']">查看</el-button>
+            <!-- 提交盘点：草稿/已驳回 -->
+            <el-button v-if="[0, -2].includes(Number(scope.row.checkOrderStatus))" link type="warning" @click="handleUpdate(scope.row)" v-hasPermi="['wms:check:all']">提交</el-button>
+            <!-- 去盘点：待盘点 -->
+            <el-button v-if="Number(scope.row.checkOrderStatus) === 1" link type="primary" @click="handleGoCheck(scope.row)" v-hasPermi="['wms:check:all']">去盘点</el-button>
+            <!-- 复核：待复核 -->
+            <el-button v-if="Number(scope.row.checkOrderStatus) === 2" link type="success" @click="handleGoCheck(scope.row)" v-hasPermi="['wms:check:all']">复核</el-button>
+            <el-popover
+              placement="left" title="提示" :width="300" trigger="hover"
+              :disabled="canDeleteRow(scope.row)"
+              :content="getDisabledTip(scope.row)"
+            >
+              <template #reference>
+                <el-button link type="danger" @click="handleDelete(scope.row)" v-hasPermi="['wms:check:all']" :disabled="!canDeleteRow(scope.row)">删除</el-button>
               </template>
-            </div>
+            </el-popover>
           </template>
         </el-table-column>
       </el-table>
@@ -123,13 +140,24 @@ import {listCheckOrder, delCheckOrder} from "@/api/wms/checkOrder";
 import {getCurrentInstance, reactive, ref, toRefs} from "vue";
 import { useRoute, useRouter } from "vue-router";
 import {useWmsStore} from "../../../../store/modules/wms";
+import useUserStore from "@/store/modules/user";
 import {ElMessageBox} from "element-plus";
 import { resolveRoutePath } from "@/utils/routeResolver";
 import { listRackNoPage } from "@/api/wms/rack";
+import { getUserSelectList } from "@/api/wms/common";
 const { proxy } = getCurrentInstance();
 const route = useRoute();
 const router = useRouter();
 const wmsStore = useWmsStore();
+const userStore = useUserStore();
+const isRowExecutor = (row) => userStore.id && row.executorId && String(userStore.id) === String(row.executorId);
+// 用户列表，用于显示中文昵称
+const userList = ref([]);
+const getNickNameByUserName = (userName) => {
+  if (!userName) return '-'
+  const u = userList.value.find(x => x.userName === userName)
+  return u ? u.nickName : userName
+};
 const {wms_check_status, wms_check_scope_type} = proxy.useDict("wms_check_status", "wms_check_scope_type");
 const checkOrderList = ref([]);
 const open = ref(false);
@@ -214,7 +242,7 @@ function handleDelete(row) {
   }).catch((e) => {
     if (e === 409) {
       return ElMessageBox.alert(
-        '<div>盘点单【' + row.checkOrderNo + '】已' + (row.checkOrderStatus === 1 ? '盘点完成' : '作废') + '，不能删除！</div><div>请联系管理员处理！</div>',
+        '<div>盘点单【' + row.checkOrderNo + '】当前状态不允许删除！</div><div>请联系管理员处理！</div>',
         '系统提示',
         {
           dangerouslyUseHTMLString: true,
@@ -242,11 +270,27 @@ function handleGoDetail(row) {
   });
 }
 
+function canEditRow(row) {
+  return [0, -2].includes(Number(row.checkOrderStatus))
+}
+function canDeleteRow(row) {
+  return [0, -2].includes(Number(row.checkOrderStatus))
+}
+function getDisabledTip(row) {
+  const statusMap = { 1: '待盘点中', 2: '待复核中', 3: '已完成', '-1': '已作废' }
+  const label = statusMap[row.checkOrderStatus] || '未知状态'
+  return '盘点单【' + row.checkOrderNo + '】' + label + '，无法操作！'
+}
+
 function getRowKey(row) {
   return row.id
 }
 loadRackMap();
 getList();
+// 加载用户列表
+getUserSelectList().then(res => {
+  userList.value = res.data || []
+})
 </script>
 <style lang="scss">
 .el-statistic__content {
@@ -263,10 +307,4 @@ getList();
   flex-wrap: wrap;
 }
 
-.table-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  flex-wrap: wrap;
-}
 </style>

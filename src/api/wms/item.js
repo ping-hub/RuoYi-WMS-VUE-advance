@@ -84,12 +84,14 @@ export function delItem(id) {
 
 /**
  * 批量打印器材二维码
- * @param data
+ * @param data 请求体
+ * @param config 可选 axios 配置（如 { timeout: 60000 }）
  */
-export function batchPrintItemQrCode(data) {
+export function batchPrintItemQrCode(data, config) {
   return request({
     url: '/wms/item/batchPrintQrCode',
     method: 'post',
-    data: data
+    data: data,
+    ...config
   });
 };

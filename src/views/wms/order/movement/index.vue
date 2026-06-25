@@ -69,7 +69,7 @@
                 empty-text="暂无调拨单"
                 cell-class-name="vertical-top-cell"
       >
-        <el-table-column label="单号" align="left" min-width="120">
+        <el-table-column label="单号" align="left" min-width="115">
           <template #default="{ row }">
             <div>{{ row.movementOrderNo }}</div>
           </template>
@@ -79,12 +79,7 @@
             {{ wmsStore.warehouseMap.get(row.sourceWarehouseId)?.warehouseName || '-' }}
           </template>
         </el-table-column>
-        <el-table-column label="源库区" align="left" min-width="85">
-          <template #default="{ row }">
-            {{ row.sourceAreaId ? wmsStore.areaMap.get(row.sourceAreaId)?.areaName : '-' }}
-          </template>
-        </el-table-column>
-        <el-table-column label="调拨范围" align="center" prop="transferScope" min-width="85">
+        <el-table-column label="调拨范围" align="center" prop="transferScope" min-width="80">
           <template #default="{ row }">
             <dict-tag :options="wms_transfer_scope" :value="row.transferScope" />
           </template>
@@ -94,17 +89,12 @@
             {{ wmsStore.warehouseMap.get(row.targetWarehouseId)?.warehouseName || '-' }}
           </template>
         </el-table-column>
-        <el-table-column label="目标库区" align="left" min-width="85">
-          <template #default="{ row }">
-            {{ row.targetAreaId ? wmsStore.areaMap.get(row.targetAreaId)?.areaName : '-' }}
-          </template>
-        </el-table-column>
-        <el-table-column label="调拨状态" align="center" prop="movementOrderStatus" min-width="85">
+        <el-table-column label="调拨状态" align="center" prop="movementOrderStatus" min-width="80">
           <template #default="{ row }">
             <dict-tag :options="wms_movement_status" :value="row.movementOrderStatus" />
           </template>
         </el-table-column>
-        <el-table-column label="数量" align="left" min-width="65">
+        <el-table-column label="数量" align="left" min-width="60">
           <template #default="{ row }">
             <div class="flex-space-between">
               <el-statistic :value="Number(row.totalQuantity)" :precision="0"/>
@@ -112,6 +102,16 @@
           </template>
         </el-table-column>
         <el-table-column label="备注" prop="remark" min-width="80" show-overflow-tooltip />
+        <el-table-column label="提交人" min-width="70" show-overflow-tooltip>
+          <template #default="{ row }">
+            {{ getNickNameByUserName(row.createBy) }}
+          </template>
+        </el-table-column>
+        <el-table-column label="提交日期" min-width="100">
+          <template #default="{ row }">
+            {{ row.createTime ? parseTime(row.createTime, '{y}-{m}-{d} {h}:{i}') : '-' }}
+          </template>
+        </el-table-column>
         <el-table-column label="操作" align="right" class-name="small-padding fixed-width" width="200">
           <template #default="scope">
             <el-popover
@@ -164,11 +164,19 @@ import {useWmsStore} from "../../../../store/modules/wms";
 import {ElMessageBox} from "element-plus";
 import WarehouseCascader from "@/views/components/WarehouseCascader.vue";
 import { resolveRoutePath } from "@/utils/routeResolver";
+import { getUserSelectList } from "@/api/wms/common";
 
 const { proxy } = getCurrentInstance();
 const route = useRoute();
 const router = useRouter();
 const wmsStore = useWmsStore();
+// 用户列表，用于显示中文昵称
+const userList = ref([]);
+const getNickNameByUserName = (userName) => {
+  if (!userName) return '-'
+  const u = userList.value.find(x => x.userName === userName)
+  return u ? u.nickName : userName
+};
 const { wms_movement_status, wms_movement_type, wms_transfer_scope } = proxy.useDict(
   "wms_movement_status",
   "wms_movement_type",
@@ -281,6 +289,10 @@ function getRowKey(row) {
   return row.id
 }
 getList();
+// 加载用户列表
+getUserSelectList().then(res => {
+  userList.value = res.data || []
+})
 </script>
 <style lang="scss">
 .query-actions {

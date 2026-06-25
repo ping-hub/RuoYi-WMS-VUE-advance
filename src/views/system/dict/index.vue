@@ -104,15 +104,8 @@
 
       <el-table v-loading="loading" :data="typeList" @selection-change="handleSelectionChange">
          <el-table-column type="selection" width="55" align="center" />
-         <el-table-column label="字典编号" align="center" prop="dictId" />
          <el-table-column label="字典名称" align="center" prop="dictName" :show-overflow-tooltip="true"/>
-         <el-table-column label="字典类型" align="center" :show-overflow-tooltip="true">
-            <template #default="scope">
-               <router-link :to="'/system/dict-data/index/' + scope.row.dictId" class="link-type">
-                  <span>{{ scope.row.dictType }}</span>
-               </router-link>
-            </template>
-         </el-table-column>
+         <el-table-column label="字典类型" align="center" prop="dictType" :show-overflow-tooltip="true" />
          <el-table-column label="状态" align="center" prop="status">
             <template #default="scope">
                <dict-tag :options="sys_normal_disable" :value="scope.row.status" />
@@ -124,8 +117,9 @@
                <span>{{ parseTime(scope.row.createTime) }}</span>
             </template>
          </el-table-column>
-         <el-table-column label="操作" align="center" width="160" class-name="small-padding fixed-width">
+         <el-table-column label="操作" align="center" width="250" class-name="small-padding fixed-width">
             <template #default="scope">
+               <el-button link type="primary" icon="List" @click="handleViewData(scope.row)" v-hasPermi="['system:dict:list']">字典数据</el-button>
                <el-button link type="primary" icon="Edit" @click="handleUpdate(scope.row)" v-hasPermi="['system:dict:edit']">修改</el-button>
                <el-button link type="primary" icon="Delete" @click="handleDelete(scope.row)" v-hasPermi="['system:dict:remove']">删除</el-button>
             </template>
@@ -177,6 +171,7 @@ import useDictStore from '@/store/modules/dict'
 import { listType, getType, delType, addType, updateType, refreshCache } from "@/api/system/dict/type";
 
 const { proxy } = getCurrentInstance();
+const router = useRouter();
 const { sys_normal_disable } = proxy.useDict("sys_normal_disable");
 
 const typeList = ref([]);
@@ -254,6 +249,10 @@ function handleSelectionChange(selection) {
   ids.value = selection.map(item => item.dictId);
   single.value = selection.length != 1;
   multiple.value = !selection.length;
+}
+/** 查看字典数据 */
+function handleViewData(row) {
+  router.push('/system/dict-data/index/' + row.dictId);
 }
 /** 修改按钮操作 */
 function handleUpdate(row) {

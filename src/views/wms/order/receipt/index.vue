@@ -58,27 +58,22 @@
       </el-row>
 
       <el-table v-loading="loading" :data="receiptOrderList" border class="mt20" empty-text="暂无入库单">
-        <el-table-column label="单号" align="left" min-width="130">
+        <el-table-column label="单号" align="left" min-width="120">
           <template #default="{ row }">
             <div>{{ row.receiptOrderNo }}</div>
           </template>
         </el-table-column>
-        <el-table-column label="入库类型" min-width="85" align="left" prop="receiptOrderType">
+        <el-table-column label="入库类型" min-width="80" align="left" prop="receiptOrderType">
           <template #default="{ row }">
             <dict-tag :options="wms_receipt_type" :value="row.receiptOrderType" />
           </template>
         </el-table-column>
-        <el-table-column label="仓库" align="left" min-width="90">
+        <el-table-column label="仓库" align="left" min-width="85">
           <template #default="{ row }">
             {{ useWmsStore().warehouseMap.get(row.warehouseId)?.warehouseName || '-' }}
           </template>
         </el-table-column>
-        <el-table-column label="库区" align="left" min-width="90">
-          <template #default="{ row }">
-            {{ row.areaId ? useWmsStore().areaMap.get(row.areaId)?.areaName : '-' }}
-          </template>
-        </el-table-column>
-        <el-table-column label="入库日期" align="left" min-width="100">
+        <el-table-column label="入库日期" align="left" min-width="95">
           <template #default="{ row }">
             {{ row.receiptDate ? parseTime(row.receiptDate, '{y}-{m}-{d}') : '-' }}
           </template>
@@ -88,18 +83,28 @@
             <dict-tag :options="wms_receipt_status" :value="row.receiptOrderStatus" />
           </template>
         </el-table-column>
-        <el-table-column label="数量" align="left" min-width="70">
+        <el-table-column label="数量" align="left" min-width="60">
           <template #default="{ row }">
             <el-statistic :value="Number(row.totalQuantity)" :precision="0"/>
           </template>
         </el-table-column>
-        <el-table-column label="金额(元)" align="left" min-width="90">
+        <el-table-column label="金额(元)" align="left" min-width="85">
           <template #default="{ row }">
             <el-statistic v-if="row.payableAmount || row.payableAmount === 0" :value="Number(row.payableAmount)" :precision="2"/>
             <span v-else>-</span>
           </template>
         </el-table-column>
-        <el-table-column label="备注" prop="remark" min-width="100" show-overflow-tooltip />
+        <el-table-column label="备注" prop="remark" min-width="80" show-overflow-tooltip />
+        <el-table-column label="提交人" min-width="70" show-overflow-tooltip>
+          <template #default="{ row }">
+            {{ getNickNameByUserName(row.createBy) }}
+          </template>
+        </el-table-column>
+        <el-table-column label="提交日期" min-width="125">
+          <template #default="{ row }">
+            {{ row.createTime ? parseTime(row.createTime, '{y}-{m}-{d} {h}:{i}') : '-' }}
+          </template>
+        </el-table-column>
         <el-table-column label="操作" align="right" class-name="small-padding fixed-width" width="200">
           <template #default="scope">
             <el-popover
@@ -147,6 +152,7 @@
 
 <script setup name="ReceiptOrder">
 import { listReceiptOrder, delReceiptOrder, getReceiptOrder } from "@/api/wms/receiptOrder";
+import { getUserSelectList } from "@/api/wms/common";
 import {getCurrentInstance, reactive, ref, toRefs} from "vue";
 import { useRoute, useRouter } from "vue-router";
 import {useWmsStore} from "../../../../store/modules/wms";
@@ -161,6 +167,13 @@ const { wms_receipt_status, wms_receipt_type } = proxy.useDict(
   "wms_receipt_status",
   "wms_receipt_type"
 );
+// 用户列表，用于显示中文昵称
+const userList = ref([]);
+const getNickNameByUserName = (userName) => {
+  if (!userName) return '-'
+  const u = userList.value.find(x => x.userName === userName)
+  return u ? u.nickName : userName
+};
 const receiptOrderList = ref([]);
 const loading = ref(true);
 const total = ref(0);
@@ -256,18 +269,40 @@ async function handlePrint(row) {
   const receiptOrder = res.data
   let table = []
   if (receiptOrder.details?.length) {
-    table = receiptOrder.details.map((detail, index) => ({
+    // 按SKU聚合：以skuId为key分组，汇总数量和金额
+    const skuMap = new Map()
+    receiptOrder.details.forEach(detail => {
+      const skuId = detail.skuId ?? detail.itemSku?.id ?? detail.id
+      if (!skuMap.has(skuId)) {
+        skuMap.set(skuId, {
+          skuId,
+          itemName: detail.itemSku?.item?.itemName,
+          skuName: detail.itemSku?.skuName,
+          unitName: detail.itemSku?.item?.unitOfMeasure || detail.itemSku?.item?.unit || '',
+          qualityLevel: detail.qualityGrade ?? detail.itemSku?.qualityGrade ?? '',
+          unitPrice: detail.unitPrice,
+          totalQuantity: 0,
+          totalLineAmount: 0,
+          remark: detail.remark || ''
+        })
+      }
+      const group = skuMap.get(skuId)
+      group.totalQuantity += Number(detail.quantity || 0)
+      group.totalLineAmount += Number(detail.lineAmount || 0)
+    })
+    const skuList = Array.from(skuMap.values())
+    table = skuList.map((sku, index) => ({
       serialNo: String(index + 1),
-      itemName: detail.itemSku?.item?.itemName,
-      skuName: detail.itemSku?.skuName,
-      unitName: detail.itemSku?.item?.unitOfMeasure || detail.itemSku?.item?.unit || '',
+      itemName: sku.itemName,
+      skuName: sku.skuName,
+      unitName: sku.unitName,
       dispatchLevel: '',
       dispatchQuantity: '',
-      receiptLevel: detail.qualityLevel || '',
-      receiptQuantity: Number(detail.quantity || 0).toFixed(0),
-      unitPrice: detail.unitPrice,
-      lineAmount: detail.lineAmount,
-      remark: detail.remark || ''
+      receiptLevel: sku.qualityLevel,
+      receiptQuantity: sku.totalQuantity.toFixed(0),
+      unitPrice: sku.unitPrice,
+      lineAmount: sku.totalLineAmount ? Number(sku.totalLineAmount.toFixed(2)) : '',
+      remark: sku.remark
     }))
   }
   if (table.length < 6) {
@@ -335,6 +370,10 @@ async function handlePrint(row) {
   })
 }
 getList();
+// 加载用户列表
+getUserSelectList().then(res => {
+  userList.value = res.data || []
+})
 </script>
 <style lang="scss">
 .el-statistic__content {

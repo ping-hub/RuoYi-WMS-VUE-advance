@@ -137,11 +137,9 @@
                   <el-input
                     v-model="form.remark"
                     placeholder="备注...100个字符以内"
-                    rows="2"
                     maxlength="100"
-                    type="textarea"
-                    show-word-limit="show-word-limit"
-                  ></el-input>
+                    show-word-limit
+                  />
                 </el-form-item>
               </el-col>
             </el-row>
@@ -208,11 +206,9 @@
                   <el-input
                     v-model="form.remark"
                     placeholder="备注...100个字符以内"
-                    rows="2"
                     maxlength="100"
-                    type="textarea"
-                    show-word-limit="show-word-limit"
-                  ></el-input>
+                    show-word-limit
+                  />
                 </el-form-item>
               </el-col>
             </el-row>
@@ -260,7 +256,7 @@
             </el-table-column>
             <el-table-column v-if="!isExternalTransfer" label="目标货架" min-width="140">
               <template #default="{ row }">
-                <RackSelect v-model="row.targetRackId" :warehouse-id="form.targetWarehouseId" :area-id="row.targetAreaId || form.targetAreaId" :disabled="isViewMode" />
+                <RackSelect v-model="row.targetRackId" :warehouse-id="form.targetWarehouseId" :area-id="row.targetAreaId || form.targetAreaId" :options="rackOptions" :disabled="isViewMode" />
               </template>
             </el-table-column>
             <el-table-column v-if="!isExternalTransfer" label="目标货位" min-width="140">
@@ -270,6 +266,7 @@
                   :warehouse-id="form.targetWarehouseId"
                   :area-id="row.targetAreaId || form.targetAreaId"
                   :rack-id="row.targetRackId"
+                  :options="locationOptions"
                   :disabled="isViewMode"
                 />
               </template>
@@ -415,6 +412,8 @@ import {useWmsStore} from '@/store/modules/wms'
 import {numSub} from '@/utils/ruoyi'
 import {listInventoryDetailNoPage} from "@/api/wms/inventoryDetail";
 import {listItemInstance, getItemInstanceByCode} from "@/api/wms/itemInstance";
+import { listRackNoPage } from '@/api/wms/rack';
+import { listLocationNoPage } from '@/api/wms/location';
 import RackSelect from "@/views/components/RackSelect.vue";
 import LocationSelect from "@/views/components/LocationSelect.vue";
 
@@ -428,6 +427,29 @@ const {wms_movement_type, wms_transfer_scope} = proxy.useDict(
 );
 
 const loading = ref(false)
+/** 统一加载的货架/货位列表，避免表格行内 N 次重复请求 */
+const rackOptions = ref([])
+const locationOptions = ref([])
+const loadRackOptions = async () => {
+  if (!form.value.targetWarehouseId) { rackOptions.value = []; return }
+  try {
+    const query = { warehouseId: form.value.targetWarehouseId }
+    if (form.value.targetAreaId) query.areaId = form.value.targetAreaId
+    const res = await listRackNoPage(query)
+    rackOptions.value = res.data || []
+  } catch (e) { rackOptions.value = [] }
+}
+const loadLocationOptions = async () => {
+  if (!form.value.targetWarehouseId) { locationOptions.value = []; return }
+  try {
+    const query = { warehouseId: form.value.targetWarehouseId }
+    if (form.value.targetAreaId) query.areaId = form.value.targetAreaId
+    const res = await listLocationNoPage(query)
+    locationOptions.value = res.data || []
+  } catch (e) { locationOptions.value = [] }
+}
+const loadTargetOptions = () => Promise.all([loadRackOptions(), loadLocationOptions()])
+
 const initFormData = {
   id: undefined,
   movementOrderNo: undefined,
@@ -926,7 +948,7 @@ onMounted(() => {
 // 获取调拨单详情
 const loadDetail = (id) => {
   loading.value = true
-  getMovementOrder(id).then((response) => {
+  getMovementOrder(id).then(async (response) => {
 
     if (response.data.details?.length) {
       response.data.details.forEach(detail => {
@@ -936,7 +958,7 @@ const loadDetail = (id) => {
     }
     form.value = {...response.data}
     form.value.details = (response.data.details || []).map(detail => syncMovementDetail(detail))
-    return refreshInventoryOptions()
+    await Promise.all([refreshInventoryOptions(), loadTargetOptions()])
   }).then(() => {
   }).finally(() => {
     loading.value = false
@@ -978,7 +1000,7 @@ const handleChangeTargetWarehouse = (e) => {
     it.targetRackId = undefined
     it.targetLocationId = undefined
   })
-
+  loadTargetOptions()
 }
 
 const handleChangeTargetArea = (e) => {
@@ -989,6 +1011,7 @@ const handleChangeTargetArea = (e) => {
     it.targetRackId = undefined
     it.targetLocationId = undefined
   })
+  loadTargetOptions()
 }
 
 const handleHeaderTargetRackChange = () => {

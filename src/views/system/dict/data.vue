@@ -88,7 +88,6 @@
 
       <el-table v-loading="loading" :data="dataList" @selection-change="handleSelectionChange">
          <el-table-column type="selection" width="55" align="center" />
-         <el-table-column label="字典编码" align="center" prop="dictCode" />
          <el-table-column label="字典标签" align="center" prop="dictLabel">
             <template #default="scope">
               <span v-if="(scope.row.listClass == '' || scope.row.listClass == 'default') && (scope.row.cssClass == '' || scope.row.cssClass == null)">{{ scope.row.dictLabel }}</span>
@@ -330,7 +329,10 @@ function submitForm() {
 /** 删除按钮操作 */
 function handleDelete(row) {
   const dictCodes = row.dictCode || ids.value;
-  proxy.$modal.confirm('是否确认删除字典编码为"' + dictCodes + '"的数据项？').then(function() {
+  const labels = dataList.value
+    .filter(item => (Array.isArray(dictCodes) ? dictCodes.includes(item.dictCode) : item.dictCode === dictCodes))
+    .map(item => item.dictLabel).join(',');
+  proxy.$modal.confirm('是否确认删除字典标签为"' + labels + '"的数据项？').then(function() {
     return delData(dictCodes);
   }).then(() => {
     getList();

@@ -68,34 +68,43 @@
       </el-row>
 
       <el-table v-loading="loading" :data="borrowRecordList" border empty-text="暂无借用记录" class="borrow-table">
-        <el-table-column label="借用单号" prop="borrowNo" min-width="150" show-overflow-tooltip />
-        <el-table-column label="器材实例编码" prop="instanceCode" min-width="160" show-overflow-tooltip />
+        <el-table-column label="借用单号" prop="borrowNo" min-width="130" show-overflow-tooltip />
         <el-table-column label="器材名称" prop="itemName" min-width="80" show-overflow-tooltip />
-        <el-table-column label="借用状态" width="90" align="center">
+        <el-table-column label="借用状态" width="80" align="center">
           <template #default="{ row }">
             <dict-tag :options="wms_borrow_status" :value="row.borrowStatus" />
           </template>
         </el-table-column>
-        <el-table-column label="预警" width="80" align="center">
+        <el-table-column label="预警" width="70" align="center">
           <template #default="{ row }">
             <el-tag v-if="row.overdueFlag === 1" type="danger">超期{{ row.overdueDays || 0 }}天</el-tag>
             <el-tag v-else type="success">正常</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="借用人" prop="borrower" width="80" show-overflow-tooltip />
-        <el-table-column label="借用时间" width="160">
+        <el-table-column label="借用人" prop="borrower" width="70" show-overflow-tooltip />
+        <el-table-column label="借用时间" width="150">
           <template #default="{ row }">
             {{ row.borrowTime ? parseTime(row.borrowTime, '{y}-{m}-{d} {h}:{i}:{s}') : '-' }}
           </template>
         </el-table-column>
-        <el-table-column label="计划归还" width="110">
+        <el-table-column label="计划归还" width="100">
           <template #default="{ row }">
             {{ row.planReturnDate ? parseTime(row.planReturnDate, '{y}-{m}-{d}') : '-' }}
           </template>
         </el-table-column>
-        <el-table-column label="归还时间" width="160">
+        <el-table-column label="归还时间" width="150">
           <template #default="{ row }">
             {{ row.returnTime ? parseTime(row.returnTime, '{y}-{m}-{d} {h}:{i}:{s}') : '-' }}
+          </template>
+        </el-table-column>
+        <el-table-column label="提交人" min-width="65" show-overflow-tooltip>
+          <template #default="{ row }">
+            {{ getNickNameByUserName(row.createBy) }}
+          </template>
+        </el-table-column>
+        <el-table-column label="提交日期" min-width="100">
+          <template #default="{ row }">
+            {{ row.createTime ? parseTime(row.createTime, '{y}-{m}-{d} {h}:{i}') : '-' }}
           </template>
         </el-table-column>
         <el-table-column label="操作" align="center" width="120">
@@ -182,17 +191,6 @@
               />
             </el-form-item>
           </el-col>
-          <el-col :span="12">
-            <el-form-item label="单据日期" prop="docDate">
-              <el-date-picker
-                v-model="borrowDialog.form.docDate"
-                type="date"
-                format="YYYY-MM-DD"
-                value-format="YYYY-MM-DD"
-                style="width: 100%"
-              />
-            </el-form-item>
-          </el-col>
         </el-row>
         <el-row :gutter="20">
           <el-col :span="12">
@@ -219,7 +217,7 @@
           </el-col>
         </el-row>
         <el-form-item label="借用备注" prop="borrowRemark">
-          <el-input v-model="borrowDialog.form.borrowRemark" type="textarea" :rows="3" placeholder="请输入借用备注" />
+          <el-input v-model="borrowDialog.form.borrowRemark" placeholder="请输入借用备注" />
         </el-form-item>
         <el-alert
           :closable="false"
@@ -305,7 +303,7 @@
           </el-col>
         </el-row>
         <el-form-item label="归还备注" prop="returnRemark">
-          <el-input v-model="returnDialog.form.returnRemark" type="textarea" :rows="3" placeholder="请输入归还备注" />
+          <el-input v-model="returnDialog.form.returnRemark" placeholder="请输入归还备注" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -360,6 +358,7 @@ import {
   returnBorrowItem
 } from '@/api/wms/borrowRecord';
 import { listItemInstance, getItemInstanceByCode } from '@/api/wms/itemInstance';
+import { getUserSelectList } from '@/api/wms/common';
 
 const router = useRouter();
 const route = useRoute();
@@ -369,6 +368,13 @@ const { wms_borrow_status, wms_item_instance_status, wms_overdue_flag } = proxy.
   'wms_item_instance_status',
   'wms_overdue_flag'
 );
+// 用户列表，用于显示中文昵称
+const userList = ref([]);
+const getNickNameByUserName = (userName) => {
+  if (!userName) return '-'
+  const u = userList.value.find(x => x.userName === userName)
+  return u ? u.nickName : userName
+};
 
 const loading = ref(true);
 const buttonLoading = ref(false);
@@ -630,7 +636,7 @@ const handleBorrow = async (row) => {
     toPerson: undefined,
     docDate: undefined,
     planReturnDate: undefined,
-    borrowTime: undefined,
+    borrowTime: formatCurrentDateTime(),
     borrowRemark: undefined
   };
   borrowDialog.currentItem = {};
@@ -756,6 +762,10 @@ const handleView = async (row) => {
 
 onMounted(async () => {
   applyRouteQuery();
+  // 加载用户列表
+  getUserSelectList().then(res => {
+    userList.value = res.data || []
+  });
   await Promise.all([
     loadQueryInstances(),
     loadBorrowableInstances(),

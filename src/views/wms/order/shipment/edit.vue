@@ -59,13 +59,16 @@
           </el-row>
           <el-row :gutter="24">
             <el-col :span="6">
-              <el-form-item label="采购日期" prop="purchaseDate">
-                <el-date-picker v-model="form.purchaseDate" type="date" value-format="YYYY-MM-DD" format="YYYY-MM-DD" style="width: 100%" />
+              <el-form-item label="出库日期" prop="shipmentDate">
+                <el-date-picker v-model="form.shipmentDate" type="date" value-format="YYYY-MM-DD" format="YYYY-MM-DD" style="width: 100%" disabled />
               </el-form-item>
             </el-col>
             <el-col :span="6">
-              <el-form-item label="出库日期" prop="shipmentDate">
-                <el-date-picker v-model="form.shipmentDate" type="date" value-format="YYYY-MM-DD" format="YYYY-MM-DD" style="width: 100%" />
+              <el-form-item prop="approverId">
+                <template #label><span style="color: #f56c6c">*</span> 审批人</template>
+                <el-select v-model="form.approverId" placeholder="请选择审批人" filterable clearable style="width: 100%" @change="handleApproverFieldChange">
+                  <el-option v-for="u in userList" :key="u.userId" :label="u.nickName" :value="u.userId" />
+                </el-select>
               </el-form-item>
             </el-col>
             <el-col :span="12">
@@ -73,31 +76,14 @@
                 <el-input
                   v-model="form.remark"
                   placeholder="备注...100个字符以内"
-                  rows="2"
                   maxlength="100"
-                  type="textarea"
-                  show-word-limit="show-word-limit"
-                ></el-input>
-              </el-form-item>
-            </el-col>
-          </el-row>
-          <!-- 草稿/已驳回：审批人下拉选择 -->
-          <el-row :gutter="24" v-if="[0, -2].includes(Number(form.shipmentOrderStatus))">
-            <el-col :span="6">
-              <el-form-item label="审批人" prop="approverId">
-                <el-select v-model="form.approverId" placeholder="请选择审批人" filterable clearable style="width: 100%" @change="handleApproverFieldChange">
-                  <el-option v-for="u in userList" :key="u.userId" :label="u.nickName" :value="u.userId" />
-                </el-select>
+                  show-word-limit
+                />
               </el-form-item>
             </el-col>
           </el-row>
           <!-- 已审批/已出库：审批人+操作人只读 -->
           <el-row :gutter="24" v-if="[2, 3].includes(Number(form.shipmentOrderStatus)) && (form.approverId || form.executorId)">
-            <el-col :span="6" v-if="form.approverId">
-              <el-form-item label="审批人">
-                <el-input :model-value="getNickNameById(form.approverId)" disabled />
-              </el-form-item>
-            </el-col>
             <el-col :span="6" v-if="form.executorId">
               <el-form-item label="操作人">
                 <el-input :model-value="getNickNameById(form.executorId)" disabled />
@@ -108,7 +94,7 @@
           <el-row :gutter="24" v-if="Number(form.shipmentOrderStatus) === -2 && form.approveRemark">
             <el-col :span="12">
               <el-form-item label="驳回原因">
-                <el-input :model-value="form.approveRemark" type="textarea" :rows="2" disabled />
+                <el-input :model-value="form.approveRemark" disabled />
               </el-form-item>
             </el-col>
           </el-row>
@@ -126,7 +112,7 @@
           <el-col :span="12" v-if="rejectRemarkVisible">
             <div class="approval-form-item">
               <label>驳回原因：</label>
-              <el-input v-model="rejectRemark" type="textarea" :rows="2" placeholder="请输入驳回原因" />
+              <el-input v-model="rejectRemark" placeholder="请输入驳回原因" />
             </div>
           </el-col>
         </el-row>
@@ -303,7 +289,7 @@ import {useRoute} from "vue-router";
 import useUserStore from "@/store/modules/user";
 import useTagsViewStore from "@/store/modules/tagsView";
 import {useWmsStore} from '@/store/modules/wms'
-import {numSub} from '@/utils/ruoyi'
+import {numSub, parseTime} from '@/utils/ruoyi'
 import {listInventoryDetailNoPage} from "@/api/wms/inventoryDetail";
 import {getItemInstanceByCode, listItemInstance} from "@/api/wms/itemInstance";
 import RackSelect from "@/views/components/RackSelect.vue";
@@ -826,7 +812,7 @@ const doShipment = async () => {
       noticeOrg: form.value.noticeOrg,
       receiveUnit: form.value.receiveUnit,
       purchaseDate: form.value.purchaseDate,
-      shipmentDate: form.value.shipmentDate,
+      shipmentDate: parseTime(new Date(), '{y}-{m}-{d}'),
       remark: form.value.remark,
       receivableAmount: form.value.receivableAmount,
       totalQuantity: form.value.totalQuantity,
@@ -889,7 +875,8 @@ const loadDetail = (id) => {
       details: (response.data.details || []).map(detail => syncShipmentDetail(detail))
     }
     recalculateOrderSummary()
-    return refreshInventoryOptions()
+    // 不再加载全量库存明细：已有的明细数据不需要 inventoryDetailOptions，
+    // 添加新器材时会由 showAddItemInstance / addItemInstancesToShipment 按需加载
   }).then(() => {
   }).finally(() => {
     loading.value = false
