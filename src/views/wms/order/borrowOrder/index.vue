@@ -40,6 +40,21 @@
       </el-form>
     </el-card>
 
+    <div class="stats-row">
+      <el-card class="stats-card">
+        <div class="stats-label">借出中</div>
+        <div class="stats-value">{{ warningStats.borrowingCount }}</div>
+      </el-card>
+      <el-card class="stats-card warning-card">
+        <div class="stats-label">预警</div>
+        <div class="stats-value">{{ warningStats.warningCount }}</div>
+      </el-card>
+      <el-card class="stats-card overdue-card">
+        <div class="stats-label">超时</div>
+        <div class="stats-value">{{ warningStats.overdueCount }}</div>
+      </el-card>
+    </div>
+
     <el-card class="mt20">
       <el-row :gutter="10" class="mb8" type="flex" justify="space-between">
         <el-col :span="6"><span style="font-size: large">器材借用单</span></el-col>
@@ -65,9 +80,10 @@
             <dict-tag :options="wms_borrow_order_status" :value="row.borrowOrderStatus" />
           </template>
         </el-table-column>
-        <el-table-column label="预警" width="70" align="center">
+        <el-table-column label="预警" width="90" align="center">
           <template #default="{ row }">
-            <el-tag v-if="row.overdueFlag === 1" type="danger">超期{{ row.overdueDays || 0 }}天</el-tag>
+            <el-tag v-if="row.warningFlag === 2" type="danger">超期{{ row.overdueDays || 0 }}天</el-tag>
+            <el-tag v-else-if="row.warningFlag === 1" type="warning">预警</el-tag>
             <el-tag v-else-if="row.borrowOrderStatus === 1" type="success">正常</el-tag>
             <span v-else>-</span>
           </template>
@@ -137,11 +153,10 @@
 <script setup name="BorrowOrder">
 import { getCurrentInstance, reactive, ref, toRefs } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { ElMessageBox } from 'element-plus';
 import {
   listBorrowOrder,
   delBorrowOrder,
-  returnBorrowOrder
+  getBorrowOrderWarningStats
 } from '@/api/wms/borrowOrder';
 import { getUserSelectList } from '@/api/wms/common';
 import { resolveRoutePath } from '@/utils/routeResolver';
@@ -161,6 +176,11 @@ const getNickNameByUserName = (userName) => {
 const borrowOrderList = ref([]);
 const loading = ref(true);
 const total = ref(0);
+const warningStats = reactive({
+  borrowingCount: 0,
+  warningCount: 0,
+  overdueCount: 0
+});
 
 const data = reactive({
   queryParams: {
@@ -189,6 +209,13 @@ function getList() {
     loading.value = false;
   });
 }
+
+const loadWarningStats = async () => {
+  const res = await getBorrowOrderWarningStats();
+  warningStats.borrowingCount = Number(res.data?.borrowingCount || 0);
+  warningStats.warningCount = Number(res.data?.warningCount || 0);
+  warningStats.overdueCount = Number(res.data?.overdueCount || 0);
+};
 
 function handleQuery() {
   queryParams.value.pageNum = 1;
@@ -236,16 +263,7 @@ function getDisabledTip(row) {
 }
 
 function handleReturn(row) {
-  proxy.$modal.confirm('确认将借用单【' + row.borrowOrderNo + '】全部归还吗？').then(() => {
-    return returnBorrowOrder(row.id);
-  }).then((res) => {
-    if (res.code === 200) {
-      proxy.$modal.msgSuccess('归还成功');
-      getList();
-    } else {
-      proxy.$modal.msgError(res.msg);
-    }
-  });
+  router.push({ path: resolveBorrowOrderEditPath(), query: { id: row.id, returnFullPath: route.fullPath } });
 }
 
 function handleDelete(row) {
@@ -265,6 +283,7 @@ getUserSelectList().then(res => {
   userList.value = res.data || [];
 });
 getList();
+loadWarningStats();
 </script>
 
 <style lang="scss">
@@ -279,5 +298,36 @@ getList();
   justify-content: flex-end;
   gap: 12px;
   flex-wrap: wrap;
+}
+
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.stats-card {
+  min-height: 96px;
+}
+
+.stats-label {
+  color: var(--el-text-color-secondary);
+  font-size: 14px;
+  margin-bottom: 12px;
+}
+
+.stats-value {
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.warning-card .stats-value {
+  color: var(--el-color-warning);
+}
+
+.overdue-card .stats-value {
+  color: var(--el-color-danger);
 }
 </style>

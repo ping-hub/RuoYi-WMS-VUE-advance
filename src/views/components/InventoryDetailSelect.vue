@@ -54,7 +54,11 @@
       <el-table-column label="器材编码" prop="itemCode" min-width="140" show-overflow-tooltip />
       <el-table-column label="规格型号" prop="skuName" min-width="140" show-overflow-tooltip />
       <el-table-column label="产品标识" prop="productIdentifier" min-width="130" show-overflow-tooltip />
-      <el-table-column label="质量等级" prop="qualityGrade" width="120" show-overflow-tooltip />
+      <el-table-column label="质量等级" width="120">
+        <template #default="{ row }">
+          <dict-tag :options="wms_quality_grade" :value="row.qualityGrade" v-if="row.qualityGrade" />
+        </template>
+      </el-table-column>
       <el-table-column label="入库日期" align="left" prop="createTime" width="140">
         <template #default="{ row }">
           <div>{{ parseTime(row.createTime, '{y}-{m}-{d}') }}</div>
@@ -95,6 +99,7 @@ import {useRouter} from "vue-router";
 import {useWmsStore} from '@/store/modules/wms'
 import {listInventoryDetail} from "@/api/wms/inventoryDetail";
 const {proxy} = getCurrentInstance()
+const { wms_quality_grade } = proxy.useDict('wms_quality_grade')
 const defaultTime = reactive([new Date(0,0,0,0,0,0), new Date(0,0,0,23,59,59)])
 
 const router = useRouter()

@@ -279,7 +279,7 @@ async function handlePrint(row) {
           itemName: detail.itemSku?.item?.itemName,
           skuName: detail.itemSku?.skuName,
           unitName: detail.itemSku?.item?.unitOfMeasure || detail.itemSku?.item?.unit || '',
-          qualityLevel: detail.qualityGrade ?? detail.itemSku?.qualityGrade ?? '',
+          qualityLevel: detail.qualityGrade ?? '',
           unitPrice: detail.unitPrice,
           totalQuantity: 0,
           totalLineAmount: 0,
@@ -354,7 +354,7 @@ async function handlePrint(row) {
     panel.printElements?.forEach(element => {
       const field = element?.options?.field
       if (field && topValueFields.has(field)) {
-        element.options.title = printData[field] || ''
+        element.options.title = printData[field] || ' '
         delete element.options.field
         delete element.options.fields
       }

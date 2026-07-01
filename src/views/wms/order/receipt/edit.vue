@@ -142,6 +142,25 @@
                 />
               </template>
             </el-table-column>
+            <el-table-column label="质量等级" min-width="120">
+              <template #default="{ row }">
+                <el-select v-model="row.qualityGrade" placeholder="质量等级" :disabled="isViewMode" clearable style="width: 100%">
+                  <el-option v-for="item in wms_quality_grade" :key="item.value" :label="item.label" :value="item.value" />
+                </el-select>
+              </template>
+            </el-table-column>
+            <el-table-column label="质保期" min-width="160">
+              <template #default="{ row }">
+                <el-date-picker
+                  v-model="row.warrantyPeriod"
+                  type="date"
+                  placeholder="选择质保期"
+                  value-format="YYYY-MM-DD"
+                  :disabled="isViewMode"
+                  style="width: 100%"
+                />
+              </template>
+            </el-table-column>
             <el-table-column label="备注" min-width="150">
               <template #default="{ row }">
                 <el-input v-model="row.remark" placeholder="请输入备注" :disabled="isViewMode" />
@@ -165,7 +184,7 @@
             <el-descriptions-item label="规格型号">{{ itemDetailDialog.data.skuName || '-' }}</el-descriptions-item>
             <el-descriptions-item label="计量单位">{{ itemDetailDialog.data.unit || '-' }}</el-descriptions-item>
             <el-descriptions-item label="产品标识">{{ itemDetailDialog.data.productIdentifier || '-' }}</el-descriptions-item>
-            <el-descriptions-item label="质量等级">{{ itemDetailDialog.data.qualityGrade || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="质量等级"><dict-tag :options="wms_quality_grade" :value="itemDetailDialog.data.qualityGrade" v-if="itemDetailDialog.data.qualityGrade" /><span v-else>-</span></el-descriptions-item>
             <el-descriptions-item label="状态">{{ itemDetailDialog.data.instanceStatus || '-' }}</el-descriptions-item>
           </el-descriptions>
           <el-empty v-else-if="!itemDetailDialog.loading" description="暂无器材详情" />
@@ -279,7 +298,7 @@ const {proxy} = getCurrentInstance();
 const route = useRoute();
 const tagsViewStore = useTagsViewStore();
 const isViewMode = computed(() => route.query.mode === 'view');
-const { wms_receipt_type } = proxy.useDict("wms_receipt_type");
+const { wms_receipt_type, wms_quality_grade } = proxy.useDict("wms_receipt_type", "wms_quality_grade");
 const loading = ref(false)
 /** 统一加载的货位列表，传给 LocationSelect 避免 N 次重复请求 */
 const locationOptions = ref([])
@@ -505,7 +524,7 @@ const syncReceiptDetail = (detail) => {
     skuName: detail.skuName ?? detail.itemSku?.skuName,
     unit: detail.unit ?? detail.itemSku?.item?.unit,
     productIdentifier: detail.productIdentifier ?? detail.itemSku?.productIdentifier,
-    qualityGrade: detail.qualityGrade ?? detail.itemSku?.qualityGrade,
+    qualityGrade: detail.qualityGrade,
     instanceCode: detail.instanceCode ?? firstReceiptInstance.instanceCode ?? '',
     boxCode: detail.boxCode ?? firstReceiptInstance.boxCode ?? '',
     quantity: Number(detail.quantity || 1),

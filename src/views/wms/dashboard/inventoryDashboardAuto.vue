@@ -510,7 +510,7 @@ const loadWarningData = async () => {
     warningTotal.value = total;
     // 取前4个预警器材，显示器材名称 + 当前库存数量
     warningGridData.value = items.slice(0, 4).map(item => ({
-      category: item.itemName || '—',
+      category: (item.ruleType === 'category' ? item.itemCategoryName : item.itemName) || '—',
       count: Number(item.currentStock) || 0,
       color: warningLevelColor[item.warningLevel] || '#00e7ff',
     }));

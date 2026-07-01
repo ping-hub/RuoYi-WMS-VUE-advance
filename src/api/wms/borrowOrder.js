@@ -58,3 +58,10 @@ export function voidBorrowOrder(id) {
     method: 'put'
   });
 }
+
+export function getBorrowOrderWarningStats() {
+  return request({
+    url: '/wms/borrowOrder/warning/stats',
+    method: 'get'
+  });
+}

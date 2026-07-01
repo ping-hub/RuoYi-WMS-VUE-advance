@@ -37,7 +37,6 @@
                   <div v-if="row.item.itemCode" class="sub-text">器材编码：{{ row.item.itemCode }}</div>
                   <div v-if="row.skuName" class="sub-text">规格型号：{{ row.skuName }}</div>
                   <div v-if="row.productIdentifier" class="sub-text">产品标识：{{ row.productIdentifier }}</div>
-                  <div v-if="row.qualityGrade" class="sub-text">质量等级：{{ row.qualityGrade }}</div>
                 </template>
               </el-table-column>
               <el-table-column label="操作" width="100" v-if="singleSelect" align="right">

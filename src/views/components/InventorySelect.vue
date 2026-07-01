@@ -35,7 +35,7 @@
           <div v-if="row.item.itemCode" class="sub-text">器材编码：{{ row.item.itemCode }}</div>
           <div v-if="row.itemSku?.skuName || row.skuName" class="sub-text">规格型号：{{ row.itemSku?.skuName || row.skuName }}</div>
           <div v-if="row.itemSku?.productIdentifier || row.productIdentifier" class="sub-text">产品标识：{{ row.itemSku?.productIdentifier || row.productIdentifier }}</div>
-          <div v-if="row.itemSku?.qualityGrade || row.qualityGrade" class="sub-text">质量等级：{{ row.itemSku?.qualityGrade || row.qualityGrade }}</div>
+          <div v-if="row.qualityGrade" class="sub-text">质量等级：<dict-tag :options="wms_quality_grade" :value="row.qualityGrade" /></div>
         </template>
       </el-table-column>
       <el-table-column label="剩余库存" prop="quantity" align="right">
@@ -77,6 +77,7 @@ import {useWmsStore} from '@/store/modules/wms'
 import {listInventory} from "@/api/wms/inventory";
 
 const {proxy} = getCurrentInstance()
+const { wms_quality_grade } = proxy.useDict('wms_quality_grade')
 
 const spanMethod = computed(() => getRowspanMethod(list.value, ['itemId']))
 const router = useRouter()

@@ -215,6 +215,17 @@
           </template>
         </el-form>
       </el-card>
+      <!-- 关联出库单（仅库外调拨 + 已执行时显示） -->
+      <el-card v-if="isViewMode && isExternalTransfer && form.movementOrderStatus === 1 && linkedShipmentOrder" header="关联出库单" class="mt10">
+        <el-descriptions :column="2" border>
+          <el-descriptions-item label="出库单号">
+            <el-link type="primary" @click="goToShipmentOrder">{{ linkedShipmentOrder.shipmentOrderNo }}</el-link>
+          </el-descriptions-item>
+          <el-descriptions-item label="出库状态">
+            {{ linkedShipmentOrder.shipmentOrderStatus === 0 ? '草稿' : linkedShipmentOrder.shipmentOrderStatus === 1 ? '待审批' : linkedShipmentOrder.shipmentOrderStatus === 2 ? '已审批' : linkedShipmentOrder.shipmentOrderStatus === 3 ? '已出库' : linkedShipmentOrder.shipmentOrderStatus === -1 ? '作废' : '已驳回' }}
+          </el-descriptions-item>
+        </el-descriptions>
+      </el-card>
       <el-card header="调拨明细" class="mt10">
         <div class="receipt-order-content">
           <div class="flex-space-between mb8">
@@ -301,7 +312,7 @@
             <el-descriptions-item label="规格型号">{{ itemDetailDialog.data.skuName || '-' }}</el-descriptions-item>
             <el-descriptions-item label="计量单位">{{ itemDetailDialog.data.unit || '-' }}</el-descriptions-item>
             <el-descriptions-item label="产品标识">{{ itemDetailDialog.data.productIdentifier || '-' }}</el-descriptions-item>
-            <el-descriptions-item label="质量等级">{{ itemDetailDialog.data.qualityGrade || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="质量等级"><dict-tag :options="wms_quality_grade" :value="itemDetailDialog.data.qualityGrade" v-if="itemDetailDialog.data.qualityGrade" /><span v-else>-</span></el-descriptions-item>
             <el-descriptions-item label="状态">{{ itemDetailDialog.data.instanceStatus || '-' }}</el-descriptions-item>
           </el-descriptions>
           <el-empty v-else-if="!itemDetailDialog.loading" description="暂无器材详情" />
@@ -311,6 +322,9 @@
         </template>
       </el-dialog>
       <el-dialog v-model="itemInstanceDialog.visible" title="选择器材实例" width="1100px" append-to-body>
+        <div v-if="movementTypeCategoryLabel" style="margin-bottom: 10px">
+          <el-tag type="info">已按调拨类型「{{ movementTypeCategoryLabel }}」自动筛选器材分类</el-tag>
+        </div>
         <el-form :inline="true" :model="itemInstanceDialog.query" label-width="76px" class="item-instance-search-form">
           <el-form-item label="器材名称">
             <el-input
@@ -406,7 +420,9 @@ import {computed, getCurrentInstance, onMounted, reactive, ref, toRef, toRefs, w
 import {addMovementOrder, getMovementOrder, updateMovementOrder, movement} from "@/api/wms/movementOrder";
 import {delMovementOrderDetail} from "@/api/wms/movementOrderDetail";
 import {ElMessage} from "element-plus";
-import {useRoute} from "vue-router";
+import {useRoute, useRouter} from "vue-router";
+import {resolveRoutePath} from "@/utils/routeResolver";
+import {listShipmentOrder} from "@/api/wms/shipmentOrder";
 import useTagsViewStore from "@/store/modules/tagsView";
 import {useWmsStore} from '@/store/modules/wms'
 import {numSub} from '@/utils/ruoyi'
@@ -419,14 +435,23 @@ import LocationSelect from "@/views/components/LocationSelect.vue";
 
 const {proxy} = getCurrentInstance();
 const route = useRoute();
+const router = useRouter();
 const tagsViewStore = useTagsViewStore();
 const isViewMode = computed(() => route.query.mode === 'view');
-const {wms_movement_type, wms_transfer_scope} = proxy.useDict(
+const {wms_movement_type, wms_transfer_scope, wms_quality_grade} = proxy.useDict(
   "wms_movement_type",
-  "wms_transfer_scope"
+  "wms_transfer_scope",
+  "wms_quality_grade"
 );
 
 const loading = ref(false)
+/** 关联出库单（库外调拨执行后自动生成） */
+const linkedShipmentOrder = ref(null)
+const goToShipmentOrder = () => {
+  if (!linkedShipmentOrder.value) return
+  const path = resolveRoutePath(router, { preferredPaths: ['/shipmentOrderEdit'], titleKeywords: ['出库'] }) || '/shipmentOrderEdit'
+  router.push({ path, query: { id: linkedShipmentOrder.value.id, mode: 'view', returnFullPath: route.fullPath } })
+}
 /** 统一加载的货架/货位列表，避免表格行内 N 次重复请求 */
 const rackOptions = ref([])
 const locationOptions = ref([])
@@ -491,7 +516,8 @@ const itemInstanceDialog = reactive({
     rackId: undefined,
     instanceCode: undefined,
     itemName: undefined,
-    skuName: undefined
+    skuName: undefined,
+    itemCategory: undefined
   }
 })
 
@@ -517,7 +543,7 @@ const handleDetailRowClick = async (row) => {
           skuName: res.data.skuName ?? row.skuName ?? row.itemSku?.skuName,
           unit: res.data.unit ?? row.unit ?? row.itemSku?.item?.unit,
           productIdentifier: res.data.productIdentifier ?? row.productIdentifier ?? row.itemSku?.productIdentifier,
-          qualityGrade: res.data.qualityGrade ?? row.qualityGrade ?? row.itemSku?.qualityGrade,
+          qualityGrade: res.data.qualityGrade ?? row.qualityGrade,
           instanceStatus: res.data.instanceStatus ?? '-'
         }
         return
@@ -530,7 +556,7 @@ const handleDetailRowClick = async (row) => {
       skuName: row.skuName ?? row.itemSku?.skuName,
       unit: row.unit ?? row.itemSku?.item?.unit,
       productIdentifier: row.productIdentifier ?? row.itemSku?.productIdentifier,
-      qualityGrade: row.qualityGrade ?? row.itemSku?.qualityGrade,
+      qualityGrade: row.qualityGrade,
       instanceStatus: '-'
     }
   } catch (e) {
@@ -541,7 +567,7 @@ const handleDetailRowClick = async (row) => {
       skuName: row.skuName ?? row.itemSku?.skuName,
       unit: row.unit ?? row.itemSku?.item?.unit,
       productIdentifier: row.productIdentifier ?? row.itemSku?.productIdentifier,
-      qualityGrade: row.qualityGrade ?? row.itemSku?.qualityGrade,
+      qualityGrade: row.qualityGrade,
       instanceStatus: '-'
     }
   } finally {
@@ -607,7 +633,7 @@ const syncMovementDetail = (detail) => {
     skuName: detail.skuName ?? detail.itemSku?.skuName,
     unit: detail.unit ?? detail.itemSku?.item?.unit,
     productIdentifier: detail.productIdentifier ?? detail.itemSku?.productIdentifier,
-    qualityGrade: detail.qualityGrade ?? detail.itemSku?.qualityGrade,
+    qualityGrade: detail.qualityGrade,
     instanceCode: detail.instanceCode ?? detail.itemInstance?.instanceCode ?? detail.inventoryDetail?.instanceCode,
     sourceRackId: detail.sourceRackId ?? detail.inventoryDetail?.rackId,
     sourceRackName: detail.sourceRackName ?? detail.rackName,
@@ -695,9 +721,42 @@ const createMovementDetailRow = (item, matchedInventory) => {
   }
 }
 
+/**
+ * 根据调拨类型名称在分类树中递归查找匹配的分类节点 ID
+ */
+const findCategoryByName = (nodes, name) => {
+  if (!nodes?.length || !name) return undefined
+  for (const node of nodes) {
+    if (node.label === name) return node.id
+    const found = findCategoryByName(node.children, name)
+    if (found) return found
+  }
+  return undefined
+}
+
+/**
+ * 获取当前调拨类型对应的分类标签（用于弹窗展示）
+ */
+const movementTypeCategoryLabel = computed(() => {
+  if (!form.value.movementType) return ''
+  return form.value.movementType
+})
+
 const showAddItem = async () => {
+  // 确保分类树已加载
+  if (!useWmsStore().itemCategoryTreeList?.length) {
+    await useWmsStore().getItemCategoryTreeList()
+  }
   await refreshInventoryOptions()
   itemInstanceDialog.query.rackId = undefined
+  itemInstanceDialog.query.instanceCode = undefined
+  itemInstanceDialog.query.itemName = undefined
+  itemInstanceDialog.query.skuName = undefined
+  // 根据调拨类型自动匹配器材分类
+  itemInstanceDialog.query.itemCategory = findCategoryByName(
+    useWmsStore().itemCategoryTreeList,
+    form.value.movementType
+  )
   itemInstanceDialog.pageNum = 1
   itemInstanceDialog.visible = true
   itemInstanceDialog.selection = []
@@ -959,6 +1018,15 @@ const loadDetail = (id) => {
     form.value = {...response.data}
     form.value.details = (response.data.details || []).map(detail => syncMovementDetail(detail))
     await Promise.all([refreshInventoryOptions(), loadTargetOptions()])
+    // 库外调拨且已执行 → 查询关联出库单
+    if (form.value.transferScope === '库外调拨' && form.value.movementOrderStatus === 1 && form.value.id) {
+      try {
+        const res = await listShipmentOrder({ movementOrderId: form.value.id })
+        if (res.rows && res.rows.length > 0) {
+          linkedShipmentOrder.value = res.rows[0]
+        }
+      } catch (e) { /* ignore */ }
+    }
   }).then(() => {
   }).finally(() => {
     loading.value = false
@@ -1026,6 +1094,14 @@ watch(() => form.value.targetLocationId, (value) => {
   form.value.details.forEach(it => {
     it.targetLocationId = value
   })
+})
+
+// 切换调拨类型时清空明细（不同分类的器材不应混在同一单据）
+watch(() => form.value.movementType, () => {
+  if (form.value.details?.length) {
+    form.value.details = []
+    handleChangeQuantity()
+  }
 })
 
 const handleChangeQuantity = () => {

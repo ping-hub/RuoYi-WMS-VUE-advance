@@ -504,7 +504,7 @@ const loadWarningData = async () => {
     const items = resultData.items || [];
     warningTotal.value = total;
     warningGridData.value = items.slice(0, 4).map(item => ({
-      category: item.itemName || '—',
+      category: (item.ruleType === 'category' ? item.itemCategoryName : item.itemName) || '—',
       count: Number(item.currentStock) || 0,
       color: warningLevelColor[item.warningLevel] || '#00e7ff',
     }));

@@ -130,7 +130,7 @@
             <el-descriptions-item label="规格型号">{{ itemDetailDialog.data.skuName || '-' }}</el-descriptions-item>
             <el-descriptions-item label="计量单位">{{ itemDetailDialog.data.unit || '-' }}</el-descriptions-item>
             <el-descriptions-item label="产品标识">{{ itemDetailDialog.data.productIdentifier || '-' }}</el-descriptions-item>
-            <el-descriptions-item label="质量等级">{{ itemDetailDialog.data.qualityGrade || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="质量等级"><dict-tag :options="wms_quality_grade" :value="itemDetailDialog.data.qualityGrade" v-if="itemDetailDialog.data.qualityGrade" /><span v-else>-</span></el-descriptions-item>
             <el-descriptions-item label="状态">{{ itemDetailDialog.data.instanceStatus || '-' }}</el-descriptions-item>
           </el-descriptions>
           <el-empty v-else-if="!itemDetailDialog.loading" description="暂无器材详情" />
@@ -192,6 +192,9 @@
           <el-button @click="handleConfirmBorrow" type="warning">确认借出</el-button>
           <el-button @click="handleVoid" type="danger" v-if="form.id">作废</el-button>
         </div>
+        <div v-if="!isViewMode && Number(form.borrowOrderStatus) === 1">
+          <el-button @click="handleReturnAll" type="success">全部归还</el-button>
+        </div>
         <div>
           <el-button @click="cancel" class="mr10">{{ isViewMode ? '关闭' : '取消' }}</el-button>
         </div>
@@ -202,7 +205,7 @@
 
 <script setup name="BorrowOrderEdit">
 import { computed, getCurrentInstance, onBeforeUnmount, onMounted, reactive, ref, toRefs } from 'vue';
-import { addBorrowOrder, getBorrowOrder, updateBorrowOrder, confirmBorrow, voidBorrowOrder } from '@/api/wms/borrowOrder';
+import { addBorrowOrder, getBorrowOrder, updateBorrowOrder, confirmBorrow, returnBorrowOrder, voidBorrowOrder } from '@/api/wms/borrowOrder';
 import { useRoute } from 'vue-router';
 import useTagsViewStore from '@/store/modules/tagsView';
 import { useWmsStore } from '@/store/modules/wms';
@@ -214,7 +217,7 @@ const { proxy } = getCurrentInstance();
 const route = useRoute();
 const tagsViewStore = useTagsViewStore();
 
-const { wms_item_instance_status } = proxy.useDict('wms_item_instance_status');
+const { wms_item_instance_status, wms_quality_grade } = proxy.useDict('wms_item_instance_status', 'wms_quality_grade');
 
 const isViewMode = computed(() => route.query.mode === 'view');
 const formReadonly = computed(() => {
@@ -386,6 +389,21 @@ const handleConfirmBorrow = async () => {
     }
   } catch (e) {
     // 校验失败或保存失败，已提示过
+  }
+};
+
+const handleReturnAll = async () => {
+  await proxy?.$modal.confirm('确认将借用单【' + form.value.borrowOrderNo + '】全部归还吗？');
+  try {
+    const res = await returnBorrowOrder(form.value.id);
+    if (res.code === 200) {
+      ElMessage.success('归还成功');
+      close();
+    } else {
+      ElMessage.error(res.msg);
+    }
+  } catch (e) {
+    // 用户取消
   }
 };
 

@@ -360,9 +360,7 @@ const doStartCheck = () => {
   starting.value = true;
   startCheck(form.value.id).then(res => {
     if (res.code === 200) {
-      const data = res.data;
-      const skuCount = data.skuCount || 0;
-      ElMessage.success('已生成 ' + skuCount + ' 项SKU明细，正在加载...');
+      ElMessage.success('正在加载...');
       // startCheck 仅返回统计信息，需要重新加载完整数据（含SKU明细）
       loadDetail(form.value.id);
     } else {

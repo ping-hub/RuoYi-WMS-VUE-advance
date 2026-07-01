@@ -119,6 +119,7 @@ const taskTypeOptions = ref([
   { value: 'pending_execute', label: '待执行' },
   { value: 'pending_review', label: '待复核' },
   { value: 'rejected', label: '已驳回待修改' },
+  { value: 'borrow_timeout', label: '借用超时预警' },
 ])
 
 // 单据类型 → Tag 颜色
@@ -127,6 +128,7 @@ const orderTypeTagMap = {
   receipt: 'success',
   movement: '',
   check: 'danger',
+  borrowOrder: 'danger',
 }
 
 // 待办类型 → Tag 颜色
@@ -135,6 +137,7 @@ const taskTagMap = {
   pending_execute: '',
   pending_review: 'success',
   rejected: 'danger',
+  borrow_timeout: 'danger',
   done: 'success',
 }
 
@@ -144,6 +147,7 @@ const orderEditRouteMap = {
   receipt: { preferredPaths: ['/receiptOrderEdit'], titleKeywords: ['入库'] },
   movement: { preferredPaths: ['/movementOrderEdit'], titleKeywords: ['调拨'] },
   check: { preferredPaths: ['/checkOrderEdit'], titleKeywords: ['盘点'] },
+  borrowOrder: { preferredPaths: ['/borrowOrderEdit'], titleKeywords: ['借用'] },
 }
 
 const data = reactive({

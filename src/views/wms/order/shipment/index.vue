@@ -68,11 +68,6 @@
             <dict-tag :options="wms_shipment_type" :value="row.shipmentOrderType" />
           </template>
         </el-table-column>
-        <el-table-column label="仓库" align="left" min-width="85">
-          <template #default="{ row }">
-            {{ useWmsStore().warehouseMap.get(row.warehouseId)?.warehouseName || '-' }}
-          </template>
-        </el-table-column>
         <el-table-column label="出库日期" align="left" min-width="95">
           <template #default="{ row }">
             {{ row.shipmentDate ? parseTime(row.shipmentDate, '{y}-{m}-{d}') : '-' }}
@@ -161,7 +156,6 @@ import {listShipmentOrder, delShipmentOrder, getShipmentOrder, submitForApproval
 import {getUserSelectList} from "@/api/wms/common";
 import {getCurrentInstance, reactive, ref, toRefs} from "vue";
 import { useRoute, useRouter } from "vue-router";
-import {useWmsStore} from "../../../../store/modules/wms";
 import useUserStore from "@/store/modules/user";
 import {ElMessageBox} from "element-plus";
 import shipmentPanel from "@/components/PrintTemplate/shipment-panel";
@@ -336,7 +330,7 @@ async function handlePrint(row) {
           itemName: detail.itemSku?.item?.itemName ?? detail.itemName,
           skuName: detail.itemSku?.skuName ?? detail.skuName,
           unitName: detail.itemSku?.item?.unitOfMeasure || detail.itemSku?.item?.unit || '',
-          qualityLevel: detail.qualityGrade ?? detail.itemSku?.qualityGrade ?? '',
+          qualityLevel: detail.qualityGrade ?? '',
           unitPrice: detail.unitPrice,
           totalQuantity: 0,
           totalLineAmount: 0,
@@ -395,10 +389,6 @@ async function handlePrint(row) {
     purchaserName: shipmentOrder.purchaserName,
     acceptorName: shipmentOrder.acceptorName,
     keeperName: shipmentOrder.keeperName,
-    warehouseName: useWmsStore().warehouseMap.get(shipmentOrder.warehouseId)?.warehouseName,
-    warehouse: useWmsStore().warehouseMap.get(shipmentOrder.warehouseId)?.warehouseName,
-    areaName: useWmsStore().areaMap.get(shipmentOrder.areaId)?.areaName,
-    area: useWmsStore().areaMap.get(shipmentOrder.areaId)?.areaName,
     totalQuantity: Number(shipmentOrder.totalQuantity).toFixed(0),
     receivableAmount: ((shipmentOrder.receivableAmount || shipmentOrder.receivableAmount === 0) ? (shipmentOrder.receivableAmount + '元') : ''),
     createBy: shipmentOrder.createBy,
@@ -413,7 +403,7 @@ async function handlePrint(row) {
     panel.printElements?.forEach(element => {
       const field = element?.options?.field
       if (field && topValueFields.has(field)) {
-        element.options.title = printData[field] || ''
+        element.options.title = printData[field] || ' '
         delete element.options.field
         delete element.options.fields
       }

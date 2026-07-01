@@ -19,6 +19,22 @@
             </el-form-item>
           </el-col>
           <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
+            <el-form-item label="器材分类" prop="itemCategory">
+              <el-tree-select
+                v-model="queryParams.itemCategory"
+                :data="wmsStore.itemCategoryTreeList"
+                :props="{ value: 'id', label: 'label', children: 'children' }"
+                value-key="id"
+                check-strictly
+                placeholder="请选择器材分类"
+                clearable
+                filterable
+                style="width: 100%"
+                @change="handleQuery"
+              />
+            </el-form-item>
+          </el-col>
+          <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
             <el-form-item label="器材规格" prop="skuId">
               <el-select v-model="queryParams.skuId" placeholder="请选择器材规格" clearable filterable style="width: 100%" @change="handleQuery">
                 <el-option
@@ -82,7 +98,13 @@
         <el-table-column label="器材实例编码" prop="instanceCode" min-width="160" show-overflow-tooltip />
         <el-table-column label="器材名称" prop="itemName" min-width="120" show-overflow-tooltip />
         <el-table-column label="器材编码" prop="itemCode" min-width="110" show-overflow-tooltip />
+        <el-table-column label="器材分类" prop="categoryName" min-width="100" show-overflow-tooltip />
         <el-table-column label="器材规格" prop="skuName" min-width="110" show-overflow-tooltip />
+        <el-table-column label="质量等级" min-width="90">
+          <template #default="{ row }">
+            <dict-tag :options="wms_quality_grade" :value="row.qualityGrade" v-if="row.qualityGrade" />
+          </template>
+        </el-table-column>
         <el-table-column label="仓库" prop="warehouseName" min-width="90" show-overflow-tooltip />
         <el-table-column label="库区" prop="areaName" min-width="90" show-overflow-tooltip />
         <el-table-column label="器材状态" width="90">
@@ -181,6 +203,8 @@
         <el-descriptions-item label="器材规格">{{ detailDialog.data.skuName || '-' }}</el-descriptions-item>
         <el-descriptions-item label="在箱状态">{{ hasBox(detailDialog.data) ? '在箱' : '不在箱' }}</el-descriptions-item>
         <el-descriptions-item label="借出状态">{{ isBorrowed(detailDialog.data) ? '已借出' : '未借出' }}</el-descriptions-item>
+        <el-descriptions-item label="质量等级"><dict-tag :options="wms_quality_grade" :value="detailDialog.data.qualityGrade" v-if="detailDialog.data.qualityGrade" /><span v-else>-</span></el-descriptions-item>
+        <el-descriptions-item label="质保期">{{ detailDialog.data.warrantyPeriod || '-' }}</el-descriptions-item>
         <el-descriptions-item label="仓库">{{ detailDialog.data.warehouseName || '-' }}</el-descriptions-item>
         <el-descriptions-item label="库区">{{ detailDialog.data.areaName || '-' }}</el-descriptions-item>
         <el-descriptions-item label="货架">{{ detailDialog.data.rackName || '-' }}</el-descriptions-item>
@@ -237,7 +261,7 @@ import { useWmsStore } from '@/store/modules/wms';
 
 const { proxy } = getCurrentInstance();
 const route = useRoute();
-const { wms_item_instance_status } = proxy.useDict('wms_item_instance_status');
+const { wms_item_instance_status, wms_quality_grade } = proxy.useDict('wms_item_instance_status', 'wms_quality_grade');
 const wmsStore = useWmsStore();
 
 const itemInstanceList = ref([]);
@@ -289,6 +313,7 @@ const data = reactive({
     instanceCode: undefined,
     itemName: undefined,
     itemCode: undefined,
+    itemCategory: undefined,
     skuId: undefined,
     instanceStatus: undefined,
     warehouseId: undefined,
@@ -340,6 +365,7 @@ const resetQuery = async () => {
   proxy.resetForm('queryRef');
   queryParams.value.receiptOrderDetailId = undefined;
   queryParams.value.skuId = undefined;
+  queryParams.value.itemCategory = undefined;
   queryParams.value.pageNum = 1;
   queryParams.value.pageSize = 10;
   applyRouteQuery();
@@ -456,6 +482,7 @@ onMounted(async () => {
   await Promise.all([
     wmsStore.getWarehouseList(),
     wmsStore.getAreaList(),
+    wmsStore.getItemCategoryTreeList(),
     loadSkuOptions()
   ]);
   await getList();
