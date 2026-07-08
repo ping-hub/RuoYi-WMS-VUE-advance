@@ -474,11 +474,11 @@ const loadEnvData = async () => {
   try {
     const res = await getEnvLatest();
     const list = res.data || [];
-    const tempHum = list.find(item => item.deviceType === '温度' || item.deviceType === '湿度');
-    if (tempHum) {
-      envTemp.value = tempHum.temp != null ? `${tempHum.temp}℃` : '--';
-      envHum.value  = tempHum.hum  != null ? `${tempHum.hum}%`  : '--';
-    }
+    // 新数据模型：每条记录为一个传感器的单次读数，分别取温度和湿度
+    const tempItem = list.find(item => item.deviceType === '温度');
+    const humItem  = list.find(item => item.deviceType === '湿度');
+    envTemp.value = tempItem?.deviceValue != null ? `${tempItem.deviceValue}℃` : '--';
+    envHum.value  = humItem?.deviceValue  != null ? `${humItem.deviceValue}%`  : '--';
   } catch (e) {
     console.warn('加载环境监测数据失败:', e);
   }
