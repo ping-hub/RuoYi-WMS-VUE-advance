@@ -95,25 +95,25 @@
       </el-row>
 
       <el-table v-loading="loading" :data="itemInstanceList" border empty-text="暂无器材实例编码" cell-class-name="vertical-top-cell">
-        <el-table-column label="器材实例编码" prop="instanceCode" min-width="160" show-overflow-tooltip />
-        <el-table-column label="器材名称" prop="itemName" min-width="120" show-overflow-tooltip />
-        <el-table-column label="器材编码" prop="itemCode" min-width="110" show-overflow-tooltip />
-        <el-table-column label="器材分类" prop="categoryName" min-width="100" show-overflow-tooltip />
-        <el-table-column label="器材规格" prop="skuName" min-width="110" show-overflow-tooltip />
-        <el-table-column label="质量等级" min-width="90">
+        <el-table-column label="器材实例编码" prop="instanceCode" min-width="140" show-overflow-tooltip />
+        <el-table-column label="器材名称" prop="itemName" min-width="110" show-overflow-tooltip />
+        <el-table-column label="器材编码" prop="itemCode" min-width="100" show-overflow-tooltip />
+        <el-table-column label="器材分类" prop="categoryName" min-width="80" show-overflow-tooltip />
+        <el-table-column label="器材规格" prop="skuName" min-width="90" show-overflow-tooltip />
+        <el-table-column label="质量等级" width="80">
           <template #default="{ row }">
             <dict-tag :options="wms_quality_grade" :value="row.qualityGrade" v-if="row.qualityGrade" />
           </template>
         </el-table-column>
-        <el-table-column label="仓库" prop="warehouseName" min-width="90" show-overflow-tooltip />
-        <el-table-column label="库区" prop="areaName" min-width="90" show-overflow-tooltip />
+        <el-table-column label="仓库" prop="warehouseName" width="80" show-overflow-tooltip />
+        <el-table-column label="库区" prop="areaName" width="80" show-overflow-tooltip />
         <el-table-column label="器材状态" width="90">
           <template #default="{ row }">
             <dict-tag :options="wms_item_instance_status" :value="row.instanceStatus" />
           </template>
         </el-table-column>
-        <el-table-column label="备注" prop="remark" min-width="80" show-overflow-tooltip />
-        <el-table-column label="操作" align="right" width="130">
+        <el-table-column label="备注" prop="remark" min-width="60" show-overflow-tooltip />
+        <el-table-column label="操作" align="right" width="180">
           <template #default="{ row }">
             <el-button link type="primary" @click="handleView(row)">详情</el-button>
             <el-popover
@@ -128,6 +128,7 @@
                 <el-button link type="primary" :disabled="!canEditRow(row)" @click="handleUpdate(row)" v-hasPermi="['wms:itemInstance:edit']">修改</el-button>
               </template>
             </el-popover>
+            <el-button link type="primary" @click="handlePrintQrCode(row)" v-hasPermi="['wms:itemInstance:list']">打印</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -215,6 +216,26 @@
       </el-descriptions>
     </el-dialog>
 
+    <el-dialog v-model="printDialog.visible" title="打印器材二维码" width="520px" append-to-body :close-on-click-modal="false" @closed="handlePrintDialogClosed">
+      <el-form label-width="90px">
+        <el-form-item label="器材实例">
+          <span>{{ printDialog.instanceCode || '-' }}</span>
+        </el-form-item>
+        <el-form-item label="打印机">
+          <el-select v-model="printDialog.printerId" placeholder="请选择打印机" filterable style="width: 100%" :disabled="printDialog.loading || printDialog.sending">
+            <el-option v-for="item in printDialog.printers" :key="item.printerId" :label="item.printerId" :value="item.printerId" />
+          </el-select>
+        </el-form-item>
+      </el-form>
+      <el-alert v-if="printDialog.errorMessage" :title="printDialog.errorMessage" type="error" :closable="false" class="mb12" show-icon />
+      <div v-if="printDialog.total" class="mb12">进度：{{ printDialog.current }}/{{ printDialog.total }}</div>
+      <template #footer>
+        <el-button :loading="printDialog.loading" :disabled="printDialog.sending" @click="loadPrinters">刷新</el-button>
+        <el-button :disabled="printDialog.sending" @click="printDialog.visible = false">取消</el-button>
+        <el-button type="primary" :loading="printDialog.sending" :disabled="!printDialog.printerId || !printDialog.printers.length" @click="handleConfirmPrint">开始打印</el-button>
+      </template>
+    </el-dialog>
+
     <el-dialog :title="upload.title" v-model="upload.open" width="420px" append-to-body>
       <el-upload
         ref="uploadRef"
@@ -258,6 +279,7 @@ import {
 } from '@/api/wms/itemInstance';
 import { listItemSku } from '@/api/wms/itemSku';
 import { useWmsStore } from '@/store/modules/wms';
+import { buildQrTscCommand, WssPrintClient, getPrintUrl } from '@/utils/wssPrintClient';
 
 const { proxy } = getCurrentInstance();
 const route = useRoute();
@@ -290,6 +312,20 @@ const upload = reactive({
   headers: { Authorization: 'Bearer ' + getToken() },
   url: import.meta.env.VITE_APP_BASE_API + '/wms/itemInstance/importData'
 });
+
+const printDialog = reactive({
+  visible: false,
+  loading: false,
+  sending: false,
+  instanceCode: '',
+  printers: [],
+  printerId: '',
+  total: 0,
+  current: 0,
+  errorMessage: ''
+});
+
+let printClient;
 
 const initFormData = () => ({
   id: undefined,
@@ -468,6 +504,110 @@ const handleFileSuccess = (response, file) => {
 const submitFileForm = () => {
   uploadRef.value?.submit();
 };
+
+// ========== 打印二维码 ==========
+async function ensurePrintClient() {
+  if (!printClient) {
+    const url = await getPrintUrl();
+    printClient = new WssPrintClient({ url });
+  }
+  await printClient.connect();
+}
+
+async function loadPrinters() {
+  printDialog.errorMessage = '';
+  printDialog.loading = true;
+  try {
+    await ensurePrintClient();
+    const printers = await printClient.listDevices();
+    printDialog.printers = printers;
+    const savedPrinterId = localStorage.getItem('wss_print_printer_id') || '';
+    if (!printDialog.printerId && savedPrinterId && printers.some(item => item.printerId === savedPrinterId)) {
+      printDialog.printerId = savedPrinterId;
+    }
+    if (!printDialog.printerId && printers.length) {
+      printDialog.printerId = printers[0].printerId;
+    }
+  } catch (e) {
+    printDialog.errorMessage = e?.message || '获取打印机列表失败';
+    try {
+      printClient?.disconnect();
+    } finally {
+      printClient = undefined;
+    }
+  } finally {
+    printDialog.loading = false;
+  }
+}
+
+const handlePrintQrCode = async (row) => {
+  if (!row.instanceCode) {
+    proxy.$modal.msgError('当前器材实例无编码，无法打印');
+    return;
+  }
+  printDialog.instanceCode = row.instanceCode;
+  printDialog.total = 1;
+  printDialog.current = 0;
+  printDialog.errorMessage = '';
+  printDialog.visible = true;
+  await loadPrinters();
+};
+
+async function handleConfirmPrint() {
+  if (!printDialog.printerId) {
+    proxy.$modal.msgError('请选择打印机');
+    return;
+  }
+  if (!printDialog.instanceCode) {
+    proxy.$modal.msgError('没有可打印的数据');
+    return;
+  }
+  localStorage.setItem('wss_print_printer_id', printDialog.printerId);
+  printDialog.sending = true;
+  printDialog.errorMessage = '';
+  try {
+    await ensurePrintClient();
+    const command = buildQrTscCommand(printDialog.instanceCode);
+    const res = await printClient.sendData(command, printDialog.printerId);
+    if (Number(res?.code) <= 0) {
+      throw new Error(res?.msg || '打印失败');
+    }
+    printDialog.current = 1;
+    await printClient.closePrinter(printDialog.printerId);
+    proxy.$modal.msgSuccess('打印任务已发送');
+    printDialog.visible = false;
+  } catch (e) {
+    printDialog.errorMessage = e?.message || '打印失败';
+    try {
+      await printClient?.closePrinter(printDialog.printerId);
+    } catch {
+      return;
+    }
+  } finally {
+    printDialog.sending = false;
+    try {
+      printClient?.disconnect();
+    } finally {
+      printClient = undefined;
+    }
+  }
+}
+
+function handlePrintDialogClosed() {
+  printDialog.errorMessage = '';
+  printDialog.loading = false;
+  printDialog.sending = false;
+  printDialog.instanceCode = '';
+  printDialog.printers = [];
+  printDialog.printerId = '';
+  printDialog.total = 0;
+  printDialog.current = 0;
+  try {
+    printClient?.disconnect();
+  } finally {
+    printClient = undefined;
+  }
+}
 
 watch(
   () => route.query,

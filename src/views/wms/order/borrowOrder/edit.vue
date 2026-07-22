@@ -21,13 +21,19 @@
               </el-form-item>
             </el-col>
             <el-col :span="6">
-              <el-form-item label="计划归还" prop="planReturnDate">
-                <el-date-picker v-model="form.planReturnDate" type="date" format="YYYY-MM-DD"
-                  value-format="YYYY-MM-DD" style="width: 100%" />
+              <el-form-item label="借用期限" prop="borrowPeriodDays">
+                <el-input-number v-model="form.borrowPeriodDays" :min="1" :max="3650" :step="1"
+                  controls-position="right" style="width: 100%" @change="onPeriodDaysChange" />
               </el-form-item>
             </el-col>
           </el-row>
           <el-row :gutter="24">
+            <el-col :span="6">
+              <el-form-item label="计划归还" prop="planReturnDate">
+                <el-date-picker v-model="form.planReturnDate" type="date" format="YYYY-MM-DD"
+                  value-format="YYYY-MM-DD" style="width: 100%" disabled />
+              </el-form-item>
+            </el-col>
             <el-col :span="6">
               <el-form-item label="发货单位" prop="fromUnit">
                 <el-input v-model="form.fromUnit" placeholder="请输入发货单位" />
@@ -43,13 +49,13 @@
                 <el-input v-model="form.fromPerson" placeholder="请输入发货人" />
               </el-form-item>
             </el-col>
+          </el-row>
+          <el-row :gutter="24">
             <el-col :span="6">
               <el-form-item label="收货人" prop="toPerson">
                 <el-input v-model="form.toPerson" placeholder="请输入收货人" />
               </el-form-item>
             </el-col>
-          </el-row>
-          <el-row :gutter="24">
             <el-col :span="12">
               <el-form-item label="备注" prop="remark">
                 <el-input v-model="form.remark" placeholder="备注...100个字符以内" maxlength="100" show-word-limit />
@@ -233,6 +239,7 @@ const initFormData = {
   borrower: undefined,
   borrowTime: undefined,
   planReturnDate: undefined,
+  borrowPeriodDays: 30,
   fromUnit: undefined,
   toUnit: undefined,
   fromPerson: undefined,
@@ -252,6 +259,9 @@ const data = reactive({
     ],
     planReturnDate: [
       { required: true, message: '计划归还日期不能为空', trigger: 'change' }
+    ],
+    borrowPeriodDays: [
+      { required: true, message: '借用期限不能为空', trigger: 'change' }
     ]
   }
 });
@@ -285,6 +295,17 @@ const borrowScanBuffer = reactive({
   lastTime: 0,
   pending: false
 });
+
+// ========== 借用期限联动 ==========
+
+const onPeriodDaysChange = (val) => {
+  if (!val || !form.value.borrowTime) return;
+  const borrowDate = new Date(form.value.borrowTime);
+  const returnDate = new Date(borrowDate);
+  returnDate.setDate(returnDate.getDate() + val);
+  const pad = (n) => String(n).padStart(2, '0');
+  form.value.planReturnDate = `${returnDate.getFullYear()}-${pad(returnDate.getMonth() + 1)}-${pad(returnDate.getDate())}`;
+};
 
 const cancel = async () => {
   if (formReadonly.value) {
@@ -333,6 +354,7 @@ const doSave = () => {
         borrower: form.value.borrower,
         borrowTime: form.value.borrowTime,
         planReturnDate: form.value.planReturnDate,
+        borrowPeriodDays: form.value.borrowPeriodDays,
         fromUnit: form.value.fromUnit,
         toUnit: form.value.toUnit,
         fromPerson: form.value.fromPerson,
@@ -612,6 +634,9 @@ onMounted(() => {
     const now = new Date();
     const pad = (n) => String(n).padStart(2, '0');
     form.value.borrowTime = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+    // 默认借用期限30天，自动计算计划归还日期
+    form.value.borrowPeriodDays = 30;
+    onPeriodDaysChange(30);
   }
 });
 
