@@ -38,10 +38,11 @@ export function delBorrowOrder(id) {
   });
 }
 
-export function confirmBorrow(id) {
+export function confirmBorrow(data) {
   return request({
-    url: '/wms/borrowOrder/confirm/' + id,
-    method: 'put'
+    url: '/wms/borrowOrder/confirm',
+    method: 'put',
+    data
   });
 }
 
@@ -63,5 +64,13 @@ export function getBorrowOrderWarningStats() {
   return request({
     url: '/wms/borrowOrder/warning/stats',
     method: 'get'
+  });
+}
+
+export function listBorrowOrderWarning(query) {
+  return request({
+    url: '/wms/borrowOrder/warning/list',
+    method: 'get',
+    params: query
   });
 }

@@ -16,3 +16,11 @@ export function getMyTasksSummary() {
     method: 'get'
   })
 }
+
+// 三类预警统计汇总（供我的待办页 Tab 角标使用）
+export function getWarningCategoryStats() {
+  return request({
+    url: '/wms/myTasks/warningCategoryStats',
+    method: 'get'
+  })
+}

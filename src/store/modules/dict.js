@@ -2,7 +2,8 @@ const useDictStore = defineStore(
   'dict',
   {
     state: () => ({
-      dict: new Array()
+      dict: new Array(),
+      version: 0
     }),
     actions: {
       // 获取字典
@@ -53,6 +54,7 @@ const useDictStore = defineStore(
       // 清空字典
       cleanDict() {
         this.dict = new Array();
+        this.version++;
       },
       // 初始字典
       initDict() {

@@ -33,8 +33,8 @@
             </el-form-item>
           </el-col>
           <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
-            <el-form-item label="器材实例编码" prop="instanceCode">
-              <el-input v-model="queryParams.instanceCode" clearable placeholder="请输入器材实例编码" @keyup.enter="handleQuery" />
+            <el-form-item label="器材识别码" prop="instanceCode">
+              <el-input v-model="queryParams.instanceCode" clearable placeholder="请输入器材识别码" @keyup.enter="handleQuery" />
             </el-form-item>
           </el-col>
           <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
@@ -82,7 +82,7 @@
             </el-button>
           </template>
         </el-table-column>
-        <el-table-column label="器材实例编码" min-width="180" show-overflow-tooltip>
+        <el-table-column label="器材识别码" min-width="180" show-overflow-tooltip>
           <template #default="{ row }">
             {{ row.instanceCode || '-' }}
           </template>
@@ -239,16 +239,16 @@ const handleGoOrder = (row) => {
     2: { preferredPaths: ['/shipmentOrderEdit'], titleKeywords: ['出库'] },
     3: { preferredPaths: ['/movementOrderEdit'], titleKeywords: ['调拨'] },
     4: { preferredPaths: ['/checkOrderEdit'], titleKeywords: ['盘点'] },
-    5: { preferredPaths: ['/wms-borrow-record/index'], titleKeywords: ['借用'] },
-    6: { preferredPaths: ['/wms-borrow-record/index'], titleKeywords: ['借用'] }
+    5: { preferredPaths: ['/borrowOrderEdit'], titleKeywords: ['借用单'] },
+    6: { preferredPaths: ['/borrowOrderEdit'], titleKeywords: ['借用单'] }
   }
   const fallbackPathMap = {
     1: '/receiptOrderEdit',
     2: '/shipmentOrderEdit',
     3: '/movementOrderEdit',
     4: '/checkOrderEdit',
-    5: '/wms-borrow-record/index',
-    6: '/wms-borrow-record/index'
+    5: '/borrowOrderEdit',
+    6: '/borrowOrderEdit'
   }
   const path = resolveRoutePath(router, orderRouteResolverMap[row.orderType] || {}) || fallbackPathMap[row.orderType]
   if (!path || !row.orderId) {

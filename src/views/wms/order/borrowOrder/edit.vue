@@ -68,11 +68,11 @@
         <div class="receipt-order-content">
           <div class="flex-space-between mb8">
             <div>
-              <el-tag type="info">支持"选择器材实例"或扫码枪扫二维码直接新增，当前只允许选择在库实例</el-tag>
+              <el-tag type="info">支持"选择器材"或扫码枪扫二维码直接新增，当前只允许选择在库器材</el-tag>
             </div>
             <div class="add-actions">
               <el-button type="primary" plain size="default" @click="showAddItemInstance" icon="Tickets" :disabled="formReadonly">
-                选择器材实例
+                选择器材
               </el-button>
             </div>
           </div>
@@ -80,10 +80,14 @@
             :data="form.details"
             border
             empty-text="暂无器材明细"
-            @row-click="handleDetailRowClick"
-            style="cursor: pointer"
+            highlight-current-row
+            @row-click="handleRowClick"
           >
-            <el-table-column label="器材实例编码" prop="instanceCode" min-width="160" show-overflow-tooltip />
+            <el-table-column label="器材识别码" min-width="160">
+              <template #default="{ row }">
+                <span class="instance-code-link" @click.stop="handleDetailRowClick(row)">{{ row.instanceCode || '-' }}</span>
+              </template>
+            </el-table-column>
             <el-table-column label="器材名称" min-width="160">
               <template #default="{ row }">
                 <span>{{ row.itemName || '-' }}</span>
@@ -102,6 +106,17 @@
             <el-table-column label="货位" min-width="120">
               <template #default="{ row }">
                 <span>{{ row.locationName || '-' }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="随箱出库" width="100" align="center">
+              <template #default="{ row }">
+                <el-checkbox
+                  v-if="row.boxId"
+                  v-model="row.boxOutbound"
+                  :disabled="formReadonly"
+                  @change="handleBoxOutboundChange(row)"
+                />
+                <span v-else>-</span>
               </template>
             </el-table-column>
             <el-table-column v-if="isViewMode && [1, 2].includes(Number(form.borrowOrderStatus))" label="归还状态" width="80" align="center">
@@ -130,7 +145,7 @@
       <el-dialog v-model="itemDetailDialog.visible" title="器材详情" width="520px" append-to-body>
         <div v-loading="itemDetailDialog.loading">
           <el-descriptions v-if="itemDetailDialog.data" :column="2" border>
-            <el-descriptions-item label="实例编码">{{ itemDetailDialog.data.instanceCode || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="器材识别码">{{ itemDetailDialog.data.instanceCode || '-' }}</el-descriptions-item>
             <el-descriptions-item label="器材名称">{{ itemDetailDialog.data.itemName || '-' }}</el-descriptions-item>
             <el-descriptions-item label="器材编码">{{ itemDetailDialog.data.itemCode || '-' }}</el-descriptions-item>
             <el-descriptions-item label="规格型号">{{ itemDetailDialog.data.skuName || '-' }}</el-descriptions-item>
@@ -145,8 +160,8 @@
           <el-button @click="itemDetailDialog.visible = false">关闭</el-button>
         </template>
       </el-dialog>
-      <!-- 选择器材实例弹窗 -->
-      <el-dialog v-model="itemInstanceDialog.visible" title="选择器材实例" width="1100px" append-to-body>
+      <!-- 选择器材弹窗 -->
+      <el-dialog v-model="itemInstanceDialog.visible" title="选择器材" width="1100px" append-to-body>
         <el-form :inline="true" :model="itemInstanceDialog.query" label-width="76px" class="item-instance-search-form">
           <el-form-item label="器材名称">
             <el-input v-model="itemInstanceDialog.query.itemName" placeholder="请输入器材名称" clearable
@@ -156,8 +171,8 @@
             <el-input v-model="itemInstanceDialog.query.skuName" placeholder="请输入器材规格" clearable
               style="width: 150px" @keyup.enter="getItemInstanceList" />
           </el-form-item>
-          <el-form-item label="器材实例编码" label-width="100px">
-            <el-input v-model="itemInstanceDialog.query.instanceCode" placeholder="请输入器材实例编码" clearable
+          <el-form-item label="器材识别码" label-width="100px">
+            <el-input v-model="itemInstanceDialog.query.instanceCode" placeholder="请输入器材识别码" clearable
               style="width: 150px" @keyup.enter="getItemInstanceList" />
           </el-form-item>
           <el-form-item class="item-instance-search-form__action">
@@ -167,7 +182,7 @@
         <el-table v-loading="itemInstanceDialog.loading" :data="itemInstanceDialog.list"
           @selection-change="handleItemInstanceSelectionChange" border row-key="id">
           <el-table-column type="selection" width="55" :selectable="isItemInstanceSelectable" />
-          <el-table-column label="器材实例编码" prop="instanceCode" min-width="160" />
+          <el-table-column label="器材识别码" prop="instanceCode" min-width="160" />
           <el-table-column label="器材名称" prop="itemName" min-width="160" />
           <el-table-column label="器材规格" prop="skuName" min-width="160" />
           <el-table-column label="货架" prop="rackName" width="120" />
@@ -217,6 +232,7 @@ import useTagsViewStore from '@/store/modules/tagsView';
 import { useWmsStore } from '@/store/modules/wms';
 import { ElMessage } from 'element-plus';
 import { getItemInstanceByCode, listItemInstance } from '@/api/wms/itemInstance';
+import { getBoxByCode } from '@/api/wms/box';
 import RackSelect from '@/views/components/RackSelect.vue';
 
 const { proxy } = getCurrentInstance();
@@ -402,7 +418,8 @@ const handleConfirmBorrow = async () => {
     if (!form.value.id) {
       await doSave();
     }
-    const res = await confirmBorrow(form.value.id);
+    // 传递完整的 bo（包含 details 中的 boxId/boxOutbound）
+    const res = await confirmBorrow(form.value);
     if (res.code === 200) {
       ElMessage.success('确认借出成功');
       close();
@@ -455,6 +472,14 @@ const loadDetail = (id) => {
 
 // ========== 器材明细操作 ==========
 
+/** 当前高亮选中行（点击行触发） */
+const currentRow = ref(null)
+
+/** 点击行：高亮选中，不弹窗 */
+const handleRowClick = (row) => {
+  currentRow.value = row
+}
+
 const handleDetailRowClick = async (row) => {
   itemDetailDialog.visible = true;
   itemDetailDialog.loading = true;
@@ -501,7 +526,7 @@ const handleDeleteDetail = (row, index) => {
   form.value.details.splice(index, 1);
 };
 
-// ========== 选择器材实例 ==========
+// ========== 选择器材 ==========
 
 const showAddItemInstance = async () => {
   itemInstanceDialog.pageNum = 1;
@@ -537,14 +562,14 @@ const isItemInstanceSelectable = (row) => {
 
 const handleConfirmItemInstance = async () => {
   if (!itemInstanceDialog.selection.length) {
-    ElMessage.error('请选择器材实例编码');
+    ElMessage.error('请选择器材识别码');
     return;
   }
   try {
     addItemInstancesToOrder(itemInstanceDialog.selection);
     itemInstanceDialog.visible = false;
   } catch (e) {
-    ElMessage.error(e?.message || '器材实例编码添加失败');
+    ElMessage.error(e?.message || '器材识别码添加失败');
   }
 };
 
@@ -552,7 +577,7 @@ const addItemInstancesToOrder = (items) => {
   if (!items?.length) return;
   for (const item of items) {
     if (form.value.details.some(detail => detail.instanceCode === item.instanceCode)) {
-      throw new Error(`器材实例编码 ${item.instanceCode} 已添加`);
+      throw new Error(`器材识别码 ${item.instanceCode} 已添加`);
     }
     form.value.details.push({
       instanceCode: item.instanceCode,
@@ -569,9 +594,55 @@ const addItemInstancesToOrder = (items) => {
       rackName: item.rackName,
       locationId: item.locationId,
       locationName: item.locationName,
+      boxId: item.boxId || null,
+      boxOutbound: false,
       remark: ''
     });
   }
+};
+
+// 同箱“随箱出库”复选框联动
+const handleBoxOutboundChange = (row) => {
+  if (!row.boxId) return;
+  const checked = row.boxOutbound;
+  form.value.details.forEach(d => {
+    if (d.boxId === row.boxId) {
+      d.boxOutbound = checked;
+    }
+  });
+};
+
+// 扫箱码：批量加入箱内所有器材并自动勾选“随箱出库”
+const handleScanAddBox = async (boxCode) => {
+  const boxRes = await getBoxByCode(boxCode);
+  const box = boxRes.data;
+  if (!box?.id) {
+    ElMessage.error(`未找到箱子：${boxCode}`);
+    return;
+  }
+  if (box.boxStatus === 'outbound') {
+    ElMessage.error(`箱子 ${boxCode} 已处于出库状态`);
+    return;
+  }
+  const itemsRes = await listItemInstance({ boxId: box.id, instanceStatus: '在库' });
+  const items = itemsRes.rows || itemsRes.data || [];
+  if (!items.length) {
+    ElMessage.warning(`箱子 ${boxCode} 内没有在库器材`);
+    return;
+  }
+  const newItems = items.filter(it => !form.value.details.some(d => d.instanceCode === it.instanceCode));
+  if (!newItems.length) {
+    ElMessage.warning(`箱子 ${boxCode} 内器材已全部添加`);
+    return;
+  }
+  addItemInstancesToOrder(newItems);
+  // 添加完后自动勾选“随箱出库”
+  form.value.details.forEach(d => {
+    if (d.boxId === box.id) {
+      d.boxOutbound = true;
+    }
+  });
+  ElMessage.success(`已扫箱码 ${boxCode}，添加 ${newItems.length} 件器材，箱子随箱出库`);
 };
 
 // ========== 扫码支持 ==========
@@ -585,7 +656,7 @@ const handleScanAddItemInstance = async (instanceCode) => {
   const res = await getItemInstanceByCode(instanceCode, { instanceStatus: '在库' });
   const item = res.data;
   if (!item?.id) {
-    ElMessage.error(`未找到可在库器材实例：${instanceCode}`);
+    ElMessage.error(`未找到可在库器材：${instanceCode}`);
     return;
   }
   addItemInstancesToOrder([item]);
@@ -607,7 +678,13 @@ const handleScanKeydown = async (event) => {
     if (!instanceCode) return;
     borrowScanBuffer.pending = true;
     try {
-      await handleScanAddItemInstance(instanceCode);
+      // 先尝试识别为箱码，若不是再尝试器材码
+      const boxCheck = await getBoxByCode(instanceCode).catch(() => null);
+      if (boxCheck?.data?.id) {
+        await handleScanAddBox(instanceCode);
+      } else {
+        await handleScanAddItemInstance(instanceCode);
+      }
     } catch (e) {
       ElMessage.error(e?.message || '扫码添加失败');
     } finally {
@@ -682,6 +759,16 @@ onBeforeUnmount(() => {
 .item-instance-search-form__action {
   margin-left: auto !important;
   margin-right: 0 !important;
+}
+
+.instance-code-link {
+  color: var(--el-color-primary);
+  cursor: pointer;
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
 }
 
 @media (max-width: 1280px) {

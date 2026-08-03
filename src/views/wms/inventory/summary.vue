@@ -29,7 +29,7 @@
     </el-card>
 
     <el-card class="mt20">
-      <el-table v-loading="loading" :data="groupedList" border class="mt20" empty-text="暂无库存数据">
+      <el-table v-loading="loading" :data="inventoryList" border class="mt20" empty-text="暂无库存数据">
         <el-table-column label="器材名称" min-width="200" show-overflow-tooltip prop="itemName" />
         <el-table-column label="器材编码" min-width="150" show-overflow-tooltip prop="itemCode" />
         <el-table-column label="规格型号" min-width="180" show-overflow-tooltip prop="skuName" />
@@ -62,8 +62,8 @@
 </template>
 
 <script setup name="InventorySummary">
-import { computed, getCurrentInstance, ref } from 'vue'
-import { listInventory } from '@/api/wms/inventory'
+import { getCurrentInstance, ref } from 'vue'
+import { listInventorySummary } from '@/api/wms/inventory'
 import { useWmsStore } from '@/store/modules/wms'
 import WarehouseCascader from '@/views/components/WarehouseCascader.vue'
 
@@ -80,29 +80,6 @@ const queryParams = ref({
   place: [],
   warehouseId: undefined,
   areaId: undefined,
-})
-
-// 按 规格型号 + 仓库 + 库区 聚合数量（去掉货架/货位维度后合并同类）
-const groupedList = computed(() => {
-  const map = {}
-  inventoryList.value.forEach(item => {
-    const skuId = item.skuId || ''
-    const warehouseId = item.warehouseId || ''
-    const areaId = item.areaId || ''
-    const key = `${skuId}-${warehouseId}-${areaId}`
-    if (!map[key]) {
-      map[key] = {
-        itemName: item.item?.itemName || '',
-        itemCode: item.item?.itemCode || '',
-        skuName: item.itemSku?.skuName || '',
-        warehouseId,
-        areaId,
-        quantity: 0
-      }
-    }
-    map[key].quantity += Number(item.quantity || 0)
-  })
-  return Object.values(map)
 })
 
 const buildQuery = () => {
@@ -122,7 +99,7 @@ const buildQuery = () => {
 
 function getList() {
   loading.value = true
-  listInventory(buildQuery()).then(response => {
+  listInventorySummary(buildQuery()).then(response => {
     inventoryList.value = response.rows || []
     total.value = response.total || 0
   }).finally(() => {

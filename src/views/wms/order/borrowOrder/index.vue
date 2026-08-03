@@ -115,9 +115,10 @@
             {{ row.createTime ? parseTime(row.createTime, '{y}-{m}-{d} {h}:{i}') : '-' }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" align="right" class-name="small-padding fixed-width" width="200">
+        <el-table-column label="操作" align="right" class-name="small-padding fixed-width" width="250">
           <template #default="scope">
             <el-button link type="primary" @click="handleView(scope.row)" v-hasPermi="['wms:borrowOrder:list']">查看</el-button>
+            <el-button link type="warning" @click="handlePrint(scope.row)" v-hasPermi="['wms:borrowOrder:list']">打印</el-button>
             <el-popover placement="left" title="提示" :width="300" trigger="hover" :disabled="canEdit(scope.row)" :content="getDisabledTip(scope.row)">
               <template #reference>
                 <el-button link type="primary" @click="handleUpdate(scope.row)" v-hasPermi="['wms:borrowOrder:list']" :disabled="!canEdit(scope.row)">修改</el-button>
@@ -156,8 +157,10 @@ import { useRoute, useRouter } from 'vue-router';
 import {
   listBorrowOrder,
   delBorrowOrder,
+  getBorrowOrder,
   getBorrowOrderWarningStats
 } from '@/api/wms/borrowOrder';
+import { buildBorrowPanels } from '@/components/PrintTemplate/borrow-panel';
 import { getUserSelectList } from '@/api/wms/common';
 import { resolveRoutePath } from '@/utils/routeResolver';
 
@@ -276,6 +279,78 @@ function handleDelete(row) {
     proxy.$modal.msgSuccess('删除成功');
   }).finally(() => {
     loading.value = false;
+  });
+}
+
+/** 打印借用单 */
+async function handlePrint(row) {
+  const res = await getBorrowOrder(row.id);
+  const order = res.data;
+  const borrowDate = proxy.parseTime(order.borrowTime, '{y}-{m}-{d}');
+  const returnDate = proxy.parseTime(order.planReturnDate, '{y}-{m}-{d}');
+
+  // 按SKU聚合：以skuId为key分组，汇总数量
+  let table = [];
+  if (order.details?.length) {
+    const skuMap = new Map();
+    order.details.forEach(detail => {
+      const skuId = detail.skuId ?? detail.itemSku?.id ?? detail.id;
+      if (!skuMap.has(skuId)) {
+        skuMap.set(skuId, {
+          skuId,
+          itemCode: detail.itemCode ?? detail.itemSku?.item?.itemCode ?? '',
+          itemName: detail.itemName ?? detail.itemSku?.item?.itemName ?? '',
+          skuName: detail.skuName ?? detail.itemSku?.skuName ?? '',
+          totalQuantity: 0,
+        });
+      }
+      const group = skuMap.get(skuId);
+      group.totalQuantity += Number(detail.quantity || 1);
+    });
+    table = Array.from(skuMap.values()).map((sku, index) => ({
+      serialNo: String(index + 1),
+      itemCode: sku.itemCode,
+      itemName: sku.itemName,
+      skuName: sku.skuName,
+      quantity: String(sku.totalQuantity),
+      borrowDate,
+      returnDate,
+    }));
+  }
+
+  // 动态生成多页面板（每页10条，签字仅最后一页）
+  const { panels, pageDataMap } = buildBorrowPanels(table);
+  const totalPages = panels.length;
+  pageDataMap.totalPages = totalPages;
+  for (let i = 0; i < totalPages; i++) {
+    pageDataMap[`pageNo${i}`] = `第${i + 1}页/共${totalPages}页`;
+  }
+  const template = { panels };
+
+  // 替换页码字段为格式化文本
+  template.panels?.forEach((panel, idx) => {
+    panel.printElements?.forEach(element => {
+      const field = element?.options?.field;
+      if (field === `pageNo${idx}`) {
+        element.options.title = pageDataMap[field] || `第${idx + 1}页/共${totalPages}页`;
+        delete element.options.field;
+        delete element.options.fields;
+      }
+    });
+  });
+
+  const printData = { ...pageDataMap };
+  let printTemplate = new proxy.$hiprint.PrintTemplate({ template });
+  printTemplate.print(printData, {}, {
+    styleHandler: () => {
+      let css = '<link href="https://cyl-press.oss-cn-shenzhen.aliyuncs.com/print-lock.css" media="print" rel="stylesheet">';
+      css += `<style>
+        .hiprint-printElement-text[style*="width: 55pt"] .hiprint-printElement-text-content {
+          display: flex !important; justify-content: space-between !important; align-items: baseline !important;
+        }
+      </style>`;
+      return css;
+    }
   });
 }
 

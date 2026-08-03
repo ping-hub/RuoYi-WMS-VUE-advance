@@ -4,8 +4,8 @@
       <el-form ref="queryRef" :model="queryParams" label-width="112px" class="query-form">
         <el-row :gutter="16">
           <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
-            <el-form-item label="器材实例编码" prop="instanceCode">
-              <el-input v-model="queryParams.instanceCode" placeholder="请输入器材实例编码" clearable @keyup.enter="handleQuery" />
+            <el-form-item label="器材识别码" prop="instanceCode">
+              <el-input v-model="queryParams.instanceCode" placeholder="请输入器材识别码" clearable @keyup.enter="handleQuery" />
             </el-form-item>
           </el-col>
           <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
@@ -92,13 +92,22 @@
     <el-card class="mt20">
       <el-row :gutter="10" class="mb8" type="flex" justify="space-between">
         <el-col :span="8"><span style="font-size: large">库存明细</span></el-col>
+        <el-col :span="8" style="text-align: right">
+          <el-button type="success" plain icon="Position" :disabled="!selectedRows.length" @click="handleBatchRelocate" v-hasPermi="['wms:itemInstance:edit']">散件移位</el-button>
+          <el-button type="primary" plain icon="Printer" :disabled="!selectedRows.length" :loading="printDialog.sending" @click="handleBatchPrint" v-hasPermi="['wms:itemInstance:list']">批量打印</el-button>
+        </el-col>
       </el-row>
 
-      <el-table v-loading="loading" :data="itemInstanceList" border empty-text="暂无器材实例编码" cell-class-name="vertical-top-cell">
-        <el-table-column label="器材实例编码" prop="instanceCode" min-width="140" show-overflow-tooltip />
+      <el-table v-loading="loading" :data="itemInstanceList" border empty-text="暂无器材识别码" cell-class-name="vertical-top-cell" @selection-change="handleSelectionChange">
+        <el-table-column type="selection" width="50" align="center" :selectable="canSelectRow" />
+        <el-table-column label="器材识别码" prop="instanceCode" min-width="140" show-overflow-tooltip />
         <el-table-column label="器材名称" prop="itemName" min-width="110" show-overflow-tooltip />
         <el-table-column label="器材编码" prop="itemCode" min-width="100" show-overflow-tooltip />
-        <el-table-column label="器材分类" prop="categoryName" min-width="80" show-overflow-tooltip />
+        <el-table-column label="器材分类" min-width="80" show-overflow-tooltip>
+          <template #default="{ row }">
+            {{ resolveCategoryName(row) || '-' }}
+          </template>
+        </el-table-column>
         <el-table-column label="器材规格" prop="skuName" min-width="90" show-overflow-tooltip />
         <el-table-column label="质量等级" width="80">
           <template #default="{ row }">
@@ -113,7 +122,7 @@
           </template>
         </el-table-column>
         <el-table-column label="备注" prop="remark" min-width="60" show-overflow-tooltip />
-        <el-table-column label="操作" align="right" width="180">
+        <el-table-column label="操作" align="right" width="130">
           <template #default="{ row }">
             <el-button link type="primary" @click="handleView(row)">详情</el-button>
             <el-popover
@@ -128,7 +137,6 @@
                 <el-button link type="primary" :disabled="!canEditRow(row)" @click="handleUpdate(row)" v-hasPermi="['wms:itemInstance:edit']">修改</el-button>
               </template>
             </el-popover>
-            <el-button link type="primary" @click="handlePrintQrCode(row)" v-hasPermi="['wms:itemInstance:list']">打印</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -146,7 +154,7 @@
       <el-form ref="instanceFormRef" :model="form" :rules="rules" label-width="108px">
         <el-row :gutter="20">
           <el-col :span="12">
-            <el-form-item label="器材实例编码" prop="instanceCode">
+            <el-form-item label="器材识别码" prop="instanceCode">
               <el-input v-model="form.instanceCode" disabled />
             </el-form-item>
           </el-col>
@@ -194,15 +202,14 @@
       </template>
     </el-drawer>
 
-    <el-dialog title="器材实例编码详情" v-model="detailDialog.visible" width="720px" append-to-body>
+    <el-dialog title="器材详情" v-model="detailDialog.visible" width="720px" append-to-body>
       <el-descriptions :column="2" border>
-        <el-descriptions-item label="器材实例编码">{{ detailDialog.data.instanceCode || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="器材识别码">{{ detailDialog.data.instanceCode || '-' }}</el-descriptions-item>
         <el-descriptions-item label="器材状态">
           <dict-tag :options="wms_item_instance_status" :value="detailDialog.data.instanceStatus" />
         </el-descriptions-item>
         <el-descriptions-item label="器材名称">{{ detailDialog.data.itemName || '-' }}</el-descriptions-item>
         <el-descriptions-item label="器材规格">{{ detailDialog.data.skuName || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="在箱状态">{{ hasBox(detailDialog.data) ? '在箱' : '不在箱' }}</el-descriptions-item>
         <el-descriptions-item label="借出状态">{{ isBorrowed(detailDialog.data) ? '已借出' : '未借出' }}</el-descriptions-item>
         <el-descriptions-item label="质量等级"><dict-tag :options="wms_quality_grade" :value="detailDialog.data.qualityGrade" v-if="detailDialog.data.qualityGrade" /><span v-else>-</span></el-descriptions-item>
         <el-descriptions-item label="质保期">{{ detailDialog.data.warrantyPeriod || '-' }}</el-descriptions-item>
@@ -216,10 +223,10 @@
       </el-descriptions>
     </el-dialog>
 
-    <el-dialog v-model="printDialog.visible" title="打印器材二维码" width="520px" append-to-body :close-on-click-modal="false" @closed="handlePrintDialogClosed">
+    <el-dialog v-model="printDialog.visible" title="批量打印器材二维码" width="520px" append-to-body :close-on-click-modal="false" @closed="handlePrintDialogClosed">
       <el-form label-width="90px">
-        <el-form-item label="器材实例">
-          <span>{{ printDialog.instanceCode || '-' }}</span>
+        <el-form-item label="打印数量">
+          <span>{{ printCodes.length }} 条</span>
         </el-form-item>
         <el-form-item label="打印机">
           <el-select v-model="printDialog.printerId" placeholder="请选择打印机" filterable style="width: 100%" :disabled="printDialog.loading || printDialog.sending">
@@ -265,6 +272,43 @@
         </div>
       </template>
     </el-dialog>
+
+    <!-- 散件移位弹窗 -->
+    <el-dialog title="散件批量移位" v-model="relocateDialog.visible" width="520px" append-to-body :close-on-click-modal="false">
+      <el-alert
+        v-if="relocateDialog.boxedItems.length"
+        type="warning"
+        :closable="false"
+        class="mb16"
+        :title="`已选择 ${relocateDialog.boxedItems.length} 个在箱器材，请先移除选择或使用箱体管理页的‘移位’功能`"
+      />
+      <el-form :model="relocateDialog.form" label-width="80px">
+        <el-form-item label="目标仓库">
+          <el-select v-model="relocateDialog.form.warehouseId" placeholder="请选择仓库" style="width:100%" @change="handleRelocateWarehouseChange">
+            <el-option v-for="item in wmsStore.warehouseList" :key="item.id" :label="item.warehouseName" :value="item.id" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="目标库区">
+          <el-select v-model="relocateDialog.form.areaId" placeholder="请选择库区" style="width:100%" clearable @change="handleRelocateAreaChange">
+            <el-option v-for="item in relocateAreaList" :key="item.id" :label="item.areaName" :value="item.id" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="目标货架">
+          <el-select v-model="relocateDialog.form.rackId" placeholder="请选择货架" style="width:100%" clearable @change="handleRelocateRackChange">
+            <el-option v-for="item in relocateRackList" :key="item.id" :label="item.rackName" :value="item.id" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="目标货位">
+          <el-select v-model="relocateDialog.form.locationId" placeholder="请选择货位" style="width:100%" clearable>
+            <el-option v-for="item in relocateLocationList" :key="item.id" :label="item.locationName" :value="item.id" />
+          </el-select>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="relocateDialog.visible = false">取消</el-button>
+        <el-button type="primary" :loading="relocateDialog.loading" @click="submitBatchRelocate">确认移位</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -275,9 +319,12 @@ import { getToken } from '@/utils/auth';
 import {
   getItemInstance,
   listItemInstance,
-  updateItemInstance
+  updateItemInstance,
+  batchRelocateItemInstances
 } from '@/api/wms/itemInstance';
 import { listItemSku } from '@/api/wms/itemSku';
+import { listRackNoPage } from '@/api/wms/rack';
+import { listLocationNoPage } from '@/api/wms/location';
 import { useWmsStore } from '@/store/modules/wms';
 import { buildQrTscCommand, WssPrintClient, getPrintUrl } from '@/utils/wssPrintClient';
 
@@ -294,6 +341,8 @@ const total = ref(0);
 const queryRef = ref();
 const instanceFormRef = ref();
 const uploadRef = ref();
+const selectedRows = ref([]);
+const printCodes = ref([]);
 
 const dialog = reactive({
   visible: false,
@@ -317,7 +366,6 @@ const printDialog = reactive({
   visible: false,
   loading: false,
   sending: false,
-  instanceCode: '',
   printers: [],
   printerId: '',
   total: 0,
@@ -372,9 +420,21 @@ const hasBox = (row) => !!row?.boxId;
 
 const isBorrowed = (row) => row?.instanceStatus === '借出';
 
-const canEditRow = (row) => row?.instanceStatus === '在库';
+const resolveCategoryName = (row) => {
+  if (!row) return ''
+  if (row.categoryName) return row.categoryName
+  if (row.itemCategoryName) return row.itemCategoryName
+  const categoryId = row.itemCategory ?? row.itemCategoryId ?? row.categoryId ?? row.category?.id
+  if (categoryId) {
+    return wmsStore.itemCategoryMap.get(categoryId)?.categoryName || ''
+  }
+  return ''
+}
 
-const getEditDisabledMessage = (row) => `器材实例【${row?.instanceCode || '-'}】当前状态为【${row?.instanceStatus || '-'}】，无法修改！`;
+const canEditRow = (row) => row?.instanceStatus === '在库';
+const canSelectRow = (row) => row?.instanceStatus === '在库';
+
+const getEditDisabledMessage = (row) => `器材识别码【${row?.instanceCode || '-'}】当前状态为【${row?.instanceStatus || '-'}】，无法修改！`;
 
 const loadSkuOptions = async () => {
   const res = await listItemSku({});
@@ -436,7 +496,7 @@ const reset = () => {
 
 const handleUpdate = async (row) => {
   if (!canEditRow(row)) {
-    proxy.$modal.msgWarning('仅在库状态的器材实例允许修改');
+    proxy.$modal.msgWarning('仅在库状态的器材允许修改');
     return;
   }
   reset();
@@ -540,13 +600,22 @@ async function loadPrinters() {
   }
 }
 
-const handlePrintQrCode = async (row) => {
-  if (!row.instanceCode) {
-    proxy.$modal.msgError('当前器材实例无编码，无法打印');
+function handleSelectionChange(selection) {
+  selectedRows.value = selection || [];
+}
+
+const handleBatchPrint = async () => {
+  if (!selectedRows.value.length) {
+    proxy.$modal.msgError('请先勾选要打印的器材');
     return;
   }
-  printDialog.instanceCode = row.instanceCode;
-  printDialog.total = 1;
+  const codes = selectedRows.value.map(item => item.instanceCode).filter(Boolean);
+  if (!codes.length) {
+    proxy.$modal.msgError('勾选数据中未找到器材识别码');
+    return;
+  }
+  printCodes.value = codes;
+  printDialog.total = codes.length;
   printDialog.current = 0;
   printDialog.errorMessage = '';
   printDialog.visible = true;
@@ -558,7 +627,7 @@ async function handleConfirmPrint() {
     proxy.$modal.msgError('请选择打印机');
     return;
   }
-  if (!printDialog.instanceCode) {
+  if (!printCodes.value.length) {
     proxy.$modal.msgError('没有可打印的数据');
     return;
   }
@@ -567,14 +636,16 @@ async function handleConfirmPrint() {
   printDialog.errorMessage = '';
   try {
     await ensurePrintClient();
-    const command = buildQrTscCommand(printDialog.instanceCode);
-    const res = await printClient.sendData(command, printDialog.printerId);
-    if (Number(res?.code) <= 0) {
-      throw new Error(res?.msg || '打印失败');
+    for (const code of printCodes.value) {
+      const command = buildQrTscCommand(code);
+      const res = await printClient.sendData(command, printDialog.printerId);
+      if (Number(res?.code) <= 0) {
+        throw new Error(res?.msg || '打印失败');
+      }
+      printDialog.current += 1;
     }
-    printDialog.current = 1;
     await printClient.closePrinter(printDialog.printerId);
-    proxy.$modal.msgSuccess('打印任务已发送');
+    proxy.$modal.msgSuccess(`已发送 ${printDialog.total} 条打印任务`);
     printDialog.visible = false;
   } catch (e) {
     printDialog.errorMessage = e?.message || '打印失败';
@@ -597,11 +668,11 @@ function handlePrintDialogClosed() {
   printDialog.errorMessage = '';
   printDialog.loading = false;
   printDialog.sending = false;
-  printDialog.instanceCode = '';
   printDialog.printers = [];
   printDialog.printerId = '';
   printDialog.total = 0;
   printDialog.current = 0;
+  printCodes.value = [];
   try {
     printClient?.disconnect();
   } finally {
@@ -623,10 +694,110 @@ onMounted(async () => {
     wmsStore.getWarehouseList(),
     wmsStore.getAreaList(),
     wmsStore.getItemCategoryTreeList(),
+    wmsStore.getItemCategoryList(),
     loadSkuOptions()
   ]);
   await getList();
 });
+
+// ========== 散件批量移位 ==========
+const relocateDialog = reactive({
+  visible: false,
+  loading: false,
+  boxedItems: [],
+  looseItems: [],
+  form: {
+    warehouseId: undefined,
+    areaId: undefined,
+    rackId: undefined,
+    locationId: undefined
+  }
+});
+
+const relocateAreaList = computed(() => {
+  if (!relocateDialog.form.warehouseId) return wmsStore.areaList;
+  return wmsStore.areaList.filter(a => a.warehouseId === relocateDialog.form.warehouseId);
+});
+
+const relocateRackList = ref([]);
+const relocateLocationList = ref([]);
+
+const handleBatchRelocate = () => {
+  const sel = selectedRows.value.filter(r => r.instanceStatus === '在库');
+  if (!sel.length) {
+    proxy.$modal.msgWarning('请选择在库状态的器材进行移位');
+    return;
+  }
+  const boxed = sel.filter(r => r.boxId);
+  const loose = sel.filter(r => !r.boxId);
+  if (boxed.length && !loose.length) {
+    proxy.$modal.msgWarning('所选器材均在箱内，请使用箱体管理页的“移位”功能');
+    return;
+  }
+  relocateDialog.boxedItems = boxed;
+  relocateDialog.looseItems = loose;
+  relocateDialog.form = { warehouseId: undefined, areaId: undefined, rackId: undefined, locationId: undefined };
+  relocateRackList.value = [];
+  relocateLocationList.value = [];
+  relocateDialog.visible = true;
+};
+
+const handleRelocateWarehouseChange = () => {
+  relocateDialog.form.areaId = undefined;
+  relocateDialog.form.rackId = undefined;
+  relocateDialog.form.locationId = undefined;
+  relocateRackList.value = [];
+  relocateLocationList.value = [];
+};
+
+const handleRelocateAreaChange = async () => {
+  relocateDialog.form.rackId = undefined;
+  relocateDialog.form.locationId = undefined;
+  relocateLocationList.value = [];
+  if (relocateDialog.form.areaId) {
+    const res = await listRackNoPage({ areaId: relocateDialog.form.areaId });
+    relocateRackList.value = res.data || [];
+  } else {
+    relocateRackList.value = [];
+  }
+};
+
+const handleRelocateRackChange = async () => {
+  relocateDialog.form.locationId = undefined;
+  if (relocateDialog.form.rackId) {
+    const res = await listLocationNoPage({ rackId: relocateDialog.form.rackId });
+    relocateLocationList.value = res.data || [];
+  } else {
+    relocateLocationList.value = [];
+  }
+};
+
+const submitBatchRelocate = async () => {
+  const ids = relocateDialog.looseItems.map(r => r.id);
+  if (!ids.length) {
+    proxy.$modal.msgWarning('没有可移位的散件器材');
+    return;
+  }
+  if (!relocateDialog.form.warehouseId) {
+    proxy.$modal.msgWarning('请选择目标仓库');
+    return;
+  }
+  relocateDialog.loading = true;
+  try {
+    await batchRelocateItemInstances({
+      ids,
+      warehouseId: relocateDialog.form.warehouseId,
+      areaId: relocateDialog.form.areaId,
+      rackId: relocateDialog.form.rackId,
+      locationId: relocateDialog.form.locationId
+    });
+    proxy.$modal.msgSuccess(`成功移位 ${ids.length} 件器材`);
+    relocateDialog.visible = false;
+    await getList();
+  } finally {
+    relocateDialog.loading = false;
+  }
+};
 </script>
 
 <style scoped>

@@ -1,5 +1,5 @@
 <template>
-  <el-drawer :model-value="show" title="选择器材实例" @close="handleCancelClick" :size="size" :close-on-click-modal="false"
+  <el-drawer :model-value="show" title="选择器材" @close="handleCancelClick" :size="size" :close-on-click-modal="false"
              append-to-body>
     <el-form label-width="96px" class="query-form">
       <el-row :gutter="16">
@@ -49,7 +49,7 @@
               v-loading="loading" ref="inventorySelectFormRef" cell-class-name="my-cell" class="mt20">
       <el-table-column type="selection" width="55" :reserve-selection="true" :selectable="judgeSelectable"/>
       <el-table-column label="库区" prop="areaName" min-width="110" show-overflow-tooltip />
-      <el-table-column label="器材实例编码" prop="instanceCode" min-width="180" show-overflow-tooltip />
+      <el-table-column label="器材识别码" prop="instanceCode" min-width="180" show-overflow-tooltip />
       <el-table-column label="器材名称" prop="itemName" min-width="150" show-overflow-tooltip />
       <el-table-column label="器材编码" prop="itemCode" min-width="140" show-overflow-tooltip />
       <el-table-column label="规格型号" prop="skuName" min-width="140" show-overflow-tooltip />

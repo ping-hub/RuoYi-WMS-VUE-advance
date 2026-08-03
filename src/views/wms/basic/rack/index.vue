@@ -90,6 +90,9 @@
         <el-form-item label="货架名称" prop="rackName">
           <el-input v-model="form.rackName" placeholder="请输入货架名称" />
         </el-form-item>
+        <el-form-item label="货架编码" prop="rackCode">
+          <el-input v-model="form.rackCode" placeholder="请输入货架编码" />
+        </el-form-item>
         <el-form-item label="所属仓库" prop="warehouseId">
           <el-select v-model="form.warehouseId" placeholder="请选择仓库" filterable style="width: 100%" @change="handleWarehouseChange">
             <el-option
@@ -212,6 +215,9 @@ const data = reactive({
     rackName: [
       { required: true, message: '货架名称不能为空', trigger: 'blur' }
     ],
+    rackCode: [
+      { required: true, message: '货架编码不能为空', trigger: 'blur' }
+    ],
     warehouseId: [
       { required: true, message: '所属仓库不能为空', trigger: 'change' }
     ],
@@ -256,6 +262,7 @@ function reset() {
   form.value = {
     id: undefined,
     rackName: undefined,
+    rackCode: undefined,
     warehouseId: undefined,
     areaId: undefined,
     rackStatus: 'enabled',
@@ -347,7 +354,7 @@ function buildSubmitTip() {
     return '货架保存成功后将自动生成对应货位，确认新增该货架吗？';
   }
   if (hasPlanShrink()) {
-    return '当前修改包含行列缩减，可能影响现有货位；若被裁掉货位存在库存、箱体或器材实例占用，后端会直接阻止保存。确认继续提交吗？';
+    return '当前修改包含行列缩减，可能影响现有货位；若被裁掉货位存在库存、箱体或器材占用，后端会直接阻止保存。确认继续提交吗？';
   }
   if (hasPlanChanged()) {
     return '当前修改包含行列变化，新增范围会自动补建货位；请确认货架规划调整无误后再保存。';

@@ -52,3 +52,20 @@ export function getEnvLatest() {
     method: 'get'
   })
 }
+
+// 质保期预警统计（已到期 / 本月到期 / 下月到期）
+export function getWarrantyStats() {
+  return request({
+    url: '/wms/dashboard/warrantyStats',
+    method: 'get'
+  })
+}
+
+// 质保期预警明细列表
+export function getWarrantyWarningList(query) {
+  return request({
+    url: '/wms/dashboard/warrantyWarningList',
+    method: 'get',
+    params: query
+  })
+}

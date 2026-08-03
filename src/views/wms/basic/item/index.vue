@@ -84,16 +84,15 @@
               <span v-else>-</span>
             </template>
           </el-table-column>
-          <el-table-column label="计量单位" prop="unit" min-width="100" show-overflow-tooltip />
-          <el-table-column label="启用状态" min-width="100">
+          <el-table-column label="器材分类" min-width="120" show-overflow-tooltip>
             <template #default="{ row }">
-              <dict-tag :options="wms_item_status" :value="row.status" />
+              {{ row.itemCategoryInfo?.categoryName || '-' }}
             </template>
           </el-table-column>
-          <el-table-column label="备注" prop="remark" min-width="120" show-overflow-tooltip />
-          <el-table-column label="操作" align="right" width="260" fixed="right">
+          <el-table-column label="备注" prop="remark" min-width="100" show-overflow-tooltip />
+          <el-table-column label="操作" align="right" width="220" fixed="right">
             <template #default="{ row }">
-              <el-button link type="primary" icon="Printer" @click="handleBatchPrintQrCode(row)">批量打印二维码</el-button>
+              <el-button link type="primary" icon="Printer" @click="handleBatchPrintQrCode(row)">打印</el-button>
               <el-button link type="primary" icon="Edit" @click="handleUpdate(row)" v-hasPermi="['wms:item:edit']">修改</el-button>
               <el-button link type="primary" icon="Delete" @click="handleDelete(row)" v-hasPermi="['wms:item:edit']">删除</el-button>
             </template>
@@ -149,7 +148,9 @@
             </el-col>
             <el-col :span="12">
               <el-form-item label="计量单位" prop="unit">
-                <el-input v-model="form.unit" placeholder="请输入计量单位 例:台/个/张/包" />
+                <el-select v-model="form.unit" placeholder="请选择计量单位" clearable filterable style="width: 100%">
+                  <el-option v-for="item in wms_unit" :key="item.value" :label="item.label" :value="item.value" />
+                </el-select>
               </el-form-item>
             </el-col>
           </el-row>
@@ -236,6 +237,9 @@
             style="width: 100%"
           />
         </el-form-item>
+        <el-form-item label="分类编码" prop="categoryCode">
+          <el-input v-model="categoryForm.categoryCode" placeholder="请输入分类编码" @keyup.enter="submitCategoryForm" />
+        </el-form-item>
         <el-form-item label="分类名称" prop="categoryName">
           <el-input v-model="categoryForm.categoryName" placeholder="请输入器材分类名称" @keyup.enter="submitCategoryForm" />
         </el-form-item>
@@ -252,6 +256,16 @@
       <el-form label-width="90px">
         <el-form-item label="器材">
           <span>{{ printDialog.itemName || '-' }}</span>
+        </el-form-item>
+        <el-form-item label="仓库">
+          <el-select v-model="printDialog.warehouseCode" placeholder="请选择仓库" filterable style="width: 100%" :disabled="printDialog.loading || printDialog.sending">
+            <el-option
+              v-for="wh in wmsStore.warehouseList"
+              :key="wh.warehouseCode"
+              :label="wh.warehouseName"
+              :value="wh.warehouseCode"
+            />
+          </el-select>
         </el-form-item>
         <el-form-item label="打印规格">
           <el-select v-model="printDialog.skuId" placeholder="请选择规格" filterable style="width: 100%" :disabled="printDialog.loading || printDialog.sending">
@@ -310,9 +324,10 @@ import { buildQrTscCommand, WssPrintClient, getPrintUrl } from '@/utils/wssPrint
 const route = useRoute();
 const { proxy } = getCurrentInstance();
 const wmsStore = useWmsStore();
-const { wms_item_status, wms_item_sku_status } = proxy.useDict(
+const { wms_item_status, wms_item_sku_status, wms_unit } = proxy.useDict(
   'wms_item_status',
-  'wms_item_sku_status'
+  'wms_item_sku_status',
+  'wms_unit'
 );
 
 const itemList = ref([]);
@@ -345,6 +360,7 @@ const printDialog = reactive({
   skuId: undefined,
   skuOptions: [],
   qrCodeCount: 1,
+  warehouseCode: undefined,
   printers: [],
   printerId: '',
   total: 0,
@@ -370,6 +386,7 @@ const initFormData = () => ({
 const initCategoryFormData = () => ({
   id: undefined,
   parentId: undefined,
+  categoryCode: undefined,
   categoryName: undefined
 });
 
@@ -393,9 +410,6 @@ const data = reactive({
     isAsc: 'asc'
   },
   rules: {
-    itemCode: [
-      { required: true, message: '器材编码不能为空', trigger: 'blur' }
-    ],
     itemName: [
       { required: true, message: '器材名称不能为空', trigger: 'blur' }
     ]
@@ -405,6 +419,9 @@ const data = reactive({
 const categoryData = reactive({
   form: initCategoryFormData(),
   rules: {
+    categoryCode: [
+      { required: true, message: '分类编码不能为空', trigger: 'blur' }
+    ],
     categoryName: [
       { required: true, message: '分类名称不能为空', trigger: 'blur' }
     ]
@@ -450,7 +467,8 @@ const handleAddChildCategory = (parentData) => {
 
 const handleEditCategory = async (data) => {
   resetType();
-  categoryForm.value = { id: data.id, parentId: data.parentId, categoryName: data.label };
+  const fullData = wmsStore.itemCategoryMap.get(data.id);
+  categoryForm.value = { id: data.id, parentId: fullData?.parentId, categoryCode: fullData?.categoryCode, categoryName: data.label };
   categoryDialog.title = '修改器材分类';
   categoryDialog.visible = true;
 };
@@ -598,6 +616,13 @@ const resetCategoryFilter = () => {
 
 const handleAdd = () => {
   reset();
+  // 带入当前选中分类，若无则默认第一条
+  const currentCategory = queryParams.value.itemCategory;
+  if (currentCategory) {
+    form.value.itemCategory = currentCategory;
+  } else if (categoryTreeOptions.value.length) {
+    form.value.itemCategory = categoryTreeOptions.value[0].id;
+  }
   dialog.visible = true;
   dialog.title = '新增器材';
 };
@@ -698,6 +723,10 @@ async function handleConfirmPrint() {
     proxy.$modal.msgError('请选择打印机');
     return;
   }
+  if (!printDialog.warehouseCode) {
+    proxy.$modal.msgError('请选择仓库');
+    return;
+  }
   if (!printDialog.skuId) {
     proxy.$modal.msgError('请选择打印规格');
     return;
@@ -714,14 +743,15 @@ async function handleConfirmPrint() {
     const payload = {
       row: { ...printDialog.row },
       skuId: printDialog.skuId,
-      qrCodeCount: Number(printDialog.qrCodeCount)
+      qrCodeCount: Number(printDialog.qrCodeCount),
+      warehouseCode: printDialog.warehouseCode
     };
     // 后端已批量优化，增大超时保护大批量场景（60秒）
     const res = await batchPrintItemQrCode(payload, { timeout: 60000 });
     const details = res?.data?.details || [];
     const codes = details.map(item => item.instanceCode).filter(Boolean);
     if (!codes.length) {
-      proxy.$modal.msgError('后端未返回可打印的器材实例明细');
+      proxy.$modal.msgError('后端未返回可打印的器材明细');
       return;
     }
     printCodes.value = codes;
@@ -767,6 +797,7 @@ function handlePrintDialogClosed() {
   printDialog.skuId = undefined;
   printDialog.skuOptions = [];
   printDialog.qrCodeCount = 1;
+  printDialog.warehouseCode = undefined;
   printDialog.printers = [];
   printDialog.total = 0;
   printDialog.current = 0;

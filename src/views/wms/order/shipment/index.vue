@@ -115,12 +115,8 @@
               </template>
             </el-popover>
             <el-button link type="primary" @click="handleView(scope.row)" v-hasPermi="['wms:shipment:all']">查看</el-button>
-            <!-- 提交审批：草稿/已驳回 -->
-            <el-button v-if="[0, -2].includes(Number(scope.row.shipmentOrderStatus))" link type="warning" @click="handleSubmit(scope.row)" v-hasPermi="['wms:shipment:submit']">提交</el-button>
-            <!-- 审批/驳回：待审批 -->
-            <el-button v-if="scope.row.shipmentOrderStatus == 1" link type="success" @click="handleApprove(scope.row)" v-hasPermi="['wms:shipment:approve']">审批</el-button>
-            <!-- 完成出库：已审批，仅指定操作人可见 -->
-            <el-button v-if="scope.row.shipmentOrderStatus == 2 && isRowExecutor(scope.row)" link type="primary" @click="handleDoShipment(scope.row)" v-hasPermi="['wms:shipment:execute']">出库</el-button>
+            <!-- 出库：草稿态 -->
+            <el-button v-if="scope.row.shipmentOrderStatus == 0" link type="primary" @click="handleDoShipment(scope.row)" v-hasPermi="['wms:shipment:all']">出库</el-button>
             <el-popover
               placement="left"
               title="提示"
@@ -152,13 +148,13 @@
 </template>
 
 <script setup name="ShipmentOrder">
-import {listShipmentOrder, delShipmentOrder, getShipmentOrder, submitForApproval, voidOrder} from "@/api/wms/shipmentOrder";
+import {listShipmentOrder, delShipmentOrder, getShipmentOrder, voidOrder} from "@/api/wms/shipmentOrder";
 import {getUserSelectList} from "@/api/wms/common";
 import {getCurrentInstance, reactive, ref, toRefs} from "vue";
 import { useRoute, useRouter } from "vue-router";
 import useUserStore from "@/store/modules/user";
 import {ElMessageBox} from "element-plus";
-import shipmentPanel from "@/components/PrintTemplate/shipment-panel";
+import { buildShipmentPanels } from "@/components/PrintTemplate/shipment-panel";
 import { resolveRoutePath } from "@/utils/routeResolver";
 
 const { proxy } = getCurrentInstance();
@@ -167,7 +163,7 @@ const router = useRouter();
 const userStore = useUserStore();
 // 用户列表，用于显示中文昵称
 const userList = ref([]);
-// 根据用户ID查找昵称
+// 根据用户ID查找昵称（保留供未来使用）
 const getNickNameById = (userId) => {
   if (!userId) return '-'
   const u = userList.value.find(x => String(x.userId) === String(userId))
@@ -179,8 +175,6 @@ const getNickNameByUserName = (userName) => {
   const u = userList.value.find(x => x.userName === userName)
   return u ? u.nickName : userName
 };
-// 判断当前用户是否为该行指定操作人
-const isRowExecutor = (row) => userStore.id && row.executorId && String(userStore.id) === String(row.executorId);
 const { wms_shipment_status, wms_shipment_type } = proxy.useDict(
   "wms_shipment_status",
   "wms_shipment_type"
@@ -254,7 +248,7 @@ function handleDelete(row) {
   }).catch((e) => {
     if (e === 409) {
       return ElMessageBox.alert(
-        '<div>出库单【' + row.shipmentOrderNo + '】已' + (row.shipmentOrderStatus === 1 ? '出库' : '作废') + '，不能删除！</div><div>请联系管理员处理！</div>',
+        '<div>出库单【' + row.shipmentOrderNo + '】已' + (row.shipmentOrderStatus === 3 ? '出库' : '作废') + '，不能删除！</div><div>请联系管理员处理！</div>',
         '系统提示',
         {
           dangerouslyUseHTMLString: true,
@@ -276,39 +270,20 @@ function handleView(row) {
 
 /** 状态判断辅助函数 */
 function canEdit(row) {
-  return [0, -2].includes(Number(row.shipmentOrderStatus))
+  return [0].includes(Number(row.shipmentOrderStatus))
 }
 
 function canDelete(row) {
-  return [0, -2].includes(Number(row.shipmentOrderStatus))
+  return [0].includes(Number(row.shipmentOrderStatus))
 }
 
 function getDisabledTip(row) {
-  const statusMap = { 1: '待审批中', 2: '已审批', 3: '已出库', '-1': '已作废', '-2': '已驳回' }
+  const statusMap = { 3: '已出库', '-1': '已作废' }
   const label = statusMap[row.shipmentOrderStatus] || '未知状态'
   return '出库单【' + row.shipmentOrderNo + '】' + label + '，无法操作！'
 }
 
-/** 提交审批 */
-function handleSubmit(row) {
-  proxy.$modal.confirm('确认提交出库单【' + row.shipmentOrderNo + '】审批吗？').then(() => {
-    return submitForApproval(row.id)
-  }).then((res) => {
-    if (res.code === 200) {
-      proxy.$modal.msgSuccess('提交成功')
-      getList()
-    } else {
-      proxy.$modal.msgError(res.msg)
-    }
-  })
-}
-
-/** 审批 - 跳转到编辑页进行操作 */
-function handleApprove(row) {
-  router.push({ path: resolveShipmentOrderEditPath(), query: { id: row.id, returnFullPath: route.fullPath } });
-}
-
-/** 完成出库 - 跳转到编辑页进行操作 */
+/** 出库 - 跳转到编辑页进行操作 */
 function handleDoShipment(row) {
   router.push({ path: resolveShipmentOrderEditPath(), query: { id: row.id, returnFullPath: route.fullPath } });
 }
@@ -348,8 +323,8 @@ async function handlePrint(row) {
         itemName: sku.itemName,
         skuName: sku.skuName,
         unitName: sku.unitName,
-        dispatchLevel: '',
-        dispatchQuantity: '',
+        dispatchLevel: sku.qualityLevel,
+        dispatchQuantity: sku.totalQuantity.toFixed(0),
         shipmentLevel: sku.qualityLevel,
         shipmentQuantity: sku.totalQuantity.toFixed(0),
         unitPrice: sku.unitPrice,
@@ -358,48 +333,30 @@ async function handlePrint(row) {
       }
     })
   }
-  if (table.length < 6) {
-    const startIndex = table.length
-    table.push(
-      ...Array.from({ length: 6 - table.length }, (_, index) => ({
-        serialNo: String(startIndex + index + 1),
-        itemName: '',
-        skuName: '',
-        unitName: '',
-        dispatchLevel: '',
-        dispatchQuantity: '',
-        shipmentLevel: '',
-        shipmentQuantity: '',
-        unitPrice: '',
-        lineAmount: '',
-        remark: ''
-      }))
-    )
+
+  // 动态生成多页面板（每页10条，签字仅最后一页）
+  const { panels, pageDataMap } = buildShipmentPanels(table)
+  const totalPages = panels.length
+  pageDataMap.totalPages = totalPages
+  // 为每页添加页码字段
+  for (let i = 0; i < totalPages; i++) {
+    pageDataMap[`pageNo${i}`] = `第${i + 1}页/共${totalPages}页`
   }
+  const template = { panels }
+
+  // 构建打印数据：单据头字段 + 每页独立表格数据
   const printData = {
-    shipmentOrderNo: shipmentOrder.shipmentOrderNo,
-    shipmentOrderType: shipmentOrder.shipmentOrderType,
-    shipmentOrderStatus: proxy.selectDictLabel(wms_shipment_status.value, shipmentOrder.shipmentOrderStatus),
     basisNo: shipmentOrder.basisNo,
     dispatchMode: shipmentOrder.dispatchMode,
     noticeOrg: shipmentOrder.noticeOrg,
     receiveUnit: shipmentOrder.receiveUnit,
-    purchaseDate: proxy.parseTime(shipmentOrder.purchaseDate, '{y}-{m}-{d}'),
+    purchaseDate: proxy.parseTime(shipmentOrder.purchaseDate, '{y}-{m}-{d}') || '/',
     shipmentDate: proxy.parseTime(shipmentOrder.shipmentDate, '{y}-{m}-{d}'),
-    purchaserName: shipmentOrder.purchaserName,
-    acceptorName: shipmentOrder.acceptorName,
-    keeperName: shipmentOrder.keeperName,
-    totalQuantity: Number(shipmentOrder.totalQuantity).toFixed(0),
-    receivableAmount: ((shipmentOrder.receivableAmount || shipmentOrder.receivableAmount === 0) ? (shipmentOrder.receivableAmount + '元') : ''),
-    createBy: shipmentOrder.createBy,
-    createTime: proxy.parseTime(shipmentOrder.createTime, '{mm}-{dd} {hh}:{ii}'),
-    updateBy: shipmentOrder.updateBy,
-    updateTime: proxy.parseTime(shipmentOrder.updateTime, '{mm}-{dd} {hh}:{ii}'),
-    remark: shipmentOrder.remark,
-    table
+    ...pageDataMap  // tablePage0, tablePage1, ... 每页独立数据
   }
-  const template = JSON.parse(JSON.stringify(shipmentPanel))
-  template.panels?.forEach(panel => {
+
+  // 替换单据头中的字段值为实际数据，同时替换页码
+  template.panels?.forEach((panel, idx) => {
     panel.printElements?.forEach(element => {
       const field = element?.options?.field
       if (field && topValueFields.has(field)) {
@@ -407,9 +364,16 @@ async function handlePrint(row) {
         delete element.options.field
         delete element.options.fields
       }
+      // 替换页码字段为格式化文本
+      if (field === `pageNo${idx}`) {
+        element.options.title = printData[field] || `第${idx + 1}页/共${totalPages}页`
+        delete element.options.field
+        delete element.options.fields
+      }
     })
   })
-  let printTemplate = new proxy.$hiprint.PrintTemplate({template})
+
+  let printTemplate = new proxy.$hiprint.PrintTemplate({ template })
   printTemplate.print(printData, {}, {
     styleHandler: () => {
       let css = '<link href="https://cyl-press.oss-cn-shenzhen.aliyuncs.com/print-lock.css" media="print" rel="stylesheet">';

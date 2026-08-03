@@ -91,11 +91,11 @@
             {{ row.createTime ? parseTime(row.createTime, '{y}-{m}-{d} {h}:{i}') : '-' }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" align="right" class-name="small-padding fixed-width" width="220">
+        <el-table-column label="操作" align="right" class-name="small-padding fixed-width" width="230">
           <template #default="scope">
             <el-popover
               placement="left" title="提示" :width="300" trigger="hover"
-              :disabled="[0, -2].includes(Number(scope.row.checkOrderStatus))"
+              :disabled="[0].includes(Number(scope.row.checkOrderStatus))"
               :content="getDisabledTip(scope.row)"
             >
               <template #reference>
@@ -103,12 +103,8 @@
               </template>
             </el-popover>
             <el-button link type="primary" @click="handleGoDetail(scope.row)" v-hasPermi="['wms:check:all']">查看</el-button>
-            <!-- 提交盘点：草稿/已驳回 -->
-            <el-button v-if="[0, -2].includes(Number(scope.row.checkOrderStatus))" link type="warning" @click="handleUpdate(scope.row)" v-hasPermi="['wms:check:all']">提交</el-button>
-            <!-- 去盘点：待盘点 -->
-            <el-button v-if="Number(scope.row.checkOrderStatus) === 1" link type="primary" @click="handleGoCheck(scope.row)" v-hasPermi="['wms:check:all']">去盘点</el-button>
-            <!-- 复核：待复核 -->
-            <el-button v-if="Number(scope.row.checkOrderStatus) === 2" link type="success" @click="handleGoCheck(scope.row)" v-hasPermi="['wms:check:all']">复核</el-button>
+            <!-- 完成盘点：草稿态 -->
+            <el-button v-if="Number(scope.row.checkOrderStatus) === 0" link type="primary" @click="handleGoCheck(scope.row)" v-hasPermi="['wms:check:all']">完成盘点</el-button>
             <el-popover
               placement="left" title="提示" :width="300" trigger="hover"
               :disabled="canDeleteRow(scope.row)"
@@ -271,13 +267,13 @@ function handleGoDetail(row) {
 }
 
 function canEditRow(row) {
-  return [0, -2].includes(Number(row.checkOrderStatus))
+  return [0].includes(Number(row.checkOrderStatus))
 }
 function canDeleteRow(row) {
-  return [0, -2].includes(Number(row.checkOrderStatus))
+  return [0].includes(Number(row.checkOrderStatus))
 }
 function getDisabledTip(row) {
-  const statusMap = { 1: '待盘点中', 2: '待复核中', 3: '已完成', '-1': '已作废' }
+  const statusMap = { 3: '已完成', '-1': '已作废' }
   const label = statusMap[row.checkOrderStatus] || '未知状态'
   return '盘点单【' + row.checkOrderNo + '】' + label + '，无法操作！'
 }

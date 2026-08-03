@@ -66,7 +66,7 @@ const internalRackList = computed(() => {
 });
 
 const getOptionLabel = (item) => {
-  return item.rackCode ? `${item.rackName} (${item.rackCode})` : item.rackName;
+  return item.rackName;
 };
 
 const handleChange = (value) => {

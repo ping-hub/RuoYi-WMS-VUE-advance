@@ -50,69 +50,7 @@
             </el-form-item>
           </el-col>
         </el-row>
-        <!-- 流程信息（只读展示，草稿/已驳回状态不显示） -->
-        <el-row :gutter="24" v-if="form.createBy && ![0, -2].includes(status)">
-          <el-col :span="6">
-            <el-form-item label="申请人">
-              <el-input :model-value="getNickNameByUserName(form.createBy)" disabled />
-            </el-form-item>
-          </el-col>
-          <el-col :span="6" v-if="form.executorName">
-            <el-form-item label="盘点人">
-              <el-input :model-value="form.executorName" disabled />
-            </el-form-item>
-          </el-col>
-          <el-col :span="6" v-if="form.reviewerName && status >= 2">
-            <el-form-item label="复核人">
-              <el-input :model-value="form.reviewerName" disabled />
-            </el-form-item>
-          </el-col>
-        </el-row>
-
       </el-form>
-      <!-- 草稿/已驳回：盘点人选择 + 驳回原因（在 el-form 外部，不受 disabled 影响） -->
-      <el-row :gutter="24" v-if="(status === 0 || status === -2) && !isViewMode" class="approval-controls">
-        <el-col :span="6">
-          <div class="approval-form-item">
-            <label><span style="color: #f56c6c">*</span> 盘点人：</label>
-            <el-select v-model="submitExecutorId" placeholder="请指定盘点人" filterable clearable style="width: 100%" @change="handleSubmitExecutorChange">
-              <el-option v-for="u in userList" :key="u.userId" :label="u.nickName" :value="u.userId" />
-            </el-select>
-          </div>
-        </el-col>
-        <el-col :span="12" v-if="status === -2 && form.approveRemark">
-          <div class="approval-form-item">
-            <label>驳回原因：</label>
-            <el-input :model-value="form.approveRemark" disabled />
-          </div>
-        </el-col>
-      </el-row>
-      <!-- 待盘点：复核人选择（在 el-form 外部，不受 disabled 影响） -->
-      <el-row :gutter="24" v-if="status === 1 && !isViewMode" class="approval-controls">
-        <el-col :span="6">
-          <div class="approval-form-item">
-            <label><span style="color: #f56c6c">*</span> 复核人：</label>
-            <el-select v-model="form.reviewerId" placeholder="请指定复核人" filterable clearable style="width: 100%" @change="handleReviewerFieldChange">
-              <el-option v-for="u in userList" :key="u.userId" :label="u.nickName" :value="u.userId" />
-            </el-select>
-          </div>
-        </el-col>
-        <el-col :span="12" v-if="rejectRemarkVisible">
-          <div class="approval-form-item">
-            <label>驳回原因：</label>
-            <el-input v-model="rejectRemark" placeholder="请输入驳回原因" />
-          </div>
-        </el-col>
-      </el-row>
-      <!-- 待复核：驳回原因输入 -->
-      <el-row :gutter="24" v-if="status === 2 && !isViewMode && rejectRemarkVisible" class="approval-controls">
-        <el-col :span="12">
-          <div class="approval-form-item">
-            <label>驳回原因：</label>
-            <el-input v-model="rejectRemark" placeholder="请输入驳回原因" />
-          </div>
-        </el-col>
-      </el-row>
     </el-card>
 
     <!-- 开始盘点按钮（待盘点且无明细时显示） -->
@@ -165,7 +103,7 @@
                   </div>
                   <div class="instance-scroll">
                     <div v-for="(inst, idx) in (actualInstanceMap[row.skuId] || [])" :key="inst.instanceCode || inst._key" class="instance-item">
-                      <el-input v-if="inst._isManual" v-model="inst.instanceCode" placeholder="实例编码" size="small"
+                      <el-input v-if="inst._isManual" v-model="inst.instanceCode" placeholder="器材识别码" size="small"
                                 style="width:180px" :disabled="!canEditInstances"
                                 @blur="onInstanceCodeBlur(row, inst)" />
                       <span v-else class="instance-code">{{ inst.instanceCode }}</span>
@@ -176,7 +114,7 @@
                         <el-icon><Delete /></el-icon>
                       </el-button>
                     </div>
-                    <el-empty v-if="!getActualInstanceCount(row)" description="无实际实例" :image-size="40" />
+                    <el-empty v-if="!getActualInstanceCount(row)" description="无实际器材" :image-size="40" />
                   </div>
                   <el-button v-if="canEditInstances" link type="primary" size="small"
                              @click="addActualInstance(row)" class="mt5">
@@ -236,23 +174,12 @@
     <!-- 底部按钮 -->
     <div class="footer-global">
       <div class="btn-box">
-        <!-- 草稿/已驳回：暂存 + 提交盘点 + 作废 -->
-        <div v-if="!isViewMode && (status === 0 || status === -2)">
-          <el-button @click="save" type="primary" plain>暂存</el-button>
-          <el-button @click="handleSubmit" type="warning">提交盘点</el-button>
+        <div v-if="!isViewMode">
+          <el-button @click="doCheck" type="primary">完成盘点</el-button>
           <el-button @click="handleVoid" type="danger" v-if="form.id">作废</el-button>
         </div>
-        <!-- 待盘点：完成盘点 + 驳回 -->
-        <div v-if="!isViewMode && status === 1">
-          <el-button @click="doCheck" type="primary">完成盘点</el-button>
-          <el-button @click="handleReject" type="danger">{{ rejectRemarkVisible ? '确认驳回' : '驳回' }}</el-button>
-        </div>
-        <!-- 待复核：复核通过 + 驳回 -->
-        <div v-if="!isViewMode && status === 2">
-          <el-button @click="doApprove" type="success">复核通过</el-button>
-          <el-button @click="handleReject" type="danger">{{ rejectRemarkVisible ? '确认驳回' : '驳回' }}</el-button>
-        </div>
         <div>
+          <el-button v-if="!isViewMode" @click="save" type="primary">暂存</el-button>
           <el-button @click="cancel">{{ isViewMode ? '关闭' : '取消' }}</el-button>
         </div>
       </div>
@@ -262,9 +189,7 @@
 
 <script setup name="CheckOrderEdit">
 import { computed, getCurrentInstance, onMounted, reactive, ref, toRefs, watch } from "vue";
-import { addCheckOrder, getCheckOrder, updateCheckOrder, startCheck, getInstancesBySku,
-         submitForApproval, completeCheck, approveOrder, rejectOrder, voidOrder } from "@/api/wms/checkOrder";
-import { getUserSelectList } from "@/api/wms/common";
+import { addCheckOrder, getCheckOrder, updateCheckOrder, startCheck, getInstancesBySku, check as checkApi, voidOrder } from "@/api/wms/checkOrder";
 import { ElMessage } from "element-plus";
 import { Delete } from "@element-plus/icons-vue";
 import { useRoute } from "vue-router";
@@ -281,9 +206,9 @@ const { wms_check_scope_type } = proxy.useDict("wms_check_scope_type");
 const loading = ref(false);
 const starting = ref(false);
 const status = computed(() => Number(form.value.checkOrderStatus));
-const canEdit = computed(() => !isViewMode.value && [0, -2].includes(status.value));
-const canEditInstances = computed(() => status.value === 1 && !isViewMode.value);
-const showStartBtn = computed(() => form.value.id && status.value === 1 && !isViewMode.value && (!form.value.details || !form.value.details.length));
+const canEdit = computed(() => !isViewMode.value);
+const canEditInstances = computed(() => status.value === 0 && !isViewMode.value);
+const showStartBtn = computed(() => status.value === 0 && !isViewMode.value && (!form.value.details || !form.value.details.length) && form.value.warehouseId);
 
 const initFormData = {
   id: undefined, checkOrderNo: undefined, checkOrderStatus: 0, remark: undefined,
@@ -291,11 +216,6 @@ const initFormData = {
   checkScopeType: 'warehouse', checkDate: undefined,
   checkOrderTotal: 0, details: [],
   workflowLogs: [],
-  applicantId: undefined, applicantName: undefined,
-  submitTime: undefined,
-  executorId: undefined, executorName: undefined,
-  reviewerId: undefined, reviewerName: undefined,
-  executeTime: undefined, approveRemark: undefined,
 };
 
 const data = reactive({
@@ -306,13 +226,6 @@ const data = reactive({
 });
 const { form, rules } = toRefs(data);
 
-// 流程状态变量
-const rejectRemark = ref('');
-const rejectRemarkVisible = ref(false);
-// 提交时指定盘点人的临时变量
-const submitExecutorId = ref(undefined);
-const submitExecutorName = ref('');
-
 // SKU实例懒加载缓存
 const skuInstanceCache = reactive({});
 const skuInstanceLoading = reactive({});
@@ -320,19 +233,6 @@ const skuInstanceLoading = reactive({});
 const actualInstanceMap = reactive({});
 // 从后端详情恢复时的暂存数据（等待账面实例加载后组装 actualInstanceMap）
 const _pendingInstanceRestore = {};
-
-// ===== 用户下拉列表 =====
-const userList = ref([]);
-const getNickNameByUserName = (userName) => {
-  if (!userName) return '-'
-  const u = userList.value.find(x => x.userName === userName)
-  return u ? u.nickName : userName
-};
-const loadUserList = () => {
-  getUserSelectList().then(res => {
-    userList.value = res.data || [];
-  });
-};
 
 const close = () => {
   if (route.query.returnFullPath) { proxy?.$tab.closeOpenPage(route.query.returnFullPath); return; }
@@ -356,8 +256,27 @@ const handleAreaChange = () => { form.value.rackId = undefined; syncCheckScopeTy
 watch(() => form.value.rackId, syncCheckScopeType);
 
 // ===== 开始盘点 =====
-const doStartCheck = () => {
-  starting.value = true;
+const doStartCheck = async () => {
+  // 新增订单尚无id，先静默保存获取id
+  if (!form.value.id) {
+    try {
+      await checkForm.value.validate();
+    } catch { return; }
+    starting.value = true;
+    doSave(undefined, () => {
+      // 保存成功，form.value.id 已赋值，继续执行 startCheck
+      runStartCheck();
+    }, () => {
+      // 保存失败，重置 loading 状态
+      starting.value = false;
+    });
+  } else {
+    starting.value = true;
+    runStartCheck();
+  }
+};
+
+const runStartCheck = () => {
   startCheck(form.value.id).then(res => {
     if (res.code === 200) {
       ElMessage.success('正在加载...');
@@ -491,7 +410,7 @@ const save = async () => {
   doSave();
 };
 
-const doSave = (checkOrderStatus, onSuccess = null) => {
+const doSave = (checkOrderStatus, onSuccess = null, onFail = null) => {
   const details = (form.value.details || []).map(it => {
     // 若已加载实际实例列表，将编码传给后端以暂存实例级增删
     const actualList = actualInstanceMap[it.skuId];
@@ -516,44 +435,20 @@ const doSave = (checkOrderStatus, onSuccess = null) => {
   if (params.id) {
     updateCheckOrder(params).then(res => {
       if (res.code === 200) { if (onSuccess) onSuccess(); else { ElMessage.success(res.msg); close(); } }
-      else ElMessage.error(res.msg);
-    });
+      else { ElMessage.error(res.msg); if (onFail) onFail(); }
+    }).catch(() => { if (onFail) onFail(); });
   } else {
     addCheckOrder(params).then(res => {
       if (res.code === 200) {
         if (res.data) form.value.id = res.data;
         if (onSuccess) onSuccess(); else { ElMessage.success(res.msg); close(); }
       }
-      else ElMessage.error(res.msg);
-    });
+      else { ElMessage.error(res.msg); if (onFail) onFail(); }
+    }).catch(() => { if (onFail) onFail(); });
   }
 };
 
 // ===== 流程操作 =====
-
-/** 提交盘点（草稿/已驳回 → 待盘点） */
-const handleSubmit = async () => {
-  if (!submitExecutorId.value) {
-    return ElMessage.warning('请先选择盘点人');
-  }
-  await proxy?.$modal.confirm('确认提交盘点吗？');
-  const doSubmit = (id) => {
-    submitForApproval(id, submitExecutorId.value, submitExecutorName.value).then(res => {
-      if (res.code === 200) {
-        ElMessage.success('已提交，待盘点');
-        close();
-      } else {
-        ElMessage.error(res.msg);
-      }
-    });
-  };
-  if (!form.value.id) {
-    // 先保存再提交
-    doSave(undefined, () => doSubmit(form.value.id));
-  } else {
-    doSubmit(form.value.id);
-  }
-};
 
 /** 作废 */
 const handleVoid = async () => {
@@ -568,12 +463,9 @@ const handleVoid = async () => {
   });
 };
 
-/** 完成盘点（待盘点 → 待复核） */
+/** 完成盘点（草稿 → 已完成，后端 check() 方法内部设置状态为 FINISH） */
 const doCheck = async () => {
-  if (!form.value.reviewerId) {
-    return ElMessage.warning('请先指定复核人');
-  }
-  await proxy?.$modal.confirm('确认盘点结束吗？完成后将进入复核环节。');
+  await proxy?.$modal.confirm('确认盘点完成吗？');
   // 盘点完成时自动赋值当前时间
   const now = new Date();
   const pad = (n) => String(n).padStart(2, '0');
@@ -599,51 +491,10 @@ const doCheck = async () => {
     checkDate: form.value.checkDate, remark: form.value.remark,
     details,
   };
-  completeCheck(params, form.value.reviewerId, form.value.reviewerName).then(res => {
-    if (res.code === 200) { ElMessage.success('盘点完成，已提交复核'); close(); }
+  checkApi(params).then(res => {
+    if (res.code === 200) { ElMessage.success('盘点完成'); close(); }
     else ElMessage.error(res.msg);
   });
-};
-
-/** 复核通过（待复核 → 已完成） */
-const doApprove = async () => {
-  await proxy?.$modal.confirm('确认复核通过吗？');
-  approveOrder(form.value.id, null).then(res => {
-    if (res.code === 200) {
-      ElMessage.success('复核通过');
-      close();
-    } else {
-      ElMessage.error(res.msg);
-    }
-  });
-};
-
-/** 驳回（待盘点/待复核 → 已驳回） */
-const handleReject = () => {
-  if (!rejectRemarkVisible.value) {
-    rejectRemarkVisible.value = true;
-    return;
-  }
-  rejectOrder(form.value.id, rejectRemark.value).then(res => {
-    if (res.code === 200) {
-      ElMessage.success('已驳回');
-      close();
-    } else {
-      ElMessage.error(res.msg);
-    }
-  });
-};
-
-/** 复核人下拉变化时同步 reviewerName */
-const handleReviewerFieldChange = (userId) => {
-  const u = userList.value.find(x => x.userId === userId);
-  form.value.reviewerName = u ? u.nickName : '';
-};
-
-/** 盘点人下拉变化时同步 submitExecutorName */
-const handleSubmitExecutorChange = (userId) => {
-  const u = userList.value.find(x => x.userId === userId);
-  submitExecutorName.value = u ? u.nickName : '';
 };
 
 // ===== 加载详情 =====
@@ -691,7 +542,6 @@ onMounted(() => {
     route.meta.title = '新增盘点单'
     tagsViewStore.updateVisitedView(route)
   }
-  loadUserList();
   const id = route.query?.id;
   if (id) loadDetail(id);
 });
@@ -747,11 +597,4 @@ onMounted(() => {
 .el-statistic__content { font-size: 14px; }
 :deep(.row-loss) { background-color: #fef0f0 !important; }
 :deep(.row-gain) { background-color: #f0f9eb !important; }
-.approval-controls {
-  padding: 12px 0 0;
-  .approval-form-item {
-    display: flex; align-items: center; gap: 8px;
-    label { min-width: 70px; text-align: right; font-size: 14px; color: var(--el-text-color-regular); }
-  }
-}
 </style>

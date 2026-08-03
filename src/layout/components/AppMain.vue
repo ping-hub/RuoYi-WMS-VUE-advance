@@ -3,7 +3,9 @@
     <router-view v-slot="{ Component, route }">
 <!--      <transition name="fade-transform" mode="out-in">-->
         <keep-alive :include="tagsViewStore.cachedViews">
-          <component v-if="!route.meta.link" :is="Component" :key="route.path"/>
+          <div :key="route.path">
+            <component v-if="!route.meta.link" :is="Component" />
+          </div>
         </keep-alive>
 <!--      </transition>-->
     </router-view>

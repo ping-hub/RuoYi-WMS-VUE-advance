@@ -5,11 +5,12 @@
     :disabled="disabled"
     :clearable="clearable"
     filterable
+    :filter-method="handleFilter"
     style="width: 100%"
     @update:model-value="handleChange"
   >
     <el-option
-      v-for="item in internalLocationList"
+      v-for="item in filteredLocationList"
       :key="item.id"
       :label="getOptionLabel(item)"
       :value="item.id"
@@ -60,6 +61,7 @@ const props = defineProps({
 const emit = defineEmits(['update:modelValue', 'change']);
 
 const locationList = ref([]);
+const filterQuery = ref('');
 
 /** 优先使用外部传入的 options，否则使用内部加载的 locationList */
 const internalLocationList = computed(() => {
@@ -73,8 +75,23 @@ const internalLocationList = computed(() => {
   return locationList.value;
 });
 
+/** 根据搜索关键字过滤后的货位列表（忽略大小写模糊匹配） */
+const filteredLocationList = computed(() => {
+  const query = filterQuery.value.trim().toLowerCase();
+  if (!query) return internalLocationList.value;
+  return internalLocationList.value.filter(item => {
+    const name = (item.locationName || '').toLowerCase();
+    const code = (item.locationCode || '').toLowerCase();
+    return name.includes(query) || code.includes(query);
+  });
+});
+
+const handleFilter = (val) => {
+  filterQuery.value = val;
+};
+
 const getOptionLabel = (item) => {
-  return item.locationCode ? `${item.locationName} (${item.locationCode})` : item.locationName;
+  return item.locationName;
 };
 
 const handleChange = (value) => {
@@ -85,7 +102,7 @@ const handleChange = (value) => {
 const loadLocationList = async () => {
   // 如果外部传入了 options，不需要自行加载
   if (props.options !== undefined) return;
-  const query = {};
+  const query = { pageSize: 99999 };
   if (props.warehouseId !== undefined && props.warehouseId !== null && props.warehouseId !== '') {
     query.warehouseId = props.warehouseId;
   }

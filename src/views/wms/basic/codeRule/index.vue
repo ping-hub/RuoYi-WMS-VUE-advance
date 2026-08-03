@@ -48,29 +48,19 @@
           >
             <el-divider content-position="left">编码组成</el-divider>
 
-            <!-- 前缀 + 器材编码前缀开关（仅 item 类型显示右侧开关） -->
+            <!-- 前缀 -->
             <el-form-item label="前缀" prop="prefix">
-              <div style="display: flex; align-items: center; gap: 12px;">
-                <el-input
-                  v-model="configForm.prefix"
-                  :placeholder="currentType === 'item' && configForm.useItemCodeAsPrefix === '0' ? '使用器材编码' : '请输入前缀，如 ZC'"
-                  :disabled="currentType === 'item' && configForm.useItemCodeAsPrefix === '0'"
-                  clearable maxlength="20" style="width: 200px"
-                />
-                <template v-if="currentType === 'item'">
-                  <el-switch
-                    v-model="configForm.useItemCodeAsPrefix"
-                    active-value="0"
-                    inactive-value="1"
-                  />
-                  <span class="form-tip">使用器材编码作为前缀</span>
-                </template>
-              </div>
+              <el-input
+                v-model="configForm.prefix"
+                placeholder="请输入前缀，如 D8 / ZC"
+                clearable maxlength="20" style="width: 200px"
+              />
             </el-form-item>
 
             <!-- 后缀 -->
             <el-form-item label="后缀" prop="suffixType">
               <el-radio-group v-model="configForm.suffixType">
+                <el-radio label="">无</el-radio>
                 <el-radio label="ymd">年月日</el-radio>
                 <el-radio label="ym">年月</el-radio>
                 <el-radio label="y">年</el-radio>
@@ -174,8 +164,7 @@ const initConfigForm = {
   separator: '-',
   seqLength: 4,
   seqMethod: 'sequential',
-  currentSeq: '0',
-  useItemCodeAsPrefix: '1'
+  currentSeq: '0'
 }
 
 const configForm = reactive({ ...initConfigForm })
@@ -185,7 +174,7 @@ const configRules = {
     { max: 20, message: '前缀长度不能超过20个字符', trigger: 'blur' }
   ],
   suffixType: [
-    { required: true, message: '请选择后缀格式', trigger: 'change' }
+    { message: '请选择后缀格式', trigger: 'change' }
   ],
   seqLength: [
     { required: true, message: '请选择序号位数', trigger: 'change' }
@@ -205,20 +194,26 @@ const seqLengthTip = computed(() => {
 const previewResult = computed(() => {
   const parts = []
 
-  // 前缀：item 类型且开关开启时，用示例器材编码展示
-  if (currentType.value === 'item' && configForm.useItemCodeAsPrefix === '0') {
-    parts.push('{器材编码}')
-  } else if (configForm.prefix) {
+  // 前缀
+  if (configForm.prefix) {
     parts.push(configForm.prefix)
   }
 
+  // 日期后缀（可选）
   const now = new Date()
   if (configForm.suffixType === 'ymd') {
     parts.push(`${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`)
   } else if (configForm.suffixType === 'ym') {
     parts.push(`${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}`)
-  } else {
+  } else if (configForm.suffixType === 'y') {
     parts.push(`${now.getFullYear()}`)
+  }
+  // suffixType 为空时不添加日期后缀
+
+  // item 类型展示四段式预览：prefix-一级分类编码-二级分类编码-seq
+  if (currentType.value === 'item') {
+    parts.push('{一级分类}')
+    parts.push('{二级分类}')
   }
 
   const seq = String(parseInt(configForm.currentSeq || '0') + 1).padStart(configForm.seqLength, '0')
@@ -240,13 +235,12 @@ async function loadConfigForType(type) {
     if (res.data) {
       Object.assign(configForm, {
         prefix: res.data.prefix || '',
-        suffixType: res.data.suffixType || 'y',
+        suffixType: res.data.suffixType ?? 'y',
         separator: res.data.separator || '-',
         seqLength: res.data.seqLength || 4,
         seqMethod: res.data.seqMethod || 'sequential',
         currentSeq: String(res.data.currentSeq || 0),
-        id: res.data.id,
-        useItemCodeAsPrefix: res.data.useItemCodeAsPrefix || '1'
+        id: res.data.id
       })
     }
   } catch (e) {
@@ -265,8 +259,7 @@ async function handleSave() {
       suffixType: configForm.suffixType,
       separator: configForm.separator,
       seqLength: configForm.seqLength,
-      seqMethod: configForm.seqMethod,
-      useItemCodeAsPrefix: configForm.useItemCodeAsPrefix
+      seqMethod: configForm.seqMethod
     })
     proxy.$modal.msgSuccess('保存成功')
     // 刷新列表

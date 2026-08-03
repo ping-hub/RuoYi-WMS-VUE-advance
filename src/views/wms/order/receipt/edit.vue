@@ -18,7 +18,7 @@
             </el-col>
             <el-col :span="6">
               <el-form-item label="仓库" prop="warehouseId">
-                <el-select v-model="form.warehouseId" placeholder="请选择仓库" @change="handleChangeWarehouse" filterable>
+                <el-select v-model="form.warehouseId" placeholder="请选择仓库" @change="handleChangeWarehouse" filterable style="width: 100%">
                   <el-option v-for="item in useWmsStore().warehouseList" :key="item.id" :label="item.warehouseName" :value="item.id"/>
                 </el-select>
               </el-form-item>
@@ -46,12 +46,16 @@
             
             <el-col :span="6">
               <el-form-item label="调拨根据" prop="basisNo">
-                <el-input v-model="form.basisNo" placeholder="请输入调拨根据"></el-input>
+                <el-select v-model="form.basisNo" placeholder="请选择调拨根据" clearable filterable style="width: 100%">
+                  <el-option v-for="item in wms_dispatch_basis" :key="item.value" :label="item.label" :value="item.value" />
+                </el-select>
               </el-form-item>
             </el-col>
             <el-col :span="6">
               <el-form-item label="调拨方式" prop="dispatchMode">
-                <el-input v-model="form.dispatchMode" placeholder="请输入调拨方式" />
+                <el-select v-model="form.dispatchMode" placeholder="请选择调拨方式" clearable filterable style="width: 100%">
+                  <el-option v-for="item in wms_dispatch_mode" :key="item.value" :label="item.label" :value="item.value" />
+                </el-select>
               </el-form-item>
             </el-col>
             <el-col :span="6">
@@ -61,7 +65,9 @@
             </el-col>
             <el-col :span="6">
               <el-form-item label="收物单位" prop="receiveUnit">
-                <el-input v-model="form.receiveUnit" placeholder="请输入收物单位"></el-input>
+                <el-select v-model="form.receiveUnit" placeholder="请选择收物单位" clearable filterable style="width: 100%">
+                  <el-option v-for="item in wms_receive_unit" :key="item.value" :label="item.label" :value="item.value" />
+                </el-select>
               </el-form-item>
             </el-col>
           </el-row>
@@ -87,6 +93,13 @@
               </el-form-item>
             </el-col>
           </el-row>
+          <el-row :gutter="24" v-if="form.receiptOrderType === '调拨入库'">
+            <el-col :span="6">
+              <el-form-item label="调拨单号" prop="movementOrderNo">
+                <el-input v-model="form.movementOrderNo" placeholder="请输入调拨单号" style="width: 100%" />
+              </el-form-item>
+            </el-col>
+          </el-row>
         </el-form>
       </el-card>
       <el-card header="入库明细" class="mt10">
@@ -94,7 +107,7 @@
           <div class="flex-space-between mb8 receipt-toolbar">
             <div>
               <el-tag type="info">
-                入库按器材实例执行。支持"选择器材实例"或扫码枪扫二维码直接新增；货位支持扫码录入（先扫器材码添加，再扫货位码绑定）。
+                入库按器材明细执行。支持"选择器材"或扫码枪直接新增；点击货位或箱码格子可单独扫码或手动录入。
               </el-tag>
             </div>
             <div class="receipt-toolbar-actions">
@@ -107,39 +120,53 @@
                 content="请先选择仓库！"
               >
                 <template #reference>
-                  <el-button type="primary" plain="plain" size="default" @click="showAddItem" icon="Plus" :disabled="!form.warehouseId || isViewMode">选择器材实例</el-button>
+                  <el-button type="primary" plain="plain" size="default" @click="showAddItem" icon="Plus" :disabled="!form.warehouseId || isViewMode">选择器材</el-button>
                 </template>
               </el-popover>
+              <el-button type="warning" plain size="default" @click="showBatchSetting" icon="SetUp" :disabled="!selectedDetails.length || isViewMode">批量设置</el-button>
             </div>
           </div>
           <el-table
             :data="form.details"
             border
             empty-text="暂无入库明细"
-            @row-click="handleDetailRowClick"
+            highlight-current-row
+            @row-click="handleRowClick"
+            @selection-change="handleDetailSelectionChange"
             style="cursor: pointer"
+            ref="detailTableRef"
           >
-            <el-table-column label="器材实例编码" min-width="160">
+            <el-table-column v-if="!isViewMode" type="selection" width="50" align="center" />
+            <el-table-column label="器材识别码" min-width="200">
               <template #default="{ row }">
-                <span>{{ row.instanceCode || '-' }}</span>
+                <span class="instance-code-link" @click.stop="handleDetailRowClick(row)">{{ row.instanceCode || '-' }}</span>
               </template>
             </el-table-column>
-            <el-table-column label="器材名称" min-width="160">
+            <el-table-column label="器材名称" min-width="140">
               <template #default="{ row }">
                 <span>{{ row.itemName || '-' }}</span>
               </template>
             </el-table-column>
             <el-table-column label="货位" min-width="160">
               <template #default="{ row }">
-                <LocationSelect
-                  v-model="row.locationId"
-                  :warehouse-id="form.warehouseId"
-                  :area-id="form.areaId"
-                  :options="locationOptions"
-                  placeholder="货位"
-                  :disabled="isViewMode"
-                  @change="(val) => handleLocationSelectChange(row, val)"
-                />
+                <div data-scan-field="location" @focusin="focusedScanField = 'location'; currentFocusedRow = row" @focusout="focusedScanField = ''">
+                  <LocationSelect
+                    v-model="row.locationId"
+                    :warehouse-id="form.warehouseId"
+                    :area-id="form.areaId"
+                    :options="locationOptions"
+                    placeholder="货位"
+                    :disabled="isViewMode"
+                    @change="(val) => handleLocationSelectChange(row, val)"
+                  />
+                </div>
+              </template>
+            </el-table-column>
+            <el-table-column label="箱码" min-width="120">
+              <template #default="{ row }">
+                <div data-scan-field="boxcode" @focusin="focusedScanField = 'boxcode'; currentFocusedRow = row" @focusout="focusedScanField = ''">
+                  <el-input v-model="row.boxCode" placeholder="扫码或输入" :disabled="isViewMode" clearable style="width: 100%" @click.stop @keyup.enter="handleBoxCodeEnter(row)" />
+                </div>
               </template>
             </el-table-column>
             <el-table-column label="质量等级" min-width="120">
@@ -149,24 +176,27 @@
                 </el-select>
               </template>
             </el-table-column>
-            <el-table-column label="质保期" min-width="160">
+            <el-table-column label="质保期" min-width="130">
               <template #default="{ row }">
-                <el-date-picker
-                  v-model="row.warrantyPeriod"
-                  type="date"
-                  placeholder="选择质保期"
-                  value-format="YYYY-MM-DD"
+                <el-input-number
+                  v-model="row.warrantyPeriodMonths"
+                  :min="1"
+                  :max="360"
+                  :precision="0"
+                  controls-position="right"
+                  placeholder="月数"
                   :disabled="isViewMode"
                   style="width: 100%"
+                  @change="(val) => updateWarrantyMonths(row, val)"
                 />
               </template>
             </el-table-column>
             <el-table-column label="备注" min-width="150">
               <template #default="{ row }">
-                <el-input v-model="row.remark" placeholder="请输入备注" :disabled="isViewMode" />
+                <el-input v-model="row.remark" placeholder="请输入备注" :disabled="isViewMode" @click.stop />
               </template>
             </el-table-column>
-            <el-table-column v-if="!isViewMode" label="操作" width="88" align="right">
+            <el-table-column v-if="!isViewMode" label="操作" width="75" align="right">
               <template #default="scope">
                 <el-button icon="Delete" type="danger" plain size="small" @click.stop="handleDeleteDetail(scope.row, scope.$index)" link>删除</el-button>
               </template>
@@ -178,7 +208,7 @@
       <el-dialog v-model="itemDetailDialog.visible" title="器材详情" width="520px" append-to-body>
         <div v-loading="itemDetailDialog.loading">
           <el-descriptions v-if="itemDetailDialog.data" :column="2" border>
-            <el-descriptions-item label="实例编码">{{ itemDetailDialog.data.instanceCode || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="器材识别码">{{ itemDetailDialog.data.instanceCode || '-' }}</el-descriptions-item>
             <el-descriptions-item label="器材名称">{{ itemDetailDialog.data.itemName || '-' }}</el-descriptions-item>
             <el-descriptions-item label="器材编码">{{ itemDetailDialog.data.itemCode || '-' }}</el-descriptions-item>
             <el-descriptions-item label="规格型号">{{ itemDetailDialog.data.skuName || '-' }}</el-descriptions-item>
@@ -193,7 +223,58 @@
           <el-button @click="itemDetailDialog.visible = false">关闭</el-button>
         </template>
       </el-dialog>
-      <el-dialog v-model="itemInstanceSelectDialog.visible" title="选择器材实例" width="1200px" append-to-body>
+      <!-- 批量设置弹窗 -->
+      <el-dialog v-model="batchDialog.visible" title="批量设置" width="560px" append-to-body :close-on-click-modal="false" @opened="handleBatchDialogOpened" @closed="handleBatchDialogClosed">
+        <el-alert :title="`将对已勾选的 ${selectedDetails.length} 条明细生效（仅覆盖填写了的字段，留空则保留原值）`" type="info" :closable="false" class="mb12" show-icon />
+        <el-form label-width="80px" :model="batchDialog.form">
+          <el-form-item label="货位">
+            <LocationSelect
+              v-model="batchDialog.form.locationId"
+              :warehouse-id="form.warehouseId"
+              :area-id="form.areaId"
+              :options="locationOptions"
+              placeholder="扫货位码或选择货位"
+              @change="handleBatchLocationChange"
+            />
+          </el-form-item>
+          <el-form-item label="箱码">
+            <el-input v-model="batchDialog.form.boxCode" placeholder="扫箱码或手动输入" clearable />
+          </el-form-item>
+          <el-form-item label="质量等级">
+            <el-select v-model="batchDialog.form.qualityGrade" placeholder="请选择质量等级" clearable style="width:100%">
+              <el-option v-for="item in wms_quality_grade" :key="item.value" :label="item.label" :value="item.value" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="质保期">
+            <el-input-number
+              v-model="batchDialog.form.warrantyPeriodMonths"
+              :min="1"
+              :max="360"
+              :precision="0"
+              controls-position="right"
+              placeholder="填写月数"
+              style="width:100%"
+              @change="(val) => { batchDialog.form.warrantyExpiryPreview = calcWarrantyExpiryDate(val, form.receiptDate) }"
+            />
+          </el-form-item>
+          <el-form-item label="到期时间">
+            <el-input
+              :model-value="batchDialog.form.warrantyExpiryPreview || '自动计算'"
+              disabled
+              style="width:100%"
+            />
+          </el-form-item>
+          <el-form-item label="备注">
+            <el-input v-model="batchDialog.form.remark" placeholder="输入备注" clearable />
+          </el-form-item>
+        </el-form>
+        <el-alert v-if="batchDialog.scanResult" :title="batchDialog.scanResult" :type="batchDialog.scanResultType" :closable="false" class="mb8" show-icon />
+        <template #footer>
+          <el-button @click="batchDialog.visible = false">取消</el-button>
+          <el-button type="primary" @click="handleConfirmBatchSetting">确认应用</el-button>
+        </template>
+      </el-dialog>
+      <el-dialog v-model="itemInstanceSelectDialog.visible" title="选择器材" width="1200px" append-to-body>
         <el-form :inline="true" :model="itemInstanceSelectDialog.query" label-width="88px">
           <el-form-item label="器材分类">
             <el-tree-select
@@ -226,8 +307,8 @@
               />
             </el-select>
           </el-form-item>
-          <el-form-item label="器材实例编码" label-width="100px">
-            <el-input v-model="itemInstanceSelectDialog.query.instanceCode" placeholder="请输入器材实例编码" clearable @keyup.enter="getReceiptItemInstanceList" />
+          <el-form-item label="器材识别码" label-width="100px">
+            <el-input v-model="itemInstanceSelectDialog.query.instanceCode" placeholder="请输入器材识别码" clearable @keyup.enter="getReceiptItemInstanceList" />
           </el-form-item>
           <el-form-item>
             <el-button type="primary" @click="getReceiptItemInstanceList">查询</el-button>
@@ -239,10 +320,10 @@
           @selection-change="handleReceiptItemInstanceSelectionChange"
           border
           row-key="id"
-          empty-text="请选择器材后查询实例"
+          empty-text="请选择器材后查询"
         >
           <el-table-column type="selection" width="55" :selectable="isReceiptItemInstanceSelectable" />
-          <el-table-column label="器材实例编码" prop="instanceCode" min-width="180" />
+          <el-table-column label="器材识别码" prop="instanceCode" min-width="180" />
           <el-table-column label="器材" prop="itemName" min-width="160" />
           <el-table-column label="规格" prop="skuName" min-width="160" />
           <el-table-column label="状态" width="120">
@@ -293,12 +374,14 @@ import { delReceiptOrderDetail } from '@/api/wms/receiptOrderDetail'
 import { listReceiptTargets } from '@/api/wms/storageLayout'
 import { listItem } from "@/api/wms/item";
 import { getItemInstanceByCode, listItemInstance } from "@/api/wms/itemInstance";
+import { listRackNoPage } from '@/api/wms/rack'
+import { getBoxByCode } from '@/api/wms/box'
 
 const {proxy} = getCurrentInstance();
 const route = useRoute();
 const tagsViewStore = useTagsViewStore();
 const isViewMode = computed(() => route.query.mode === 'view');
-const { wms_receipt_type, wms_quality_grade } = proxy.useDict("wms_receipt_type", "wms_quality_grade");
+const { wms_receipt_type, wms_quality_grade, wms_dispatch_basis, wms_dispatch_mode, wms_receive_unit } = proxy.useDict("wms_receipt_type", "wms_quality_grade", "wms_dispatch_basis", "wms_dispatch_mode", "wms_receive_unit");
 const loading = ref(false)
 /** 统一加载的货位列表，传给 LocationSelect 避免 N 次重复请求 */
 const locationOptions = ref([])
@@ -308,7 +391,7 @@ const loadLocationOptions = async () => {
     return
   }
   try {
-    const query = { warehouseId: form.value.warehouseId }
+    const query = { warehouseId: form.value.warehouseId, pageSize: 99999 }
     if (form.value.areaId) {
       query.areaId = form.value.areaId
     }
@@ -326,8 +409,9 @@ const initFormData = {
   dispatchMode: undefined,
   noticeOrg: undefined,
   receiveUnit: undefined,
+  movementOrderNo: undefined,
   purchaseDate: undefined,
-  receiptDate: undefined,
+  receiptDate: new Date().toISOString().slice(0, 10),
   payableAmount: undefined,
   receiptOrderStatus: 0,
   remark: undefined,
@@ -362,6 +446,36 @@ const data = reactive({
     ],
     areaId: [
       {required: true, message: "请选择库区", trigger: ['blur', 'change']}
+    ],
+    basisNo: [
+      {required: true, message: "调拨根据不能为空", trigger: "change"}
+    ],
+    dispatchMode: [
+      {required: true, message: "调拨方式不能为空", trigger: "change"}
+    ],
+    noticeOrg: [
+      {required: true, message: "通知机关不能为空", trigger: "blur"}
+    ],
+    receiveUnit: [
+      {required: true, message: "收物单位不能为空", trigger: "change"}
+    ],
+    purchaseDate: [
+      {required: true, message: "采购日期不能为空", trigger: "change"}
+    ],
+    receiptDate: [
+      {required: true, message: "入库日期不能为空", trigger: "change"}
+    ],
+    movementOrderNo: [
+      {
+        validator: (rule, value, callback) => {
+          if (data.form.receiptOrderType === '调拨入库' && !value) {
+            callback(new Error('调拨单号不能为空'))
+          } else {
+            callback()
+          }
+        },
+        trigger: 'blur'
+      }
     ],
   }
 });
@@ -403,12 +517,24 @@ const receiptScanBuffer = reactive({
   pending: false
 })
 
+/** 当前焦点所在的扫码字段：'location' | 'boxcode' | '' */
+const focusedScanField = ref('')
+/** 当前焦点所在字段对应的明细行 */
+const currentFocusedRow = ref(null)
+/** 当前高亮选中行（点击行触发） */
+const currentRow = ref(null)
+
 // 器材详情弹窗（点击明细行触发）
 const itemDetailDialog = reactive({
   visible: false,
   loading: false,
   data: null
 })
+
+/** 点击行：高亮选中，不弹窗 */
+const handleRowClick = (row) => {
+  currentRow.value = row
+}
 
 const handleDetailRowClick = async (row) => {
   itemDetailDialog.visible = true
@@ -457,7 +583,7 @@ const handleDetailRowClick = async (row) => {
   }
 }
 
-// 选择器材实例 start
+// 选择器材 start
 const showAddItem = async () => {
   if (!useWmsStore().itemCategoryTreeList?.length) {
     await useWmsStore().getItemCategoryTreeList()
@@ -476,6 +602,23 @@ const calcLineAmount = (quantity, unitPrice) => {
   const qty = Number(quantity || 0)
   const price = Number(unitPrice || 0)
   return qty && price ? Number((qty * price).toFixed(2)) : 0
+}
+
+/** 根据月数和基准日期计算质保期到期时间 */
+const calcWarrantyExpiryDate = (months, baseDate) => {
+  if (!months || Number(months) <= 0) return undefined
+  const base = baseDate ? new Date(baseDate) : new Date()
+  base.setMonth(base.getMonth() + Number(months))
+  const y = base.getFullYear()
+  const m = String(base.getMonth() + 1).padStart(2, '0')
+  const d = String(base.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
+/** 更新明细行的质保期月数并自动计算到期时间 */
+const updateWarrantyMonths = (row, months) => {
+  row.warrantyPeriodMonths = months
+  row.warrantyPeriod = calcWarrantyExpiryDate(months, form.value.receiptDate)
 }
 
 const normalizeReceiptInstance = (instance = {}) => ({
@@ -531,6 +674,7 @@ const syncReceiptDetail = (detail) => {
     generateItemInstance: 1,
     rackId: detail.rackId,
     locationId: detail.locationId,
+    warrantyPeriodMonths: detail.warrantyPeriodMonths,
     receiptItemInstances: (detail.receiptItemInstances || []).map(it => normalizeReceiptInstance(it)),
     recommendTargets: detail.recommendTargets ?? [],
     unitPrice,
@@ -632,6 +776,7 @@ const getReceiptItemInstanceList = () => {
     itemCategory: itemInstanceSelectDialog.query.itemCategory,
     itemId: itemInstanceSelectDialog.query.itemId,
     instanceCode: itemInstanceSelectDialog.query.instanceCode,
+    warehouseId: form.value.warehouseId,
     unreceivedOnly: true,
     instanceStatus: '待入库'
   }).then((res) => {
@@ -652,7 +797,7 @@ const isReceiptItemInstanceSelectable = (row) => {
 
 const handleConfirmReceiptItemInstance = () => {
   if (!itemInstanceSelectDialog.selection.length) {
-    ElMessage.error('请选择器材实例')
+    ElMessage.error('请选择器材')
     return
   }
   const newDetails = itemInstanceSelectDialog.selection.map(item => createReceiptDetailFromInstance(item))
@@ -661,12 +806,7 @@ const handleConfirmReceiptItemInstance = () => {
   batchLoadRecommendTargets(newDetails)
   recalculateOrderSummary()
 }
-// 选择器材实例 end
-
-const isTypingTarget = (event) => {
-  const tagName = event?.target?.tagName
-  return ['INPUT', 'TEXTAREA'].includes(tagName) || event?.target?.isContentEditable
-}
+// 选择器材 end
 
 const handleScanAddReceiptInstance = async (instanceCode) => {
   if (!form.value.warehouseId || !form.value.areaId) {
@@ -674,7 +814,7 @@ const handleScanAddReceiptInstance = async (instanceCode) => {
     return false
   }
   if (form.value.details.some(detail => detail.instanceCode === instanceCode)) {
-    ElMessage.warning(`器材实例 ${instanceCode} 已在当前单据中`)
+    ElMessage.warning(`器材 ${instanceCode} 已在当前单据中`)
     return false
   }
   try {
@@ -684,7 +824,7 @@ const handleScanAddReceiptInstance = async (instanceCode) => {
       return false
     }
     if (form.value.details.some(detail => detail.instanceCode === item.instanceCode)) {
-      ElMessage.warning(`器材实例 ${instanceCode} 已在当前单据中`)
+      ElMessage.warning(`器材 ${instanceCode} 已在当前单据中`)
       return false
     }
     const detail = createReceiptDetailFromInstance(item)
@@ -698,37 +838,6 @@ const handleScanAddReceiptInstance = async (instanceCode) => {
   }
 }
 
-const handleScanLocation = async (locationCode) => {
-  if (!form.value.warehouseId) {
-    ElMessage.warning('请先选择仓库')
-    return false
-  }
-  if (!form.value.details.length) {
-    ElMessage.warning('请先添加器材后再扫码货位')
-    return false
-  }
-  try {
-    const res = await listLocationNoPage({
-      warehouseId: form.value.warehouseId,
-      locationCode
-    })
-    const locations = res.data || []
-    const location = locations.find(l => l.locationCode === locationCode) || locations[0]
-    if (!location?.id) {
-      ElMessage.error(`未找到货位：${locationCode}`)
-      return false
-    }
-    // 赋值给最后一条明细（最新添加的），自动带出货架、库区
-    const lastDetail = form.value.details[form.value.details.length - 1]
-    applyLocationToDetail(lastDetail, location)
-    ElMessage.success(`已设置货位：${location.locationName || locationCode}`)
-    return true
-  } catch (e) {
-    ElMessage.error(`未找到货位：${locationCode}`)
-    return false
-  }
-}
-
 /** 将货位信息应用到明细行，自动带出货架、库区 */
 const applyLocationToDetail = (detail, location) => {
   detail.locationId = location.id
@@ -737,6 +846,71 @@ const applyLocationToDetail = (detail, location) => {
   }
   if (location.areaId) {
     detail.areaId = location.areaId
+  }
+}
+
+/** 行内货位字段扫码处理（焦点在 LocationSelect 时触发） */
+const handleInlineLocationScan = async (code, row) => {
+  if (!form.value.warehouseId) {
+    ElMessage.warning('请先选择仓库')
+    return
+  }
+  // 尝试作为货位码：含至少两个 '-'，提取货架编码验证
+  const dashParts = code.split('-')
+  if (dashParts.length >= 3) {
+    const rackCode = dashParts.slice(0, -2).join('-')
+    try {
+      const rackRes = await listRackNoPage({ warehouseId: form.value.warehouseId, rackCode })
+      const racks = rackRes.data || []
+      if (racks.length) {
+        const locRes = await listLocationNoPage({ warehouseId: form.value.warehouseId, locationCode: code, pageSize: 99999 })
+        const locations = locRes.data || []
+        const location = locations.find(l => l.locationCode === code) || locations[0]
+        if (location?.id) {
+          applyLocationToDetail(row, location)
+          ElMessage.success(`已设置货位：${location.locationName || code}`)
+          return
+        }
+      }
+    } catch (e) { /* 货位查询失败，继续尝试箱码 */ }
+  }
+  // 未匹配货位，尝试是否为箱码（仅提示，不自动填入货位）
+  try {
+    const boxRes = await getBoxByCode(code)
+    if (boxRes.data?.id) {
+      ElMessage.warning(`识别为箱码：${code}，请点箱码格后再扫`)
+      return
+    }
+  } catch (e) { /* 箱码查询失败 */ }
+  ElMessage.error(`未识别的编码：${code}`)
+}
+
+/** 行内箱码字段扫码处理（焦点在箱码 input 时触发） */
+const handleInlineBoxScan = async (code, row) => {
+  try {
+    const boxRes = await getBoxByCode(code)
+    if (boxRes.data?.id) {
+      row.boxCode = code
+      ElMessage.success(`已设置箱码：${code}`)
+      return
+    }
+  } catch (e) { /* 箱码查询失败 */ }
+  ElMessage.error(`未找到箱码：${code}`)
+}
+
+/** 箱码字段手动输入后按 Enter 验证 */
+const handleBoxCodeEnter = async (row) => {
+  const code = row.boxCode?.trim()
+  if (!code) return
+  try {
+    const boxRes = await getBoxByCode(code)
+    if (boxRes.data?.id) {
+      ElMessage.success(`箱码验证通过：${code}`)
+    } else {
+      ElMessage.warning(`未找到箱码：${code}，已保留输入值`)
+    }
+  } catch (e) {
+    ElMessage.warning(`箱码验证失败，已保留输入值`)
   }
 }
 
@@ -758,28 +932,45 @@ const handleLocationSelectChange = async (detail, locationId) => {
 }
 
 const handleReceiptScanKeydown = async (event) => {
-  if (isViewMode.value || loading.value || receiptScanBuffer.pending || isTypingTarget(event)) {
-    return
-  }
+  if (isViewMode.value || loading.value || receiptScanBuffer.pending) return
+
   const now = Date.now()
   if (now - receiptScanBuffer.lastTime > 120) {
     receiptScanBuffer.value = ''
   }
   receiptScanBuffer.lastTime = now
+
   if (event.key === 'Enter') {
     const scannedCode = receiptScanBuffer.value.trim()
     receiptScanBuffer.value = ''
-    if (!scannedCode) {
+
+    // 焦点在货位或箱码字段时 → 字段级扫码
+    if (focusedScanField.value === 'location' && currentFocusedRow.value) {
+      if (!scannedCode) return
+      receiptScanBuffer.pending = true
+      try {
+        await handleInlineLocationScan(scannedCode, currentFocusedRow.value)
+      } finally {
+        receiptScanBuffer.pending = false
+      }
       return
     }
+    if (focusedScanField.value === 'boxcode' && currentFocusedRow.value) {
+      if (!scannedCode) return
+      receiptScanBuffer.pending = true
+      try {
+        await handleInlineBoxScan(scannedCode, currentFocusedRow.value)
+      } finally {
+        receiptScanBuffer.pending = false
+      }
+      return
+    }
+
+    // 全局扫码：只识别器材
+    if (!scannedCode) return
     receiptScanBuffer.pending = true
     try {
-      // 优先尝试作为器材实例编码
-      const added = await handleScanAddReceiptInstance(scannedCode)
-      if (!added) {
-        // 未匹配到器材实例，尝试作为货位编码
-        await handleScanLocation(scannedCode)
-      }
+      await handleScanAddReceiptInstance(scannedCode)
     } finally {
       receiptScanBuffer.pending = false
     }
@@ -790,8 +981,185 @@ const handleReceiptScanKeydown = async (event) => {
   }
 }
 
-// 初始化receipt-order-form ref
 const receiptForm = ref()
+const detailTableRef = ref()
+const selectedDetails = ref([])
+
+const handleDetailSelectionChange = (selection) => {
+  selectedDetails.value = selection
+}
+
+// ---- 批量设置 ----
+const batchDialog = reactive({
+  visible: false,
+  form: {
+    locationId: undefined,
+    boxCode: '',
+    qualityGrade: undefined,
+    warrantyPeriodMonths: undefined,
+    warrantyExpiryPreview: '',
+    remark: undefined,
+  },
+  scanResult: '',
+  scanResultType: 'success',
+  _scanBuffer: '',
+  _lastTime: 0,
+  _pending: false,
+})
+
+const resetBatchForm = () => {
+  batchDialog.form.locationId = undefined
+  batchDialog.form.boxCode = ''
+  batchDialog.form.qualityGrade = undefined
+  batchDialog.form.warrantyPeriodMonths = undefined
+  batchDialog.form.warrantyExpiryPreview = ''
+  batchDialog.form.remark = undefined
+  batchDialog.scanResult = ''
+}
+
+const showBatchSetting = () => {
+  if (!selectedDetails.value.length) {
+    ElMessage.warning('请先勾选需要批量设置的明细行')
+    return
+  }
+  resetBatchForm()
+  batchDialog.visible = true
+}
+
+const handleBatchDialogOpened = () => {
+  window.addEventListener('keydown', handleBatchScanKeydown)
+}
+const handleBatchDialogClosed = () => {
+  window.removeEventListener('keydown', handleBatchScanKeydown)
+}
+
+/** 货位下拉变化时，同步带出货架、库区（与明细行逻辑一致） */
+const handleBatchLocationChange = async (locationId) => {
+  if (!locationId) return
+  try {
+    const res = await getLocation(locationId)
+    if (res.data) {
+      // 只记住 locationId，具体应用到明细行时再带出 rackId/areaId
+    }
+  } catch (e) { /* 取不到时保持现状 */ }
+}
+
+/** 批量扫码键盘监听（弹窗打开期间接管全局 keydown） */
+const handleBatchScanKeydown = async (event) => {
+  if (batchDialog._pending) return
+  const tagName = event?.target?.tagName
+  // 允许在 input/textarea 中正常打字，但 Enter 仍然触发扫码解析
+  if (['INPUT', 'TEXTAREA'].includes(tagName) && event.key !== 'Enter') {
+    return
+  }
+  const now = Date.now()
+  if (now - batchDialog._lastTime > 120) {
+    batchDialog._scanBuffer = ''
+  }
+  batchDialog._lastTime = now
+  if (event.key === 'Enter') {
+    const scannedCode = batchDialog._scanBuffer.trim()
+    batchDialog._scanBuffer = ''
+    if (!scannedCode) return
+    batchDialog._pending = true
+    try {
+      await handleBatchScanCode(scannedCode)
+    } finally {
+      batchDialog._pending = false
+    }
+    return
+  }
+  if (event.key.length === 1) {
+    batchDialog._scanBuffer += event.key
+  }
+}
+
+/** 扫码识别：先试货位，再试箱码 */
+const handleBatchScanCode = async (code) => {
+  if (!form.value.warehouseId) {
+    batchDialog.scanResult = '请先在主表单选择仓库'
+    batchDialog.scanResultType = 'warning'
+    return
+  }
+  // 尝试作为货位码：含至少两个 '-'，去掉最后两段（行-列）得到货架编码
+  const dashParts = code.split('-')
+  if (dashParts.length >= 3) {
+    // 货架编码 = 去掉最后两段
+    const rackCode = dashParts.slice(0, -2).join('-')
+    try {
+      const rackRes = await listRackNoPage({ warehouseId: form.value.warehouseId, rackCode })
+      const racks = rackRes.data || []
+      if (racks.length) {
+        // 货架存在，再用完整编码查货位
+        const locRes = await listLocationNoPage({ warehouseId: form.value.warehouseId, locationCode: code, pageSize: 99999 })
+        const locations = locRes.data || []
+        const location = locations.find(l => l.locationCode === code) || locations[0]
+        if (location?.id) {
+          batchDialog.form.locationId = location.id
+          batchDialog.scanResult = `识别为货位：${location.locationName || code}`
+          batchDialog.scanResultType = 'success'
+          return
+        }
+      }
+    } catch (e) { /* 货位查询失败，继续尝试箱码 */ }
+  }
+  // 尝试作为箱码
+  try {
+    const boxRes = await getBoxByCode(code)
+    if (boxRes.data?.id) {
+      batchDialog.form.boxCode = code
+      batchDialog.scanResult = `识别为箱码：${code}`
+      batchDialog.scanResultType = 'success'
+      return
+    }
+  } catch (e) { /* 箱码查询失败 */ }
+  // 均未匹配
+  batchDialog.scanResult = `未识别的编码：${code}`
+  batchDialog.scanResultType = 'error'
+}
+
+/** 确认批量设置：只覆盖有值字段 */
+const handleConfirmBatchSetting = () => {
+  const { locationId, boxCode, qualityGrade, warrantyPeriodMonths, remark } = batchDialog.form
+  const rows = selectedDetails.value
+  if (!rows.length) {
+    ElMessage.warning('无勾选的明细行')
+    return
+  }
+  let appliedCount = 0
+  rows.forEach(row => {
+    let changed = false
+    if (locationId) {
+      row.locationId = locationId
+      // 同步带出货架、库区
+      const loc = locationOptions.value.find(l => l.id === locationId)
+      if (loc) {
+        if (loc.rackId) row.rackId = loc.rackId
+        if (loc.areaId) row.areaId = loc.areaId
+      }
+      changed = true
+    }
+    if (boxCode !== '' && boxCode != null) {
+      row.boxCode = boxCode
+      changed = true
+    }
+    if (qualityGrade) {
+      row.qualityGrade = qualityGrade
+      changed = true
+    }
+    if (warrantyPeriodMonths != null && warrantyPeriodMonths !== '') {
+      updateWarrantyMonths(row, warrantyPeriodMonths)
+      changed = true
+    }
+    if (remark !== '' && remark != null) {
+      row.remark = remark
+      changed = true
+    }
+    if (changed) appliedCount++
+  })
+  batchDialog.visible = false
+  ElMessage.success(`已对 ${appliedCount} 条明细应用批量设置`)
+}
 
 const save = async () => {
   await proxy?.$modal.confirm('确认暂存入库单吗？');
@@ -804,11 +1172,11 @@ const validateReceiptInstancesBeforeSubmit = () => {
   for (const detail of form.value.details) {
     const quantity = Number(detail.quantity || 0)
     if (quantity !== 1) {
-      return '当前入库模式按器材实例执行，明细数量必须为1'
+      return '当前入库模式按器材执行，明细数量必须为1'
     }
     const instanceCode = String(detail.instanceCode || detail.receiptItemInstances?.[0]?.instanceCode || '').trim()
     if (!instanceCode) {
-      return '请先选择器材实例'
+      return '请先选择器材'
     }
     const uniqueKey = `CODE:${instanceCode}`
     if (instanceSet.has(uniqueKey)) {
@@ -817,7 +1185,7 @@ const validateReceiptInstancesBeforeSubmit = () => {
     instanceSet.add(uniqueKey)
   }
   if (duplicatedInstances.size) {
-    return `器材实例重复：${Array.from(duplicatedInstances).join('、')}`
+    return `器材重复：${Array.from(duplicatedInstances).join('、')}`
   }
   return ''
 }
@@ -860,6 +1228,8 @@ const doSave = async (receiptOrderStatus = 0) => {
         unit: it.unit,
         productIdentifier: it.productIdentifier,
         qualityGrade: it.qualityGrade,
+        warrantyPeriodMonths: it.warrantyPeriodMonths,
+        warrantyPeriod: it.warrantyPeriod,
         unitPrice: it.unitPrice,
         lineAmount: it.lineAmount,
         boxCode: it.boxCode,
@@ -883,6 +1253,7 @@ const doSave = async (receiptOrderStatus = 0) => {
       dispatchMode: form.value.dispatchMode,
       noticeOrg: form.value.noticeOrg,
       receiveUnit: form.value.receiveUnit,
+      movementOrderNo: form.value.movementOrderNo,
       purchaseDate: form.value.purchaseDate,
       receiptDate: form.value.receiptDate,
       remark: form.value.remark,
@@ -956,6 +1327,8 @@ const doWarehousing = async () => {
         unit: it.unit,
         productIdentifier: it.productIdentifier,
         qualityGrade: it.qualityGrade,
+        warrantyPeriodMonths: it.warrantyPeriodMonths,
+        warrantyPeriod: it.warrantyPeriod,
         unitPrice: it.unitPrice,
         lineAmount: it.lineAmount,
         boxCode: it.boxCode,
@@ -980,6 +1353,7 @@ const doWarehousing = async () => {
       dispatchMode: form.value.dispatchMode,
       noticeOrg: form.value.noticeOrg,
       receiveUnit: form.value.receiveUnit,
+      movementOrderNo: form.value.movementOrderNo,
       purchaseDate: form.value.purchaseDate,
       receiptDate: form.value.receiptDate,
       remark: form.value.remark,
@@ -1126,6 +1500,16 @@ const handleDeleteDetail = (row, index) => {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+.instance-code-link {
+  color: var(--el-color-primary);
+  cursor: pointer;
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
 }
 
 </style>

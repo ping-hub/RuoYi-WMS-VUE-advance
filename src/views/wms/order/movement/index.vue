@@ -112,7 +112,7 @@
             {{ row.createTime ? parseTime(row.createTime, '{y}-{m}-{d} {h}:{i}') : '-' }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" align="right" class-name="small-padding fixed-width" width="200">
+        <el-table-column label="操作" align="right" class-name="small-padding fixed-width" width="240">
           <template #default="scope">
             <el-popover
               placement="left"
@@ -139,6 +139,7 @@
                 <el-button link type="danger" @click="handleDelete(scope.row)" v-hasPermi="['wms:movement:all']" :disabled="[-1, 1].includes(scope.row.movementOrderStatus)">删除</el-button>
               </template>
             </el-popover>
+            <el-button link type="primary" @click="handlePrint(scope.row)" v-hasPermi="['wms:movement:all']">打印</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -157,7 +158,7 @@
 </template>
 
 <script setup name="MovementOrder">
-import {listMovementOrder, delMovementOrder} from "@/api/wms/movementOrder";
+import {listMovementOrder, delMovementOrder, getMovementOrder} from "@/api/wms/movementOrder";
 import {getCurrentInstance, reactive, ref, toRefs} from "vue";
 import { useRoute, useRouter } from "vue-router";
 import {useWmsStore} from "../../../../store/modules/wms";
@@ -165,6 +166,8 @@ import {ElMessageBox} from "element-plus";
 import WarehouseCascader from "@/views/components/WarehouseCascader.vue";
 import { resolveRoutePath } from "@/utils/routeResolver";
 import { getUserSelectList } from "@/api/wms/common";
+import { buildZhuanZhuangPanels } from "@/components/PrintTemplate/movement-zhuanzhuang-panel";
+import { buildTongZhuangPanels } from "@/components/PrintTemplate/movement-tongzhuang-panel";
 
 const { proxy } = getCurrentInstance();
 const route = useRoute();
@@ -288,6 +291,98 @@ function handleGoDetail(row) {
 function getRowKey(row) {
   return row.id
 }
+
+/** 打印调拨单（根据调拨类型自动选择专装/通装模板） */
+async function handlePrint(row) {
+  const res = await getMovementOrder(row.id)
+  const order = res.data
+  const isZhuanZhuang = order.movementType === '专装'
+
+  // 构建表格行数据
+  let table = []
+  if (order.details?.length) {
+    table = order.details.map((detail, index) => ({
+      serialNo: String(index + 1),
+      itemCode: detail.itemCode || '',
+      itemName: detail.itemName || detail.itemSku?.item?.itemName || '',
+      skuName: detail.skuName || detail.itemSku?.skuName || '',
+      unitName: detail.unit || detail.itemSku?.item?.unitOfMeasure || detail.itemSku?.item?.unit || '',
+      productIdentifier: detail.productIdentifier || '',
+      dispatchLevel: detail.qualityGrade || '',
+      dispatchQuantity: detail.quantity ? String(detail.quantity) : '',
+      unitPrice: detail.unitPrice || '',
+      lineAmount: detail.lineAmount || '',
+      remark: detail.remark || ''
+      // 实发/实收列不传数据，留空供手写
+    }))
+  }
+
+  // 根据调拨类型选择面板构建器
+  const { panels, pageDataMap } = isZhuanZhuang
+    ? buildZhuanZhuangPanels(table)
+    : buildTongZhuangPanels(table)
+
+  const totalPages = panels.length
+  pageDataMap.totalPages = totalPages
+  for (let i = 0; i < totalPages; i++) {
+    pageDataMap[`pageNo${i}`] = `第${i + 1}页/共${totalPages}页`
+  }
+  const template = { panels }
+
+  // 构建打印数据（头部字段）
+  const topValueFields = isZhuanZhuang
+    ? new Set(['dispatchBasis', 'dispatchMode', 'fromUnit', 'toUnit', 'fromStation', 'toStation', 'fromAddress', 'toAddress', 'dispatchDate', 'effectiveDate', 'remark'])
+    : new Set(['dispatchBasis', 'dispatchPurpose', 'fromUnit', 'toUnit', 'toStation', 'contactAddress', 'dispatchMode', 'effectiveDate', 'issueDate', 'remark'])
+
+  const printData = {
+    dispatchBasis: order.dispatchBasis || '',
+    dispatchPurpose: order.dispatchPurpose || '',
+    dispatchMode: order.dispatchMode || '',
+    fromUnit: order.fromUnit || '',
+    toUnit: order.toUnit || '',
+    fromStation: order.fromStation || '',
+    toStation: order.toStation || '',
+    fromAddress: order.fromAddress || '',
+    toAddress: order.toAddress || '',
+    contactAddress: order.contactAddress || '',
+    dispatchDate: proxy.parseTime(order.dispatchDate, '{y}-{m}-{d}') || '',
+    effectiveDate: proxy.parseTime(order.effectiveDate, '{y}-{m}-{d}') || '',
+    issueDate: proxy.parseTime(order.issueDate, '{y}-{m}-{d}') || '',
+    remark: order.remark || '',
+    ...pageDataMap
+  }
+
+  // 替换单据头中的字段值为实际数据，同时替换页码
+  template.panels?.forEach((panel, idx) => {
+    panel.printElements?.forEach(element => {
+      const field = element?.options?.field
+      if (field && topValueFields.has(field)) {
+        element.options.title = printData[field] || ' '
+        delete element.options.field
+        delete element.options.fields
+      }
+      if (field === `pageNo${idx}`) {
+        element.options.title = printData[field] || `第${idx + 1}页/共${totalPages}页`
+        delete element.options.field
+        delete element.options.fields
+      }
+    })
+  })
+
+  let printTemplate = new proxy.$hiprint.PrintTemplate({ template })
+  printTemplate.print(printData, {}, {
+    styleHandler: () => {
+      let css = '<link href="https://cyl-press.oss-cn-shenzhen.aliyuncs.com/print-lock.css" media="print" rel="stylesheet">';
+      css += `<style>
+        .hiprint-printElement-table, .hiprint-printElement-table table { border-collapse: collapse !important; }
+        .hiprint-printElement-table td { border-color: #aaa !important; border-width: 0.5pt !important; }
+        .hiprint-printElement-table th { border-color: #aaa !important; border-width: 0.5pt !important; background-color: #f0f0f0 !important; font-weight: 600 !important; }
+      </style>`;
+      return css
+    }
+  })
+}
+
 getList();
 // 加载用户列表
 getUserSelectList().then(res => {

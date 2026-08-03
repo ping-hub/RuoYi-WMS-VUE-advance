@@ -230,7 +230,7 @@
         <div class="receipt-order-content">
           <div class="flex-space-between mb8">
             <div>
-              <el-tag type="info">仅支持选择当前源仓库/源库区下的在库器材实例</el-tag>
+              <el-tag type="info">仅支持选择当前源仓库/源库区下的在库器材</el-tag>
             </div>
             <el-popover
               placement="left"
@@ -251,10 +251,14 @@
             :data="form.details"
             border
             empty-text="暂无调拨明细"
-            @row-click="handleDetailRowClick"
-            style="cursor: pointer"
+            highlight-current-row
+            @row-click="handleRowClick"
           >
-            <el-table-column label="器材实例编码" prop="instanceCode" min-width="160" show-overflow-tooltip />
+            <el-table-column label="器材识别码" min-width="160">
+              <template #default="{ row }">
+                <span class="instance-code-link" @click.stop="handleDetailRowClick(row)">{{ row.instanceCode || '-' }}</span>
+              </template>
+            </el-table-column>
             <el-table-column label="器材名称" min-width="140">
               <template #default="{ row }">
                 <span>{{ row.itemName || row.itemSku?.item?.itemName || '-' }}</span>
@@ -306,7 +310,7 @@
       <el-dialog v-model="itemDetailDialog.visible" title="器材详情" width="520px" append-to-body>
         <div v-loading="itemDetailDialog.loading">
           <el-descriptions v-if="itemDetailDialog.data" :column="2" border>
-            <el-descriptions-item label="实例编码">{{ itemDetailDialog.data.instanceCode || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="器材识别码">{{ itemDetailDialog.data.instanceCode || '-' }}</el-descriptions-item>
             <el-descriptions-item label="器材名称">{{ itemDetailDialog.data.itemName || '-' }}</el-descriptions-item>
             <el-descriptions-item label="器材编码">{{ itemDetailDialog.data.itemCode || '-' }}</el-descriptions-item>
             <el-descriptions-item label="规格型号">{{ itemDetailDialog.data.skuName || '-' }}</el-descriptions-item>
@@ -321,7 +325,7 @@
           <el-button @click="itemDetailDialog.visible = false">关闭</el-button>
         </template>
       </el-dialog>
-      <el-dialog v-model="itemInstanceDialog.visible" title="选择器材实例" width="1100px" append-to-body>
+      <el-dialog v-model="itemInstanceDialog.visible" title="选择器材" width="1100px" append-to-body>
         <div v-if="movementTypeCategoryLabel" style="margin-bottom: 10px">
           <el-tag type="info">已按调拨类型「{{ movementTypeCategoryLabel }}」自动筛选器材分类</el-tag>
         </div>
@@ -354,10 +358,10 @@
               @keyup.enter="getItemInstanceList"
             />
           </el-form-item>
-          <el-form-item label="器材实例编码" label-width="100px">
+          <el-form-item label="器材识别码" label-width="100px">
             <el-input
               v-model="itemInstanceDialog.query.instanceCode"
-              placeholder="请输入器材实例编码"
+              placeholder="请输入器材识别码"
               clearable
               style="width: 150px"
               @keyup.enter="getItemInstanceList"
@@ -375,7 +379,7 @@
           row-key="id"
         >
           <el-table-column type="selection" width="55" :selectable="isItemInstanceSelectable" />
-          <el-table-column label="器材实例编码" prop="instanceCode" min-width="160" />
+          <el-table-column label="器材识别码" prop="instanceCode" min-width="160" />
           <el-table-column label="器材名称" prop="itemName" min-width="160" />
           <el-table-column label="器材规格" prop="skuName" min-width="160" />
           <el-table-column label="库区" prop="areaName" width="140" />
@@ -467,7 +471,7 @@ const loadRackOptions = async () => {
 const loadLocationOptions = async () => {
   if (!form.value.targetWarehouseId) { locationOptions.value = []; return }
   try {
-    const query = { warehouseId: form.value.targetWarehouseId }
+    const query = { warehouseId: form.value.targetWarehouseId, pageSize: 99999 }
     if (form.value.targetAreaId) query.areaId = form.value.targetAreaId
     const res = await listLocationNoPage(query)
     locationOptions.value = res.data || []
@@ -521,7 +525,15 @@ const itemInstanceDialog = reactive({
   }
 })
 
-// 器材详情弹窗（点击明细行触发）
+/** 当前高亮选中行（点击行触发） */
+const currentRow = ref(null)
+
+/** 点击行：高亮选中，不弹窗 */
+const handleRowClick = (row) => {
+  currentRow.value = row
+}
+
+// 器材详情弹窗（点击器材识别码触发）
 const itemDetailDialog = reactive({
   visible: false,
   loading: false,
@@ -681,11 +693,11 @@ const addItemInstancesToMovement = async (items) => {
   const newRows = []
   for (const item of items) {
     if (form.value.details.some(detail => detail.instanceCode === item.instanceCode)) {
-      throw new Error(`器材实例编码 ${item.instanceCode} 已添加`)
+      throw new Error(`器材识别码 ${item.instanceCode} 已添加`)
     }
     const matchedInventory = matchInventoryDetailByItemInstance(item)
     if (!matchedInventory) {
-      throw new Error(`器材实例编码 ${item.instanceCode} 未匹配到当前源位置的可用库存明细`)
+      throw new Error(`器材识别码 ${item.instanceCode} 未匹配到当前源位置的可用库存明细`)
     }
     newRows.push(createMovementDetailRow(item, matchedInventory))
   }
@@ -727,7 +739,8 @@ const createMovementDetailRow = (item, matchedInventory) => {
 const findCategoryByName = (nodes, name) => {
   if (!nodes?.length || !name) return undefined
   for (const node of nodes) {
-    if (node.label === name) return node.id
+    // 模糊匹配：字典值 "通装" 可匹配分类名 "通装器材"，反之亦然
+    if (node.label === name || node.label.includes(name) || name.includes(node.label)) return node.id
     const found = findCategoryByName(node.children, name)
     if (found) return found
   }
@@ -795,14 +808,14 @@ const isItemInstanceSelectable = (row) => {
 
 const handleConfirmItemInstance = async () => {
   if (!itemInstanceDialog.selection.length) {
-    ElMessage.error('请选择器材实例编码')
+    ElMessage.error('请选择器材识别码')
     return
   }
   try {
     await addItemInstancesToMovement(itemInstanceDialog.selection)
     itemInstanceDialog.visible = false
   } catch (e) {
-    ElMessage.error(e?.message || '器材实例编码添加失败')
+    ElMessage.error(e?.message || '器材识别码添加失败')
   }
 }
 // 选择器材 end
@@ -1097,8 +1110,9 @@ watch(() => form.value.targetLocationId, (value) => {
 })
 
 // 切换调拨类型时清空明细（不同分类的器材不应混在同一单据）
-watch(() => form.value.movementType, () => {
-  if (form.value.details?.length) {
+// 仅在用户主动切换时清空，加载已有单据（form.value.id 已存在）时不清空
+watch(() => form.value.movementType, (newVal, oldVal) => {
+  if (oldVal !== undefined && !form.value.id && form.value.details?.length) {
     form.value.details = []
     handleChangeQuantity()
   }
@@ -1182,6 +1196,16 @@ const handleDeleteDetail = (row, index) => {
 .item-instance-search-form__action {
   margin-left: auto !important;
   margin-right: 0 !important;
+}
+
+.instance-code-link {
+  color: var(--el-color-primary);
+  cursor: pointer;
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
 }
 
 </style>

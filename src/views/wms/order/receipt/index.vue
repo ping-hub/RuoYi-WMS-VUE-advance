@@ -158,7 +158,8 @@ import { useRoute, useRouter } from "vue-router";
 import {useWmsStore} from "../../../../store/modules/wms";
 import {ElMessageBox} from "element-plus";
 import { resolveRoutePath } from "@/utils/routeResolver";
-import receiptPanel from "@/components/PrintTemplate/receipt-panel";
+import receiptPanelModule from "@/components/PrintTemplate/receipt-panel";
+const { buildReceiptPanels } = receiptPanelModule;
 
 const { proxy } = getCurrentInstance();
 const route = useRoute();
@@ -296,8 +297,8 @@ async function handlePrint(row) {
       itemName: sku.itemName,
       skuName: sku.skuName,
       unitName: sku.unitName,
-      dispatchLevel: '',
-      dispatchQuantity: '',
+      dispatchLevel: sku.qualityLevel,
+      dispatchQuantity: sku.totalQuantity.toFixed(0),
       receiptLevel: sku.qualityLevel,
       receiptQuantity: sku.totalQuantity.toFixed(0),
       unitPrice: sku.unitPrice,
@@ -305,28 +306,19 @@ async function handlePrint(row) {
       remark: sku.remark
     }))
   }
-  if (table.length < 6) {
-    const startIndex = table.length
-    table.push(
-      ...Array.from({ length: 6 - table.length }, (_, index) => ({
-        serialNo: String(startIndex + index + 1),
-        itemName: '',
-        skuName: '',
-        unitName: '',
-        dispatchLevel: '',
-        dispatchQuantity: '',
-        receiptLevel: '',
-        receiptQuantity: '',
-        unitPrice: '',
-        lineAmount: '',
-        remark: ''
-      }))
-    )
+
+  // 动态生成多页面板（每页10条，签字仅最后一页）
+  const { panels, pageDataMap } = buildReceiptPanels(table)
+  const totalPages = panels.length
+  pageDataMap.totalPages = totalPages
+  // 为每页添加页码字段
+  for (let i = 0; i < totalPages; i++) {
+    pageDataMap[`pageNo${i}`] = `第${i + 1}页/共${totalPages}页`
   }
+  const template = { panels }
+
+  // 构建打印数据：单据头字段 + 每页独立表格数据
   const printData = {
-    receiptOrderNo: receiptOrder.receiptOrderNo,
-    receiptOrderType: receiptOrder.receiptOrderType,
-    receiptOrderStatus: proxy.selectDictLabel(wms_receipt_status.value, receiptOrder.receiptOrderStatus),
     basisNo: receiptOrder.basisNo,
     dispatchMode: receiptOrder.dispatchMode,
     noticeOrg: receiptOrder.noticeOrg,
@@ -336,21 +328,11 @@ async function handlePrint(row) {
     purchaserName: receiptOrder.purchaserName,
     acceptorName: receiptOrder.acceptorName,
     keeperName: receiptOrder.keeperName,
-    warehouseName: useWmsStore().warehouseMap.get(receiptOrder.warehouseId)?.warehouseName,
-    warehouse: useWmsStore().warehouseMap.get(receiptOrder.warehouseId)?.warehouseName,
-    areaName: useWmsStore().areaMap.get(receiptOrder.areaId)?.areaName,
-    area: useWmsStore().areaMap.get(receiptOrder.areaId)?.areaName,
-    totalQuantity: Number(receiptOrder.totalQuantity || 0).toFixed(0),
-    payableAmount: ((receiptOrder.payableAmount || receiptOrder.payableAmount === 0) ? (receiptOrder.payableAmount + '元') : ''),
-    createBy: receiptOrder.createBy,
-    createTime: proxy.parseTime(receiptOrder.createTime, '{mm}-{dd} {hh}:{ii}'),
-    updateBy: receiptOrder.updateBy,
-    updateTime: proxy.parseTime(receiptOrder.updateTime, '{mm}-{dd} {hh}:{ii}'),
-    remark: receiptOrder.remark,
-    table
+    ...pageDataMap  // tablePage0, tablePage1, ... 每页独立数据
   }
-  const template = JSON.parse(JSON.stringify(receiptPanel))
-  template.panels?.forEach(panel => {
+
+  // 替换单据头中的字段值为实际数据，同时替换页码
+  template.panels?.forEach((panel, idx) => {
     panel.printElements?.forEach(element => {
       const field = element?.options?.field
       if (field && topValueFields.has(field)) {
@@ -358,12 +340,24 @@ async function handlePrint(row) {
         delete element.options.field
         delete element.options.fields
       }
+      // 替换页码字段为格式化文本
+      if (field === `pageNo${idx}`) {
+        element.options.title = printData[field] || `第${idx + 1}页/共${totalPages}页`
+        delete element.options.field
+        delete element.options.fields
+      }
     })
   })
-  let printTemplate = new proxy.$hiprint.PrintTemplate({template})
+
+  let printTemplate = new proxy.$hiprint.PrintTemplate({ template })
   printTemplate.print(printData, {}, {
     styleHandler: () => {
       let css = '<link href="https://cyl-press.oss-cn-shenzhen.aliyuncs.com/print-lock.css" media="print" rel="stylesheet">';
+      css += `<style>
+        .hiprint-printElement-table, .hiprint-printElement-table table { border-collapse: collapse !important; }
+        .hiprint-printElement-table td { border-color: #aaa !important; border-width: 0.5pt !important; }
+        .hiprint-printElement-table th { border-color: #aaa !important; border-width: 0.5pt !important; background-color: #f0f0f0 !important; font-weight: 600 !important; }
+      </style>`;
       return css
     }
   })

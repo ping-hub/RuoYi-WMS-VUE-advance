@@ -33,8 +33,8 @@
             </el-form-item>
           </el-col>
           <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
-            <el-form-item label="器材实例编码" prop="instanceCode" label-width="100px">
-              <el-input v-model="queryParams.instanceCode" placeholder="请输入器材实例编码" clearable @keyup.enter="handleInstanceCodeQuery" />
+            <el-form-item label="器材识别码" prop="instanceCode" label-width="100px">
+              <el-input v-model="queryParams.instanceCode" placeholder="请输入器材识别码" clearable @keyup.enter="handleInstanceCodeQuery" />
             </el-form-item>
           </el-col>
           <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
@@ -135,10 +135,10 @@
     <el-dialog title="借出登记" v-model="borrowDialog.visible" width="760px" append-to-body :close-on-click-modal="false">
       <div class="form-tip">带 * 为必填项</div>
       <el-form ref="borrowFormRef" :model="borrowDialog.form" :rules="borrowRules" label-width="110px">
-        <el-form-item label="器材实例编码" prop="instanceCode">
+        <el-form-item label="器材识别码" prop="instanceCode">
           <el-select
             v-model="borrowDialog.form.instanceCode"
-            placeholder="请选择器材实例编码"
+            placeholder="请选择器材识别码"
             filterable
             clearable
             style="width: 100%"
@@ -153,7 +153,7 @@
           </el-select>
         </el-form-item>
         <el-descriptions v-if="borrowDialog.currentItem.id" :column="2" border class="mb16">
-          <el-descriptions-item label="器材实例编码">{{ borrowDialog.currentItem.instanceCode || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="器材识别码">{{ borrowDialog.currentItem.instanceCode || '-' }}</el-descriptions-item>
           <el-descriptions-item label="器材">{{ borrowDialog.currentItem.itemName || '-' }}</el-descriptions-item>
           <el-descriptions-item label="器材规格">{{ borrowDialog.currentItem.skuName || '-' }}</el-descriptions-item>
           <el-descriptions-item label="当前状态">
@@ -235,10 +235,10 @@
 
     <el-dialog title="归还登记" v-model="returnDialog.visible" width="760px" append-to-body :close-on-click-modal="false">
       <el-form ref="returnFormRef" :model="returnDialog.form" label-width="100px">
-        <el-form-item label="器材实例编码" prop="instanceCode">
+        <el-form-item label="器材识别码" prop="instanceCode">
           <el-select
             v-model="returnDialog.form.instanceCode"
-            placeholder="请选择器材实例编码"
+            placeholder="请选择器材识别码"
             filterable
             clearable
             style="width: 100%"
@@ -259,7 +259,7 @@
             <div class="return-record-value">{{ returnDialog.currentRecord.borrowNo || '-' }}</div>
           </div>
           <div class="return-record-item">
-            <div class="return-record-label">器材实例编码</div>
+            <div class="return-record-label">器材识别码</div>
             <div class="return-record-value">{{ returnDialog.currentRecord.instanceCode || '-' }}</div>
           </div>
           <div class="return-record-item">
@@ -317,7 +317,7 @@
     <el-dialog title="借用详情" v-model="detailDialog.visible" width="860px" append-to-body>
       <el-descriptions :column="2" border class="borrow-detail-descriptions">
         <el-descriptions-item label="借用单号">{{ detailDialog.data.borrowNo || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="器材实例编码">{{ detailDialog.data.instanceCode || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="器材识别码">{{ detailDialog.data.instanceCode || '-' }}</el-descriptions-item>
         <el-descriptions-item label="借用状态">
           <dict-tag :options="wms_borrow_status" :value="detailDialog.data.borrowStatus" />
         </el-descriptions-item>
@@ -437,7 +437,7 @@ const detailDialog = reactive({
 
 const borrowRules = {
   instanceCode: [
-    { required: true, message: '器材实例编码不能为空', trigger: 'change' }
+    { required: true, message: '器材识别码不能为空', trigger: 'change' }
   ],
   borrower: [
     { required: true, message: '借用人不能为空', trigger: 'blur' }
@@ -713,17 +713,17 @@ const handleReturnInstanceChange = async (instanceCode) => {
     returnDialog.currentRecord = {};
     returnDialog.form.id = undefined;
     returnDialog.form.instanceCode = undefined;
-    ElMessage.error('未找到对应器材实例编码');
+    ElMessage.error('未找到对应器材识别码');
   }
 };
 
 const submitReturn = async () => {
   if (!returnDialog.form.instanceCode) {
-    proxy.$modal.msgError('请选择待归还的器材实例编码');
+    proxy.$modal.msgError('请选择待归还的器材识别码');
     return;
   }
   if (!returnDialog.form.id) {
-    proxy.$modal.msgError('当前器材实例不存在未归还借用记录');
+    proxy.$modal.msgError('当前器材不存在未归还借用记录');
     return;
   }
   const selectedReturnTime = parseDateTimeValue(returnDialog.form.returnTime);

@@ -543,7 +543,7 @@ async function submitForm() {
     try {
       const [rackRes, locationRes] = await Promise.all([
         getRack(form.value.rackId),
-        listLocationNoPage({ rackId: form.value.rackId })
+        listLocationNoPage({ rackId: form.value.rackId, pageSize: 99999 })
       ]);
       const locations = locationRes.data || [];
       const currentId = form.value.id == null ? undefined : String(form.value.id);

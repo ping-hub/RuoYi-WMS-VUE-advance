@@ -23,22 +23,17 @@
           <div class="safe-days-time">{{ safeDaysTime }}</div>
         </div>
 
-        <!-- 待办事项 -->
-        <div class="card card-todo">
-          <div class="card-title">待办事项（件）</div>
+        <!-- 借用单预警 -->
+        <div class="card card-todo card-clickable" @click="goToWarning('borrow')">
+          <div class="card-title">借用单预警（条）</div>
           <div class="todo-content">
             <div class="todo-left">
-              <div class="todo-value">{{ todoPendingCount }}<span class="todo-unit">件</span></div>
-              <div class="progress-bar-wrapper">
-                <div class="progress-label">{{ todoPercent }}%</div>
-                <div class="progress-bar-bg">
-                  <div class="progress-bar" :style="{ width: todoPercent + '%' }"></div>
-                </div>
-              </div>
+              <div class="todo-label">预警（条）</div>
+              <div class="todo-done-value" style="color:#faad14">{{ borrowWarningCount }}<span class="todo-unit">条</span></div>
             </div>
             <div class="todo-right">
-              <div class="todo-label">已办理事项（件）</div>
-              <div class="todo-done-value">{{ todoDoneCount }}<span class="todo-unit">件</span></div>
+              <div class="todo-label">已超期（条）</div>
+              <div class="todo-done-value" style="color:#ff4d4f">{{ borrowOverdueCount }}<span class="todo-unit">条</span></div>
             </div>
           </div>
         </div>
@@ -88,13 +83,6 @@
           </div>
           <div class="metric-card">
             <div class="metric-icon">
-              <svg viewBox="0 0 1024 1024" width="24" height="24"><path d="M512 64l-64 128H256v64h128l-32 64H256v64h64l-96 192h64l96-192h64v192h128V384h64l96 192h64l-96-192h64v-64h-96l-32-64h128v-64H576L512 64z" fill="#fff"/></svg>
-            </div>
-            <div class="metric-value">{{ coreMetrics.totalValue }}</div>
-            <div class="metric-label">总价值</div>
-          </div>
-          <div class="metric-card">
-            <div class="metric-icon">
               <svg viewBox="0 0 1024 1024" width="24" height="24"><path d="M192 832V320h128v512H192zM384 832V192h128v640H384zM576 832V448h128v384H576zM768 832V256h128v576H768z" fill="#fff"/></svg>
             </div>
             <div class="metric-value">{{ coreMetrics.totalQuantity }}</div>
@@ -133,7 +121,7 @@
       <!-- 右侧区域 -->
       <div class="col col-right">
         <!-- 库存预警 -->
-        <div class="card card-stock-warning">
+        <div class="card card-stock-warning card-clickable" @click="goToWarning('inventory')">
           <div class="card-title">库存预警（条）</div>
           <div class="stock-warning-content">
             <div class="stock-warning-left">
@@ -148,9 +136,9 @@
           </div>
         </div>
 
-        <!-- 保质期预警 -->
-        <div class="card card-expiry">
-          <div class="card-title">保质期预警（个）</div>
+        <!-- 质保期预警 -->
+        <div class="card card-expiry card-clickable" @click="goToWarning('warranty')">
+          <div class="card-title">质保期预警（个）</div>
           <div class="expiry-content">
             <div class="expiry-gauge" v-for="(g, idx) in expiryGauges" :key="idx">
               <div class="gauge-circle" :style="{ '--ring-color': g.color }">
@@ -179,9 +167,11 @@
 import { ref, nextTick, onMounted, onUnmounted } from 'vue';
 import * as echarts from 'echarts';
 import html2canvas from 'html2canvas';
-import { getSafeDays, getSourceStats, getCategoryStats, getInoutTrend, getQualityStats, getEnvLatest } from '@/api/wms/dashboard';
+import { getSafeDays, getSourceStats, getCategoryStats, getInoutTrend, getQualityStats, getEnvLatest, getWarrantyStats } from '@/api/wms/dashboard';
 import { getWarningSummary } from '@/api/wms/inventoryWarning';
-import { getMyTasksSummary } from '@/api/wms/myTasks';
+import { getBorrowOrderWarningStats } from '@/api/wms/borrowOrder';
+import { useRouter } from 'vue-router';
+import { resolveRoutePath } from '@/utils/routeResolver';
 
 const containerRef = ref(null);
 const currentTime = ref('');
@@ -189,16 +179,18 @@ const exporting = ref(false);
 const isFullscreen = ref(false);
 let timeTimer = null;
 let envTimer = null;
+const router = useRouter();
+
+// ========== 借用单预警数据 ==========
+const borrowWarningTotal = ref(0);
+const borrowWarningCount = ref(0);
+const borrowOverdueCount = ref(0);
+const borrowWarningPercent = ref(0);
 
 // ========== 环境监测实时数据 ==========
 const envTemp = ref('--');
 const envHum = ref('--');
 const envUpdateTime = ref('');
-
-// ========== 待办事项真实数据 ==========
-const todoPendingCount = ref(0);
-const todoDoneCount = ref(0);
-const todoPercent = ref(0);
 
 // ========== 真实数据 ref ==========
 const safeDays = ref(0);
@@ -228,11 +220,11 @@ let stockGaugeInstance = null;
 // 预警等级对应颜色
 const warningLevelColor = { critical: '#ff4d4f', warning: '#faad14', notice: '#f97316' };
 
-// 保质期预警数据（暂未接入，保持静态）
+// 质保期预警数据
 const expiryGauges = ref([
-  { value: 3456, label: '已到期', color: '#ff4d4f' },
-  { value: 1234, label: '本月到期', color: '#faad14' },
-  { value: 1238, label: '下月到期', color: '#52c41a' },
+  { value: 0, label: '已到期', color: '#ff4d4f' },
+  { value: 0, label: '本月到期', color: '#faad14' },
+  { value: 0, label: '下月到期', color: '#52c41a' },
 ]);
 
 // Chart refs
@@ -465,8 +457,10 @@ onMounted(() => {
     window.addEventListener('resize', handleResize);
     // 异步加载预警数据
     loadWarningData();
-    // 加载待办统计
-    loadTodoSummary();
+    // 加载质保期预警数据
+    loadWarrantyData();
+    // 加载借用单预警统计
+    loadBorrowWarning();
     // 加载环境监测实时数据，每30秒刷新
     loadEnvData();
     envTimer = setInterval(loadEnvData, 30000);
@@ -490,16 +484,27 @@ const loadEnvData = async () => {
   }
 };
 
-const loadTodoSummary = async () => {
+const loadBorrowWarning = async () => {
   try {
-    const res = await getMyTasksSummary();
+    const res = await getBorrowOrderWarningStats();
     const data = res.data || {};
-    todoPendingCount.value = data.pendingCount || 0;
-    todoDoneCount.value = data.doneCount || 0;
-    todoPercent.value = data.percent || 0;
+    borrowWarningCount.value = Number(data.warningCount || 0);
+    borrowOverdueCount.value = Number(data.overdueCount || 0);
+    borrowWarningTotal.value = borrowWarningCount.value + borrowOverdueCount.value;
+    const borrowingCount = Number(data.borrowingCount || 0);
+    borrowWarningPercent.value = borrowingCount > 0
+      ? Math.round(borrowWarningTotal.value / borrowingCount * 100)
+      : 0;
   } catch (e) {
-    console.warn('加载待办统计数据失败:', e);
+    console.warn('加载借用单预警统计失败:', e);
   }
+};
+
+const goToWarning = (type) => {
+  const path = resolveRoutePath(router, {
+    titleKeywords: ['我的待办', '我的预警', '预警总览']
+  }) || '/myTasks';
+  router.push({ path, query: { tab: type } });
 };
 
 const loadWarningData = async () => {
@@ -520,6 +525,20 @@ const loadWarningData = async () => {
     }
   } catch (e) {
     console.warn('加载库存预警数据失败:', e);
+  }
+};
+
+const loadWarrantyData = async () => {
+  try {
+    const res = await getWarrantyStats();
+    const data = res.data || {};
+    expiryGauges.value = [
+      { value: data.expired || 0, label: '已到期', color: '#ff4d4f' },
+      { value: data.expiringThisMonth || 0, label: '本月到期', color: '#faad14' },
+      { value: data.expiringNextMonth || 0, label: '下月到期', color: '#52c41a' },
+    ];
+  } catch (e) {
+    console.warn('加载质保期预警数据失败:', e);
   }
 };
 
@@ -779,13 +798,22 @@ onUnmounted(() => {
 /* 待办事项 */
 .card-todo { flex: 0 0 auto; }
 
+.card-clickable {
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.card-clickable:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0,231,255,0.15);
+}
+
 .todo-content {
   display: flex;
   gap: 12px;
   align-items: flex-start;
 }
 
-.todo-left { flex: 1; }
+.todo-left { flex: 1; padding-left: 10px; }
 .todo-right { flex: 1; }
 
 .todo-value {
@@ -1039,7 +1067,7 @@ onUnmounted(() => {
   text-shadow: 0 0 8px currentColor;
 }
 
-/* 保质期预警 */
+/* 质保期预警 */
 .card-expiry { flex: 0 0 auto; }
 
 .expiry-content {

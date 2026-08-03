@@ -18,12 +18,16 @@
             </el-col>
             <el-col :span="6">
               <el-form-item label="调拨根据" prop="basisNo">
-                <el-input v-model="form.basisNo" placeholder="请输入调拨根据"></el-input>
+                <el-select v-model="form.basisNo" placeholder="请选择调拨根据" clearable filterable style="width: 100%">
+                  <el-option v-for="item in wms_dispatch_basis_out" :key="item.value" :label="item.label" :value="item.value" />
+                </el-select>
               </el-form-item>
             </el-col>
             <el-col :span="6">
               <el-form-item label="调拨方式" prop="dispatchMode">
-                <el-input v-model="form.dispatchMode" placeholder="请输入调拨方式" />
+                <el-select v-model="form.dispatchMode" placeholder="请选择调拨方式" clearable filterable style="width: 100%">
+                  <el-option v-for="item in wms_dispatch_mode" :key="item.value" :label="item.label" :value="item.value" />
+                </el-select>
               </el-form-item>
             </el-col>
           </el-row>
@@ -35,24 +39,23 @@
             </el-col>
             <el-col :span="6">
               <el-form-item label="收物单位" prop="receiveUnit">
-                <el-input v-model="form.receiveUnit" placeholder="请输入收物单位"></el-input>
+                <el-select v-model="form.receiveUnit" placeholder="请选择收物单位" clearable filterable style="width: 100%">
+                  <el-option v-for="item in wms_receive_unit" :key="item.value" :label="item.label" :value="item.value" />
+                </el-select>
               </el-form-item>
             </el-col>
-          </el-row>
-          <el-row :gutter="24">
+            <el-col :span="6">
+              <el-form-item label="采购日期" prop="purchaseDate">
+                <el-date-picker v-model="form.purchaseDate" type="date" value-format="YYYY-MM-DD" format="YYYY-MM-DD" style="width: 100%" />
+              </el-form-item>
+            </el-col>
             <el-col :span="6">
               <el-form-item label="出库日期" prop="shipmentDate">
                 <el-date-picker v-model="form.shipmentDate" type="date" value-format="YYYY-MM-DD" format="YYYY-MM-DD" style="width: 100%" disabled />
               </el-form-item>
             </el-col>
-            <el-col :span="6">
-              <el-form-item prop="approverId">
-                <template #label><span style="color: #f56c6c">*</span> 审批人</template>
-                <el-select v-model="form.approverId" placeholder="请选择审批人" filterable clearable style="width: 100%" @change="handleApproverFieldChange">
-                  <el-option v-for="u in userList" :key="u.userId" :label="u.nickName" :value="u.userId" />
-                </el-select>
-              </el-form-item>
-            </el-col>
+          </el-row>
+          <el-row :gutter="24">
             <el-col :span="12">
               <el-form-item label="备注" prop="remark">
                 <el-input
@@ -61,22 +64,6 @@
                   maxlength="100"
                   show-word-limit
                 />
-              </el-form-item>
-            </el-col>
-          </el-row>
-          <!-- 已审批/已出库：审批人+操作人只读 -->
-          <el-row :gutter="24" v-if="[2, 3].includes(Number(form.shipmentOrderStatus)) && (form.approverId || form.executorId)">
-            <el-col :span="6" v-if="form.executorId">
-              <el-form-item label="操作人">
-                <el-input :model-value="getNickNameById(form.executorId)" disabled />
-              </el-form-item>
-            </el-col>
-          </el-row>
-          <!-- 已驳回：显示驳回原因 -->
-          <el-row :gutter="24" v-if="Number(form.shipmentOrderStatus) === -2 && form.approveRemark">
-            <el-col :span="12">
-              <el-form-item label="驳回原因">
-                <el-input :model-value="form.approveRemark" disabled />
               </el-form-item>
             </el-col>
           </el-row>
@@ -89,34 +76,17 @@
             </el-col>
           </el-row>
         </el-form>
-        <!-- 待审批：操作人 + 驳回原因（在 el-form 外部，不受 disabled 影响） -->
-        <el-row :gutter="24" v-if="form.shipmentOrderStatus == 1 && !isViewMode" class="approval-controls">
-          <el-col :span="6">
-            <div class="approval-form-item">
-              <label><span style="color: #f56c6c">*</span> 操作人：</label>
-              <el-select v-model="form.executorId" placeholder="请指定操作人" filterable clearable style="width: 100%" @change="handleExecutorFieldChange">
-                <el-option v-for="u in userList" :key="u.userId" :label="u.nickName" :value="u.userId" />
-              </el-select>
-            </div>
-          </el-col>
-          <el-col :span="12" v-if="rejectRemarkVisible">
-            <div class="approval-form-item">
-              <label>驳回原因：</label>
-              <el-input v-model="rejectRemark" placeholder="请输入驳回原因" />
-            </div>
-          </el-col>
-        </el-row>
       </el-card>
       <el-card header="器材明细" class="mt10">
         <div class="receipt-order-content">
           <div class="flex-space-between mb8">
             <div>
               <el-tag type="info" v-if="isFromMovement">由调拨单自动创建，器材明细不可编辑</el-tag>
-              <el-tag type="info" v-else>支持“选择器材实例”或扫码枪扫二维码直接新增，当前只允许选择在库实例</el-tag>
+              <el-tag type="info" v-else>支持“选择器材”或扫码枪扫二维码直接新增，当前只允许选择在库器材</el-tag>
             </div>
             <div class="add-actions">
               <el-button type="primary" plain size="default" @click="showAddItemInstance" icon="Tickets" :disabled="formReadonly || isFromMovement">
-                选择器材实例
+                选择器材
               </el-button>
             </div>
           </div>
@@ -124,10 +94,14 @@
             :data="form.details"
             border
             empty-text="暂无器材明细"
-            @row-click="handleDetailRowClick"
-            style="cursor: pointer"
+            highlight-current-row
+            @row-click="handleRowClick"
           >
-            <el-table-column label="器材实例编码" prop="instanceCode" min-width="160" show-overflow-tooltip />
+            <el-table-column label="器材识别码" min-width="200">
+              <template #default="{ row }">
+                <span class="instance-code-link" @click.stop="handleDetailRowClick(row)">{{ row.instanceCode || '-' }}</span>
+              </template>
+            </el-table-column>
             <el-table-column label="器材名称" min-width="160">
               <template #default="{ row }">
                 <span>{{ row.itemName || '-' }}</span>
@@ -153,6 +127,17 @@
                 <span>{{ row.locationName || '-' }}</span>
               </template>
             </el-table-column>
+            <el-table-column v-if="!isFromMovement" label="随箱出库" width="100" align="center">
+              <template #default="{ row }">
+                <el-checkbox
+                  v-if="row.boxId"
+                  v-model="row.boxOutbound"
+                  :disabled="formReadonly"
+                  @change="handleBoxOutboundChange(row)"
+                />
+                <span v-else>-</span>
+              </template>
+            </el-table-column>
             <el-table-column label="备注" min-width="150">
               <template #default="{ row }">
                 <el-input v-model="row.remark" placeholder="请输入备注" :disabled="formReadonly" />
@@ -172,7 +157,7 @@
       <el-dialog v-model="itemDetailDialog.visible" title="器材详情" width="520px" append-to-body>
         <div v-loading="itemDetailDialog.loading">
           <el-descriptions v-if="itemDetailDialog.data" :column="2" border>
-            <el-descriptions-item label="实例编码">{{ itemDetailDialog.data.instanceCode || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="器材识别码">{{ itemDetailDialog.data.instanceCode || '-' }}</el-descriptions-item>
             <el-descriptions-item label="器材名称">{{ itemDetailDialog.data.itemName || '-' }}</el-descriptions-item>
             <el-descriptions-item label="器材编码">{{ itemDetailDialog.data.itemCode || '-' }}</el-descriptions-item>
             <el-descriptions-item label="规格型号">{{ itemDetailDialog.data.skuName || '-' }}</el-descriptions-item>
@@ -187,7 +172,7 @@
           <el-button @click="itemDetailDialog.visible = false">关闭</el-button>
         </template>
       </el-dialog>
-      <el-dialog v-model="itemInstanceDialog.visible" title="选择器材实例" width="1100px" append-to-body>
+      <el-dialog v-model="itemInstanceDialog.visible" title="选择器材" width="1100px" append-to-body>
         <el-form :model="itemInstanceDialog.query" label-width="auto" class="item-instance-search-form">
           <el-row :gutter="12">
             <el-col :span="6">
@@ -242,8 +227,8 @@
               </el-form-item>
             </el-col>
             <el-col :span="6">
-              <el-form-item label="器材实例编码">
-                <el-input v-model="itemInstanceDialog.query.instanceCode" placeholder="器材实例编码" clearable style="width: 100%" @keyup.enter="getItemInstanceList" />
+              <el-form-item label="器材识别码">
+                <el-input v-model="itemInstanceDialog.query.instanceCode" placeholder="器材识别码" clearable style="width: 100%" @keyup.enter="getItemInstanceList" />
               </el-form-item>
             </el-col>
             <el-col :span="12">
@@ -266,7 +251,7 @@
               <span>{{ useWmsStore().areaMap.get(row.areaId)?.areaName || '-' }}</span>
             </template>
           </el-table-column>
-          <el-table-column label="器材实例编码" prop="instanceCode" min-width="160" />
+          <el-table-column label="器材识别码" prop="instanceCode" min-width="160" />
           <el-table-column label="器材编码" prop="itemCode" min-width="120" show-overflow-tooltip />
           <el-table-column label="器材名称" prop="itemName" min-width="160" />
           <el-table-column label="器材规格" prop="skuName" min-width="160" />
@@ -293,23 +278,13 @@
     </div>
     <div class="footer-global">
       <div class="btn-box">
-        <!-- 草稿/已驳回：暂存 + 提交审批 + 作废 -->
-        <div v-if="!isViewMode && [0, -2].includes(Number(form.shipmentOrderStatus))">
-          <el-button @click="save" type="primary">暂存</el-button>
-          <el-button @click="handleSubmitApproval" type="warning">提交审批</el-button>
+        <div v-if="!isViewMode">
+          <el-button @click="doShipment" type="primary">执行出库</el-button>
           <el-button @click="handleVoid" type="danger" v-if="form.id">作废</el-button>
         </div>
-        <!-- 待审批：审批通过 + 驳回 -->
-        <div v-if="!isViewMode && form.shipmentOrderStatus == 1">
-          <el-button @click="handleApproveInEdit" type="success">审批通过</el-button>
-          <el-button @click="handleRejectInEdit" type="danger">{{ rejectRemarkVisible ? '确认驳回' : '驳回' }}</el-button>
-        </div>
-        <!-- 已审批：完成出库（仅指定操作人可操作） -->
-        <div v-if="!isViewMode && form.shipmentOrderStatus == 2 && isCurrentExecutor">
-          <el-button @click="doShipment" type="primary">完成出库</el-button>
-        </div>
         <div>
-          <el-button @click="cancel" class="mr10">{{ isViewMode ? '关闭' : '取消' }}</el-button>
+          <el-button @click="save" type="primary" v-if="!isViewMode">暂存</el-button>
+          <el-button @click="cancel">{{ isViewMode ? '关闭' : '取消' }}</el-button>
         </div>
       </div>
     </div>
@@ -318,8 +293,7 @@
 
 <script setup name="ShipmentOrderEdit">
 import {computed, getCurrentInstance, onBeforeUnmount, onMounted, reactive, ref, toRefs} from "vue";
-import {addShipmentOrder, getShipmentOrder, updateShipmentOrder, shipment, submitForApproval, approveOrder, rejectOrder, voidOrder} from "@/api/wms/shipmentOrder";
-import {getUserSelectList} from "@/api/wms/common";
+import {addShipmentOrder, getShipmentOrder, updateShipmentOrder, shipment, voidOrder} from "@/api/wms/shipmentOrder";
 import {delShipmentOrderDetail} from "@/api/wms/shipmentOrderDetail";
 import {ElMessage, ElMessageBox} from "element-plus";
 import {useRoute, useRouter} from "vue-router";
@@ -329,6 +303,7 @@ import {useWmsStore} from '@/store/modules/wms'
 import {numSub, parseTime} from '@/utils/ruoyi'
 import {listInventoryDetailNoPage} from "@/api/wms/inventoryDetail";
 import {getItemInstanceByCode, listItemInstance} from "@/api/wms/itemInstance";
+import {getBoxByCode} from "@/api/wms/box";
 import RackSelect from "@/views/components/RackSelect.vue";
 import { resolveRoutePath } from '@/utils/routeResolver'
 
@@ -337,17 +312,6 @@ const route = useRoute();
 const router = useRouter();
 const userStore = useUserStore();
 const tagsViewStore = useTagsViewStore();
-// 当前用户是否为指定操作人
-const isCurrentExecutor = computed(() => {
-  if (!userStore.id || !form.value.executorId) return false
-  return String(userStore.id) === String(form.value.executorId)
-})
-// 根据用户ID查找昵称
-const getNickNameById = (userId) => {
-  if (!userId) return '-'
-  const u = userList.value.find(x => String(x.userId) === String(userId))
-  return u ? u.nickName : '-'
-}
 const isViewMode = computed(() => route.query.mode === 'view');
 // 是否由调拨单自动创建
 const isFromMovement = computed(() => !!form.value.movementOrderId);
@@ -357,22 +321,21 @@ const goToMovementOrder = () => {
   const path = resolveRoutePath(router, { preferredPaths: ['/movementOrderEdit'], titleKeywords: ['调拨'] }) || '/movementOrderEdit'
   router.push({ path, query: { id: form.value.movementOrderId, mode: 'view', returnFullPath: route.fullPath } })
 }
-// 表单只读：查看模式 或 非草稿/已驳回状态
-const formReadonly = computed(() => {
-  if (isViewMode.value) return true
-  const s = Number(form.value.shipmentOrderStatus)
-  return !isNaN(s) && s !== 0 && s !== -2
-})
+// 表单只读：仅查看模式
+const formReadonly = computed(() => isViewMode.value)
 const statusLabel = computed(() => {
   if (!wms_shipment_status.value?.length) return ''
   const item = wms_shipment_status.value.find(i => String(i.value) === String(form.value.shipmentOrderStatus))
   return item?.label || ''
 })
-const {wms_item_instance_status, wms_shipment_type, wms_shipment_status, wms_quality_grade} = proxy.useDict(
+const {wms_item_instance_status, wms_shipment_type, wms_shipment_status, wms_quality_grade, wms_dispatch_basis_out, wms_dispatch_mode, wms_receive_unit} = proxy.useDict(
   "wms_item_instance_status",
   "wms_shipment_type",
   "wms_shipment_status",
-  "wms_quality_grade"
+  "wms_quality_grade",
+  "wms_dispatch_basis_out",
+  "wms_dispatch_mode",
+  "wms_receive_unit"
 );
 
 const loading = ref(false)
@@ -392,22 +355,9 @@ const initFormData = {
   totalQuantity: 0,
   details: [],
   workflowLogs: [],
-  applicantId: undefined,
-  applicantName: undefined,
-  submitTime: undefined,
-  approverId: undefined,
-  approverName: undefined,
-  approveTime: undefined,
-  approveRemark: undefined,
-  executorId: undefined,
-  executorName: undefined,
-  executeTime: undefined,
   movementOrderId: undefined,
 }
 const inventoryDetailCache = ref(new Map())
-const userList = ref([])
-const rejectRemark = ref('')
-const rejectRemarkVisible = ref(false)
 const itemInstanceDialog = reactive({
   visible: false,
   loading: false,
@@ -433,7 +383,15 @@ const shipmentScanBuffer = reactive({
   pending: false
 })
 
-// 器材详情弹窗（点击明细行触发）
+/** 当前高亮选中行（点击行触发） */
+const currentRow = ref(null)
+
+/** 点击行：高亮选中，不弹窗 */
+const handleRowClick = (row) => {
+  currentRow.value = row
+}
+
+// 器材详情弹窗（点击器材识别码触发）
 const itemDetailDialog = reactive({
   visible: false,
   loading: false,
@@ -491,6 +449,18 @@ const data = reactive({
   rules: {
     shipmentOrderType: [
       {required: true, message: "出库类型不能为空", trigger: "change"}
+    ],
+    basisNo: [
+      {required: true, message: "调拨根据不能为空", trigger: "change"}
+    ],
+    dispatchMode: [
+      {required: true, message: "调拨方式不能为空", trigger: "change"}
+    ],
+    noticeOrg: [
+      {required: true, message: "通知机关不能为空", trigger: "blur"}
+    ],
+    receiveUnit: [
+      {required: true, message: "收物单位不能为空", trigger: "change"}
     ],
   }
 });
@@ -624,6 +594,8 @@ const createDetailRow = (payload) => {
     locationId: payload.locationId,
     locationName: payload.locationName,
     instanceCode: payload.instanceCode,
+    boxId: payload.boxId || null,
+    boxOutbound: payload.boxOutbound || false,
     remark: payload.remark
   }
 }
@@ -671,6 +643,8 @@ const doSave = (shipmentOrderStatus = 0, onSuccess = null) => {
           areaId: it.areaId,
           rackId: it.rackId,
           locationId: it.locationId,
+          boxId: it.boxId,
+          boxOutbound: it.boxOutbound,
           remark: it.remark
         }
       })
@@ -721,81 +695,6 @@ const doSave = (shipmentOrderStatus = 0, onSuccess = null) => {
 }
 
 
-const updateToInvalid = async () => {
-  // 已废弃，保留兼容
-  await handleVoid()
-}
-
-/** 提交审批 */
-const handleSubmitApproval = async () => {
-  if (!form.value.approverId) {
-    return ElMessage.warning('请先选择审批人')
-  }
-  await proxy?.$modal.confirm('确认提交审批吗？');
-  const doSubmit = (id) => {
-    submitForApproval(id, form.value.approverId, form.value.approverName).then((res) => {
-      if (res.code === 200) {
-        ElMessage.success('提交成功')
-        close()
-      } else {
-        ElMessage.error(res.msg)
-      }
-    })
-  }
-  if (!form.value.id) {
-    doSave(0, () => doSubmit(form.value.id))
-  } else {
-    doSubmit(form.value.id)
-  }
-}
-
-/** 审批人下拉变化时同步 approverName */
-const handleApproverFieldChange = (userId) => {
-  const u = userList.value.find(x => x.userId === userId)
-  form.value.approverName = u ? u.nickName : ''
-}
-
-/** 操作人下拉变化时同步 executorName */
-const handleExecutorFieldChange = (userId) => {
-  const u = userList.value.find(x => x.userId === userId)
-  form.value.executorName = u ? u.nickName : ''
-}
-
-/** 审批通过（编辑页内） */
-const handleApproveInEdit = async () => {
-  if (!form.value.executorId) {
-    return ElMessage.warning('请先指定操作人')
-  }
-  await proxy?.$modal.confirm('确认审批通过吗？');
-  // 清空驳回原因，避免误传
-  rejectRemark.value = ''
-  rejectRemarkVisible.value = false
-  approveOrder(form.value.id, null, form.value.executorId, form.value.executorName).then((res) => {
-    if (res.code === 200) {
-      ElMessage.success('审批通过')
-      close()
-    } else {
-      ElMessage.error(res.msg)
-    }
-  })
-}
-
-/** 驳回（编辑页内） */
-const handleRejectInEdit = () => {
-  if (!rejectRemarkVisible.value) {
-    rejectRemarkVisible.value = true
-    return
-  }
-  rejectOrder(form.value.id, rejectRemark.value).then((res) => {
-    if (res.code === 200) {
-      ElMessage.success('已驳回')
-      close()
-    } else {
-      ElMessage.error(res.msg)
-    }
-  })
-}
-
 /** 作废 */
 const handleVoid = async () => {
   await proxy?.$modal.confirm('确认作废出库单吗？');
@@ -843,7 +742,9 @@ const doShipment = async () => {
         warehouseId: form.value.warehouseId,
         areaId: it.areaId,
         rackId: it.rackId,
-        locationId: it.locationId
+        locationId: it.locationId,
+        boxId: it.boxId,
+        boxOutbound: it.boxOutbound
       }
     })
 
@@ -884,13 +785,9 @@ onMounted(() => {
     tagsViewStore.updateVisitedView(route)
   }
   window.addEventListener('keydown', handleShipmentScanKeydown)
-  // 加载用户列表（审批人下拉用），加载完后再加载详情以确保回显
-  const loadUserListPromise = getUserSelectList().then(res => {
-    userList.value = (res.data || []).map(u => ({ userId: u.userId, nickName: u.nickName, userName: u.userName }))
-  })
   const id = route.query && route.query.id;
   if (id) {
-    loadUserListPromise.then(() => loadDetail(id))
+    loadDetail(id)
   } else {
     form.value.shipmentOrderType = wms_shipment_type.value?.[0]?.value
     refreshInventoryOptions()
@@ -988,7 +885,7 @@ const addItemInstancesToShipment = async (items) => {
   const newRows = []
   for (const item of items) {
     if (form.value.details.some(detail => detail.instanceCode === item.instanceCode)) {
-      throw new Error(`器材实例编码 ${item.instanceCode} 已添加`)
+      throw new Error(`器材识别码 ${item.instanceCode} 已添加`)
     }
     await refreshInventoryOptions(item.warehouseId, item.areaId)
     const matchedInventory = matchInventoryDetail({
@@ -999,7 +896,7 @@ const addItemInstancesToShipment = async (items) => {
       instanceCode: item.instanceCode
     }, extraUsage)
     if (!matchedInventory) {
-      throw new Error(`器材实例编码 ${item.instanceCode} 未匹配到可用库存明细`)
+      throw new Error(`器材识别码 ${item.instanceCode} 未匹配到可用库存明细`)
     }
     extraUsage[matchedInventory.id] = Number(extraUsage[matchedInventory.id] || 0) + 1
     newRows.push(createDetailRow({
@@ -1021,10 +918,58 @@ const addItemInstancesToShipment = async (items) => {
       locationId: matchedInventory.locationId,
       locationName: matchedInventory.locationName,
       instanceCode: item.instanceCode,
+      boxId: item.boxId || null,
+      boxOutbound: false,
     }))
   }
   form.value.details.push(...newRows.map(it => syncShipmentDetail(it)))
   handleChangeQuantity()
+}
+
+// 同箱“随箱出库”复选框联动：勾选/取消一个，同箱全部同步
+const handleBoxOutboundChange = (row) => {
+  if (!row.boxId) return
+  const checked = row.boxOutbound
+  form.value.details.forEach(d => {
+    if (d.boxId === row.boxId) {
+      d.boxOutbound = checked
+    }
+  })
+}
+
+// 扫箱码：批量加入箱内所有器材并自动勾选“随箱出库”
+const handleScanAddBox = async (boxCode) => {
+  const boxRes = await getBoxByCode(boxCode)
+  const box = boxRes.data
+  if (!box?.id) {
+    ElMessage.error(`未找到箱子：${boxCode}`)
+    return
+  }
+  if (box.boxStatus === 'outbound') {
+    ElMessage.error(`箱子 ${boxCode} 已处于出库状态`)
+    return
+  }
+  // 加载箱内在库器材
+  const itemsRes = await listItemInstance({ boxId: box.id, instanceStatus: '在库' })
+  const items = itemsRes.rows || itemsRes.data || []
+  if (!items.length) {
+    ElMessage.warning(`箱子 ${boxCode} 内没有在库器材`)
+    return
+  }
+  // 过滤已添加的
+  const newItems = items.filter(it => !form.value.details.some(d => d.instanceCode === it.instanceCode))
+  if (!newItems.length) {
+    ElMessage.warning(`箱子 ${boxCode} 内器材已全部添加`)
+    return
+  }
+  await addItemInstancesToShipment(newItems)
+  // 添加完后自动勾选“随箱出库”
+  form.value.details.forEach(d => {
+    if (d.boxId === box.id) {
+      d.boxOutbound = true
+    }
+  })
+  ElMessage.success(`已扫箱码 ${boxCode}，添加 ${newItems.length} 件器材，箱子随箱出库`)
 }
 
 const isTypingTarget = (event) => {
@@ -1036,7 +981,7 @@ const handleScanAddItemInstance = async (instanceCode) => {
   const res = await getItemInstanceByCode(instanceCode, { unshippedOnly: true, instanceStatus: '在库' })
   const item = res.data
   if (!item?.id) {
-    ElMessage.error(`未找到可出库器材实例：${instanceCode}`)
+    ElMessage.error(`未找到可出库器材：${instanceCode}`)
     return
   }
   await addItemInstancesToShipment([item])
@@ -1060,7 +1005,13 @@ const handleShipmentScanKeydown = async (event) => {
     }
     shipmentScanBuffer.pending = true
     try {
-      await handleScanAddItemInstance(instanceCode)
+      // 先尝试识别为箱码，若不是再尝试器材码
+      const boxCheck = await getBoxByCode(instanceCode).catch(() => null)
+      if (boxCheck?.data?.id) {
+        await handleScanAddBox(instanceCode)
+      } else {
+        await handleScanAddItemInstance(instanceCode)
+      }
     } catch (e) {
       ElMessage.error(e?.message || '扫码添加失败')
     } finally {
@@ -1115,14 +1066,14 @@ const isItemInstanceSelectable = (row) => {
 
 const handleConfirmItemInstance = async () => {
   if (!itemInstanceDialog.selection.length) {
-    ElMessage.error('请选择器材实例编码')
+    ElMessage.error('请选择器材识别码')
     return
   }
   try {
     await addItemInstancesToShipment(itemInstanceDialog.selection)
     itemInstanceDialog.visible = false
   } catch (e) {
-    ElMessage.error(e?.message || '器材实例编码添加失败')
+    ElMessage.error(e?.message || '器材识别码添加失败')
   }
 }
 </script>
@@ -1180,31 +1131,15 @@ const handleConfirmItemInstance = async () => {
   padding-right: 8px;
 }
 
-.approval-controls {
-  padding-top: 8px;
-  border-top: 1px solid var(--el-border-color-lighter);
-  margin-top: 12px;
-}
+.instance-code-link {
+  color: var(--el-color-primary);
+  cursor: pointer;
+  text-decoration: none;
 
-.approval-form-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  margin-bottom: 18px;
-
-  > label {
-    font-size: 14px;
-    color: var(--el-text-color-regular);
-    white-space: nowrap;
-    line-height: 32px;
-    min-width: 80px;
-    text-align: right;
-  }
-
-  .el-select,
-  .el-input {
-    flex: 1;
+  &:hover {
+    text-decoration: underline;
   }
 }
+
 </style>
 

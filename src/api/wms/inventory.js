@@ -9,6 +9,15 @@ export function listInventory(query) {
   })
 }
 
+// 查询库存汇总列表（按 sku + 仓库 + 库区 聚合，服务端分页）
+export function listInventorySummary(query) {
+  return request({
+    url: '/wms/inventory/summary',
+    method: 'get',
+    params: query
+  })
+}
+
 // 查询库存详细
 export function getInventory(id) {
   return request({

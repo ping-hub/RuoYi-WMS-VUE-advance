@@ -70,3 +70,24 @@ export function delItemInstance(id) {
     method: 'delete'
   });
 }
+
+// 批量重置质保期（到期日期向后延长质保月数）
+export function batchResetWarranty(ids) {
+  return request({
+    url: '/wms/itemInstance/batchResetWarranty',
+    method: 'put',
+    data: ids
+  });
+}
+
+/**
+ * 散件批量移位：将多个在库散件器材移动到新的货位
+ * @param {object} data { ids: [], warehouseId, areaId, rackId, locationId }
+ */
+export function batchRelocateItemInstances(data) {
+  return request({
+    url: '/wms/itemInstance/batchRelocate',
+    method: 'put',
+    data
+  });
+}

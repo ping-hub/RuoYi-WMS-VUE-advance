@@ -73,14 +73,16 @@
     <el-card class="mt20">
       <el-row :gutter="10" class="mb8" type="flex" justify="space-between">
         <el-col :span="8"><span style="font-size: large">箱体管理</span></el-col>
-        <el-col :span="2">
+        <el-col :span="6" style="text-align: right">
           <el-button type="primary" plain icon="Plus" @click="handleAdd" v-hasPermi="['wms:box:edit']">新增</el-button>
+          <el-button type="primary" plain icon="Printer" :disabled="!selectedRows.length" :loading="printDialog.sending" @click="handleBatchPrint" v-hasPermi="['wms:box:list']">批量打印</el-button>
         </el-col>
       </el-row>
 
-      <el-table v-loading="loading" :data="boxList" border empty-text="暂无箱体">
-        <el-table-column label="箱码" prop="boxCode" min-width="150" show-overflow-tooltip />
-        <el-table-column label="箱体名称" prop="boxName" min-width="120" show-overflow-tooltip />
+      <el-table v-loading="loading" :data="boxList" border empty-text="暂无箱体" @selection-change="handleSelectionChange">
+        <el-table-column type="selection" width="50" align="center" />
+        <el-table-column label="箱码" prop="boxCode" min-width="100" show-overflow-tooltip />
+        <el-table-column label="箱体名称" prop="boxName" min-width="100" show-overflow-tooltip />
         <el-table-column label="状态" width="80">
           <template #default="{ row }">
             <dict-tag :options="wms_box_status" :value="row.boxStatus" />
@@ -88,16 +90,25 @@
         </el-table-column>
         <el-table-column label="仓库" prop="warehouseName" min-width="80" show-overflow-tooltip />
         <el-table-column label="库区" prop="areaName" min-width="80" show-overflow-tooltip />
-        <el-table-column label="货架" prop="rackName" min-width="80" show-overflow-tooltip />
+        <el-table-column label="货架" prop="rackName" min-width="70" show-overflow-tooltip />
         <el-table-column label="货位" prop="locationName" min-width="80" show-overflow-tooltip />
-        <el-table-column label="器材数" prop="itemCount" width="80" align="right" />
+        <el-table-column label="关联单据" min-width="120">
+          <template #default="{ row }">
+            <span v-if="row.outboundOrderType">
+              {{ row.outboundOrderType === 'SHIPMENT' ? '出库单' : row.outboundOrderType === 'BORROW_ORDER' ? '借用单' : row.outboundOrderType }}
+              #{{ row.outboundOrderId }}
+            </span>
+          </template>
+        </el-table-column>
+        <el-table-column label="出库时间" prop="outboundTime" min-width="100" show-overflow-tooltip />
+        <el-table-column label="器材数" prop="itemCount" width="65" align="right" />
         <el-table-column label="备注" prop="remark" min-width="60" show-overflow-tooltip />
-        <el-table-column label="操作" align="right" width="220">
+        <el-table-column label="操作" align="right" width="200">
           <template #default="{ row }">
             <el-button link type="primary" @click="handleView(row)">详情</el-button>
+            <el-button link type="primary" @click="handleRelocate(row)" v-hasPermi="['wms:box:edit']" :disabled="row.boxStatus === 'outbound'">移位</el-button>
             <el-button link type="primary" @click="handleUpdate(row)" v-hasPermi="['wms:box:edit']">修改</el-button>
             <el-button link type="danger" @click="handleDelete(row)" v-hasPermi="['wms:box:edit']">删除</el-button>
-            <el-button link type="primary" @click="handlePrintQrCode(row)" v-hasPermi="['wms:box:list']">打印</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -178,15 +189,15 @@
         <el-descriptions-item label="库区">{{ detailDialog.data.areaName || '-' }}</el-descriptions-item>
         <el-descriptions-item label="货架">{{ detailDialog.data.rackName || '-' }}</el-descriptions-item>
         <el-descriptions-item label="货位">{{ detailDialog.data.locationName || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="器材实例数">{{ detailDialog.data.itemCount || 0 }}</el-descriptions-item>
+        <el-descriptions-item label="器材数">{{ detailDialog.data.itemCount || 0 }}</el-descriptions-item>
         <el-descriptions-item label="备注">{{ detailDialog.data.remark || '-' }}</el-descriptions-item>
       </el-descriptions>
 
       <div class="detail-header">
-        <span class="detail-title">器材实例清单</span>
+        <span class="detail-title">器材清单</span>
       </div>
-      <el-table :data="detailDialog.data.items || []" border empty-text="箱内暂无器材实例">
-        <el-table-column label="器材实例编码" prop="instanceCode" min-width="180">
+      <el-table :data="detailDialog.data.items || []" border empty-text="箱内暂无器材">
+        <el-table-column label="器材识别码" prop="instanceCode" min-width="180">
           <template #default="{ row }">
             <el-button link type="primary" @click="handleOpenItemInstance(row)">{{ row.instanceCode }}</el-button>
           </template>
@@ -199,12 +210,77 @@
           </template>
         </el-table-column>
       </el-table>
+
+      <div class="detail-header">
+        <span class="detail-title">流转日志</span>
+      </div>
+      <el-table :data="detailDialog.logs" border empty-text="暂无流转日志">
+        <el-table-column label="事件类型" width="100">
+          <template #default="{ row }">
+            <dict-tag :options="wms_box_event_type" :value="row.eventType" />
+          </template>
+        </el-table-column>
+        <el-table-column label="关联单据" min-width="150">
+          <template #default="{ row }">
+            <span v-if="row.relatedOrderType">
+              {{ row.relatedOrderType === 'SHIPMENT' ? '出库单' : row.relatedOrderType === 'BORROW_ORDER' ? '借用单' : row.relatedOrderType }}
+              #{{ row.relatedOrderId }}
+            </span>
+            <span v-else>-</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="从" prop="fromLocationName" min-width="130" show-overflow-tooltip />
+        <el-table-column label="到" prop="toLocationName" min-width="130" show-overflow-tooltip />
+        <el-table-column label="备注" prop="remark" min-width="150" show-overflow-tooltip />
+        <el-table-column label="操作人" prop="createBy" width="80" />
+        <el-table-column label="时间" prop="createTime" width="150" />
+      </el-table>
     </el-dialog>
 
-    <el-dialog v-model="printDialog.visible" title="打印箱码" width="520px" append-to-body :close-on-click-modal="false" @closed="handlePrintDialogClosed">
+    <!-- 移位弹窗 -->
+    <el-dialog title="库内移位" v-model="relocateDialog.visible" width="520px" append-to-body :close-on-click-modal="false">
+      <el-descriptions :column="2" border class="mb16">
+        <el-descriptions-item label="箱码">{{ relocateDialog.row?.boxCode || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="当前位置">
+          {{ [relocateDialog.row?.warehouseName, relocateDialog.row?.areaName, relocateDialog.row?.rackName, relocateDialog.row?.locationName].filter(Boolean).join(' / ') || '-' }}
+        </el-descriptions-item>
+      </el-descriptions>
+      <el-form label-width="90px" :model="relocateDialog.form">
+        <el-form-item label="仓库">
+          <el-input :model-value="relocateDialog.row?.warehouseName" disabled />
+        </el-form-item>
+        <el-form-item label="目标货架">
+          <RackSelect
+            v-model="relocateDialog.form.rackId"
+            :warehouse-id="relocateDialog.row?.warehouseId"
+            :area-id="relocateDialog.row?.areaId"
+            placeholder="选择目标货架"
+            @update:model-value="handleRelocateRackChange"
+          />
+        </el-form-item>
+        <el-form-item label="目标货位">
+          <LocationSelect
+            v-model="relocateDialog.form.locationId"
+            :warehouse-id="relocateDialog.row?.warehouseId"
+            :area-id="relocateDialog.row?.areaId"
+            :rack-id="relocateDialog.form.rackId"
+            placeholder="选择目标货位"
+          />
+        </el-form-item>
+        <el-form-item label="同步器材">
+          <el-checkbox v-model="relocateDialog.form.syncItems">同时将箱内在库器材移至新位置</el-checkbox>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="relocateDialog.visible = false">取消</el-button>
+        <el-button type="primary" :loading="relocateDialog.loading" @click="submitRelocate">确认移位</el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog v-model="printDialog.visible" title="批量打印箱码" width="520px" append-to-body :close-on-click-modal="false" @closed="handlePrintDialogClosed">
       <el-form label-width="90px">
-        <el-form-item label="箱码">
-          <span>{{ printDialog.boxCode || '-' }}</span>
+        <el-form-item label="打印数量">
+          <span>{{ printCodes.length }} 条</span>
         </el-form-item>
         <el-form-item label="打印机">
           <el-select v-model="printDialog.printerId" placeholder="请选择打印机" filterable style="width: 100%" :disabled="printDialog.loading || printDialog.sending">
@@ -228,7 +304,7 @@
 import { computed, getCurrentInstance, onMounted, reactive, ref, toRefs, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessageBox } from 'element-plus';
-import { addBox, delBox, getBox, listBox, updateBox } from '@/api/wms/box';
+import { addBox, delBox, getBox, getBoxLogs, listBox, relocateBox, updateBox } from '@/api/wms/box';
 import { useWmsStore } from '@/store/modules/wms';
 import RackSelect from '@/views/components/RackSelect.vue';
 import LocationSelect from '@/views/components/LocationSelect.vue';
@@ -237,7 +313,7 @@ import { buildQrTscCommand, WssPrintClient, getPrintUrl } from '@/utils/wssPrint
 const router = useRouter();
 const route = useRoute();
 const { proxy } = getCurrentInstance();
-const { wms_box_status, wms_item_instance_status } = proxy.useDict('wms_box_status', 'wms_item_instance_status');
+const { wms_box_status, wms_item_instance_status, wms_box_event_type } = proxy.useDict('wms_box_status', 'wms_item_instance_status', 'wms_box_event_type');
 const wmsStore = useWmsStore();
 
 const loading = ref(true);
@@ -246,6 +322,8 @@ const total = ref(0);
 const boxList = ref([]);
 const queryRef = ref();
 const boxFormRef = ref();
+const selectedRows = ref([]);
+const printCodes = ref([]);
 
 const dialog = reactive({
   visible: false,
@@ -254,14 +332,14 @@ const dialog = reactive({
 
 const detailDialog = reactive({
   visible: false,
-  data: {}
+  data: {},
+  logs: []
 });
 
 const printDialog = reactive({
   visible: false,
   loading: false,
   sending: false,
-  boxCode: '',
   printers: [],
   printerId: '',
   total: 0,
@@ -456,7 +534,54 @@ const cancel = () => {
 const handleView = async (row) => {
   const res = await getBox(row.id);
   detailDialog.data = res.data || {};
+  const logsRes = await getBoxLogs(row.id);
+  detailDialog.logs = logsRes.data || [];
   detailDialog.visible = true;
+};
+
+// ========== 库内移位 ==========
+const relocateDialog = reactive({
+  visible: false,
+  loading: false,
+  row: null,
+  form: {
+    rackId: undefined,
+    locationId: undefined,
+    syncItems: true
+  }
+});
+
+const handleRelocate = async (row) => {
+  const res = await getBox(row.id);
+  relocateDialog.row = res.data || row;
+  relocateDialog.form = { rackId: undefined, locationId: undefined, syncItems: true };
+  relocateDialog.visible = true;
+};
+
+const handleRelocateRackChange = () => {
+  relocateDialog.form.locationId = undefined;
+};
+
+const submitRelocate = async () => {
+  if (!relocateDialog.form.rackId && !relocateDialog.form.locationId) {
+    proxy.$modal.msgError('请至少选择目标货架或货位');
+    return;
+  }
+  relocateDialog.loading = true;
+  try {
+    await relocateBox(relocateDialog.row.id, {
+      rackId: relocateDialog.form.rackId,
+      locationId: relocateDialog.form.locationId,
+      syncItems: relocateDialog.form.syncItems
+    });
+    proxy.$modal.msgSuccess('移位成功');
+    relocateDialog.visible = false;
+    await getList();
+  } catch (e) {
+    // 错误已在 response 拦截器处理
+  } finally {
+    relocateDialog.loading = false;
+  }
 };
 
 const handleDelete = async (row) => {
@@ -509,13 +634,22 @@ async function loadPrinters() {
   }
 }
 
-const handlePrintQrCode = async (row) => {
-  if (!row.boxCode) {
-    proxy.$modal.msgError('当前箱体无箱码，无法打印');
+function handleSelectionChange(selection) {
+  selectedRows.value = selection || [];
+}
+
+const handleBatchPrint = async () => {
+  if (!selectedRows.value.length) {
+    proxy.$modal.msgError('请先勾选要打印的箱体');
     return;
   }
-  printDialog.boxCode = row.boxCode;
-  printDialog.total = 1;
+  const codes = selectedRows.value.map(item => item.boxCode).filter(Boolean);
+  if (!codes.length) {
+    proxy.$modal.msgError('勾选数据中未找到箱码');
+    return;
+  }
+  printCodes.value = codes;
+  printDialog.total = codes.length;
   printDialog.current = 0;
   printDialog.errorMessage = '';
   printDialog.visible = true;
@@ -527,7 +661,7 @@ async function handleConfirmPrint() {
     proxy.$modal.msgError('请选择打印机');
     return;
   }
-  if (!printDialog.boxCode) {
+  if (!printCodes.value.length) {
     proxy.$modal.msgError('没有可打印的数据');
     return;
   }
@@ -536,14 +670,16 @@ async function handleConfirmPrint() {
   printDialog.errorMessage = '';
   try {
     await ensurePrintClient();
-    const command = buildQrTscCommand(printDialog.boxCode);
-    const res = await printClient.sendData(command, printDialog.printerId);
-    if (Number(res?.code) <= 0) {
-      throw new Error(res?.msg || '打印失败');
+    for (const code of printCodes.value) {
+      const command = buildQrTscCommand(code);
+      const res = await printClient.sendData(command, printDialog.printerId);
+      if (Number(res?.code) <= 0) {
+        throw new Error(res?.msg || '打印失败');
+      }
+      printDialog.current += 1;
     }
-    printDialog.current = 1;
     await printClient.closePrinter(printDialog.printerId);
-    proxy.$modal.msgSuccess('打印任务已发送');
+    proxy.$modal.msgSuccess(`已发送 ${printDialog.total} 条打印任务`);
     printDialog.visible = false;
   } catch (e) {
     printDialog.errorMessage = e?.message || '打印失败';
@@ -566,11 +702,11 @@ function handlePrintDialogClosed() {
   printDialog.errorMessage = '';
   printDialog.loading = false;
   printDialog.sending = false;
-  printDialog.boxCode = '';
   printDialog.printers = [];
   printDialog.printerId = '';
   printDialog.total = 0;
   printDialog.current = 0;
+  printCodes.value = [];
   try {
     printClient?.disconnect();
   } finally {

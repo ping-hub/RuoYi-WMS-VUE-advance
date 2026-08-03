@@ -21,15 +21,19 @@
     <el-row :gutter="16" class="mt20">
       <el-col :xl="15" :lg="14" :md="24" :sm="24" :xs="24">
         <el-card class="warehouse-main-card">
-          <el-row :gutter="10" class="mb8" type="flex" justify="space-between">
+          <el-row :gutter="10" class="mb8" type="flex" justify="space-between" align="middle">
             <el-col :span="10">
               <div class="page-title">仓库管理</div>
+            </el-col>
+            <el-col :span="2" class="toolbar-right">
+              <el-button type="primary" plain icon="Plus" @click="handleAdd" v-hasPermi="['wms:warehouse:edit']">新增</el-button>
             </el-col>
           </el-row>
 
           <el-table v-loading="loading" :data="warehouseList" border highlight-current-row @current-change="handleCurrentChange" empty-text="暂无仓库">
             <el-table-column label="仓库名称" prop="warehouseName" min-width="180" />
-            <el-table-column label="备注" prop="remark" min-width="220" show-overflow-tooltip />
+            <el-table-column label="仓库编码" prop="warehouseCode" width="120" />
+            <el-table-column label="备注" prop="remark" min-width="120" show-overflow-tooltip />
             <el-table-column label="操作" align="right" width="160">
               <template #default="{ row }">
                 <el-button link type="primary" icon="Edit" @click="handleUpdate(row)" v-hasPermi="['wms:warehouse:edit']">修改</el-button>
@@ -76,6 +80,9 @@
     <el-dialog :title="dialog.title" v-model="dialog.visible" width="560px" append-to-body :close-on-click-modal="false">
       <div class="form-tip">带 * 为必填项</div>
       <el-form ref="warehouseFormRef" :model="form" :rules="rules" label-width="110px">
+        <el-form-item label="仓库编码" prop="warehouseCode">
+          <el-input v-model="form.warehouseCode" placeholder="如 ZZ / TZ / ZC" maxlength="20" />
+        </el-form-item>
         <el-form-item label="仓库名称" prop="warehouseName">
           <el-input v-model="form.warehouseName" placeholder="请输入仓库名称" />
         </el-form-item>
@@ -119,6 +126,7 @@ const dialog = reactive({
 
 const initFormData = {
   id: undefined,
+  warehouseCode: undefined,
   warehouseName: undefined,
   remark: undefined
 }
@@ -131,6 +139,9 @@ const data = reactive({
     warehouseName: undefined
   },
   rules: {
+    warehouseCode: [
+      { required: true, message: '仓库编码不能为空', trigger: 'blur' }
+    ],
     warehouseName: [
       { required: true, message: '仓库名称不能为空', trigger: 'blur' }
     ]
@@ -278,7 +289,8 @@ onMounted(async () => {
 .toolbar-right {
   display: flex;
   justify-content: flex-end;
-  align-items: flex-start;
+  align-items: center;
+  padding-right: 8px;
 }
 
 .query-actions {

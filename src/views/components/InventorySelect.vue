@@ -1,5 +1,5 @@
 <template>
-  <el-drawer :model-value="show" title="选择器材实例" @close="handleCancelClick" :size="size" :close-on-click-modal="false"
+  <el-drawer :model-value="show" title="选择器材" @close="handleCancelClick" :size="size" :close-on-click-modal="false"
              append-to-body>
     <el-form :inline="true" label-width="68px">
       <el-form-item label="器材名称">

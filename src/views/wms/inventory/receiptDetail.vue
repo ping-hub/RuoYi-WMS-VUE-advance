@@ -59,7 +59,7 @@
             {{ row.itemName || '-' }}
           </template>
         </el-table-column>
-        <el-table-column label="实例编码" width="140" show-overflow-tooltip>
+        <el-table-column label="器材识别码" width="140" show-overflow-tooltip>
           <template #default="{ row }">
             {{ row.instanceCode || '-' }}
           </template>
