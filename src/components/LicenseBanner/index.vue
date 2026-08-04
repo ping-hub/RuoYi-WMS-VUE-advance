@@ -15,14 +15,16 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { getLicenseStatus } from '@/api/license'
 
 const showBanner = ref(false)
 const statusDesc = ref('')
 const bannerMessage = ref('')
 
-onMounted(async () => {
+let pollTimer = null
+
+async function checkStatus() {
   try {
     const res = await getLicenseStatus()
     const data = res.data
@@ -30,9 +32,23 @@ onMounted(async () => {
       showBanner.value = true
       statusDesc.value = data.statusDesc || '无效'
       bannerMessage.value = `License ${data.statusDesc || '无效'}`
+    } else {
+      showBanner.value = false
     }
   } catch (e) {
     // 获取状态失败不显示横幅
+  }
+}
+
+onMounted(() => {
+  checkStatus()
+  // 每60秒轮询一次，检测过期后及时提示
+  pollTimer = setInterval(checkStatus, 60000)
+})
+
+onUnmounted(() => {
+  if (pollTimer) {
+    clearInterval(pollTimer)
   }
 })
 </script>
