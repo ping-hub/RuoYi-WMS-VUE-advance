@@ -82,6 +82,7 @@
       <el-table v-loading="loading" :data="boxList" border empty-text="暂无箱体" @selection-change="handleSelectionChange">
         <el-table-column type="selection" width="50" align="center" />
         <el-table-column label="箱码" prop="boxCode" min-width="100" show-overflow-tooltip />
+        <el-table-column label="位置编码" prop="positionCode" min-width="110" show-overflow-tooltip />
         <el-table-column label="箱体名称" prop="boxName" min-width="100" show-overflow-tooltip />
         <el-table-column label="状态" width="80">
           <template #default="{ row }">
@@ -126,6 +127,9 @@
       <el-form ref="boxFormRef" :model="form" :rules="rules" label-width="100px">
         <el-form-item label="箱码" prop="boxCode">
           <el-input v-model="form.boxCode" placeholder="不填则后端自动生成" />
+        </el-form-item>
+        <el-form-item label="位置编码" prop="positionCode">
+          <el-input v-model="form.positionCode" placeholder="如 01-05-03-02" />
         </el-form-item>
         <el-form-item label="箱体名称" prop="boxName">
           <el-input v-model="form.boxName" placeholder="请输入箱体名称" />
@@ -181,6 +185,7 @@
     <el-dialog title="箱体详情" v-model="detailDialog.visible" width="960px" append-to-body>
       <el-descriptions :column="3" border class="mb16">
         <el-descriptions-item label="箱码">{{ detailDialog.data.boxCode || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="位置编码">{{ detailDialog.data.positionCode || '-' }}</el-descriptions-item>
         <el-descriptions-item label="箱体名称">{{ detailDialog.data.boxName || '-' }}</el-descriptions-item>
         <el-descriptions-item label="箱体状态">
           <dict-tag :options="wms_box_status" :value="detailDialog.data.boxStatus" />
@@ -308,7 +313,7 @@ import { addBox, delBox, getBox, getBoxLogs, listBox, relocateBox, updateBox } f
 import { useWmsStore } from '@/store/modules/wms';
 import RackSelect from '@/views/components/RackSelect.vue';
 import LocationSelect from '@/views/components/LocationSelect.vue';
-import { buildQrTscCommand, WssPrintClient, getPrintUrl } from '@/utils/wssPrintClient';
+import { buildQrTscCommand, buildBoxLabelTscCommand, WssPrintClient, getPrintUrl } from '@/utils/wssPrintClient';
 
 const router = useRouter();
 const route = useRoute();
@@ -358,6 +363,7 @@ const initFormData = () => ({
   areaId: undefined,
   rackId: undefined,
   locationId: undefined,
+  positionCode: undefined,
   remark: undefined
 });
 
@@ -643,13 +649,13 @@ const handleBatchPrint = async () => {
     proxy.$modal.msgError('请先勾选要打印的箱体');
     return;
   }
-  const codes = selectedRows.value.map(item => item.boxCode).filter(Boolean);
-  if (!codes.length) {
+  const items = selectedRows.value.filter(item => item.boxCode);
+  if (!items.length) {
     proxy.$modal.msgError('勾选数据中未找到箱码');
     return;
   }
-  printCodes.value = codes;
-  printDialog.total = codes.length;
+  printCodes.value = items;
+  printDialog.total = items.length;
   printDialog.current = 0;
   printDialog.errorMessage = '';
   printDialog.visible = true;
@@ -670,8 +676,8 @@ async function handleConfirmPrint() {
   printDialog.errorMessage = '';
   try {
     await ensurePrintClient();
-    for (const code of printCodes.value) {
-      const command = buildQrTscCommand(code);
+    for (const item of printCodes.value) {
+      const command = buildBoxLabelTscCommand(item.boxCode, item.positionCode);
       const res = await printClient.sendData(command, printDialog.printerId);
       if (Number(res?.code) <= 0) {
         throw new Error(res?.msg || '打印失败');

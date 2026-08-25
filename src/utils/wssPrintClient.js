@@ -46,13 +46,32 @@ function parseJsonMessage(data) {
 
 export function buildQrTscCommand(qrText) {
   const value = qrText == null ? '' : String(qrText);
-  return `SIZE 60 mm,40 mm
+  return `SIZE 100 mm,63.5 mm
 GAP 2 mm,0 mm
 SPEED 5
 DENSITY 12
 DIRECTION 1
 CLS
-QRCODE 288,130,M,4,A,0,M2,"${value}"
+QRCODE 288,130,M,10,A,0,M2,"${value}"
+PRINT 1,1
+`;
+}
+
+/**
+ * 箱码标签打印指令：二维码 + 下方明文
+ * @param {string} boxCode    箱码，如 "0199"
+ * @param {string} positionCode 位置编码，如 "01-05-03-02"，可空
+ */
+export function buildBoxLabelTscCommand(boxCode, positionCode) {
+  const qrText = positionCode ? `${positionCode}-${boxCode}` : String(boxCode);
+  return `SIZE 100 mm,63.5 mm
+GAP 2 mm,0 mm
+SPEED 5
+DENSITY 12
+DIRECTION 1
+CLS
+QRCODE 288,100,M,8,A,0,M2,"${qrText}"
+TEXT 288,220,"3",0,1,1,"${qrText}"
 PRINT 1,1
 `;
 }
