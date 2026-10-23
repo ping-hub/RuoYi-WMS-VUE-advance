@@ -28,12 +28,20 @@ export function getCategoryStats() {
   })
 }
 
-// 出入库趋势（默认近7天）
-export function getInoutTrend(days = 7) {
+// 仓储资源统计（仓库总数 / 货位数量）
+export function getStorageStats() {
+  return request({
+    url: '/wms/dashboard/storageStats',
+    method: 'get'
+  })
+}
+
+// 出入库趋势（granularity: day-日/week-周/month-月；days 在周/月粒度下表示周数/月份数）
+export function getInoutTrend(days = 7, granularity = 'day') {
   return request({
     url: '/wms/dashboard/inoutTrend',
     method: 'get',
-    params: { days }
+    params: { days, granularity }
   })
 }
 

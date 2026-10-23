@@ -63,6 +63,20 @@
         <div class="core-metrics">
           <div class="metric-card">
             <div class="metric-icon">
+              <svg viewBox="0 0 1024 1024" width="24" height="24"><path d="M896 768V192H128v576l384 192 384-192zM192 256h640v502.976l-320 160L192 758.976V256z" fill="#fff"/></svg>
+            </div>
+            <div class="metric-value">{{ storageMetrics.warehouseCount }}</div>
+            <div class="metric-label">仓库总数</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-icon">
+              <svg viewBox="0 0 1024 1024" width="24" height="24"><path d="M128 128h320v320H128zM576 128h320v320H576zM128 576h320v320H128zM576 576h320v320H576z" fill="#fff"/></svg>
+            </div>
+            <div class="metric-value">{{ storageMetrics.locationCount }}</div>
+            <div class="metric-label">货位数量</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-icon">
               <svg viewBox="0 0 1024 1024" width="24" height="24"><path d="M192 192h640v64H192zM192 384h640v64H192zM192 576h640v64H192zM192 768h640v64H192z" fill="#fff"/></svg>
             </div>
             <div class="metric-value">{{ coreMetrics.totalCategories }}</div>
@@ -100,7 +114,18 @@
 
         <!-- 出入库情况概览 -->
         <div class="card card-inout">
-          <div class="card-title">出入库情况概览</div>
+          <div class="card-title title-with-switch">
+            <span>出入库情况概览</span>
+            <div class="granularity-switch">
+              <span
+                v-for="g in GRANULARITY_OPTIONS"
+                :key="g.value"
+                class="granularity-btn"
+                :class="{ active: inoutGranularity === g.value }"
+                @click="switchInoutGranularity(g.value)"
+              >{{ g.label }}</span>
+            </div>
+          </div>
           <div class="chart-wrapper" ref="inoutChartRef"></div>
         </div>
       </div>
@@ -154,7 +179,7 @@
 import { ref, nextTick, onMounted, onUnmounted } from 'vue';
 import * as echarts from 'echarts';
 import html2canvas from 'html2canvas';
-import { getSafeDays, getSourceStats, getCategoryStats, getInoutTrend, getQualityStats, getEnvLatest, getWarrantyStats } from '@/api/wms/dashboard';
+import { getSafeDays, getSourceStats, getCategoryStats, getStorageStats, getInoutTrend, getQualityStats, getEnvLatest, getWarrantyStats } from '@/api/wms/dashboard';
 import { getWarningSummary } from '@/api/wms/inventoryWarning';
 import { getBorrowOrderWarningStats } from '@/api/wms/borrowOrder';
 import { useRouter } from 'vue-router';
@@ -181,6 +206,7 @@ const envGroups = ref([]);
 const safeDays = ref(0);
 const safeDaysTime = ref('');
 const coreMetrics = ref({ totalCategories: 0, totalQuantity: 0, totalValue: 0 });
+const storageMetrics = ref({ warehouseCount: 0, locationCount: 0 });
 const tableData = ref([]);
 
 const WEEK_DAYS = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
@@ -211,6 +237,51 @@ const expiryGauges = ref([
   { value: 0, label: '本月到期', color: '#faad14' },
   { value: 0, label: '下月到期', color: '#52c41a' },
 ]);
+
+// ========== 出入库趋势粒度切换（日/周/月） ==========
+const GRANULARITY_OPTIONS = [
+  { value: 'day', label: '日', count: 7 },
+  { value: 'week', label: '周', count: 8 },
+  { value: 'month', label: '月', count: 12 },
+];
+const inoutGranularity = ref('day');
+const switchingInout = ref(false);
+let inoutChartInstance = null;
+
+const currentGranularityCount = () =>
+  (GRANULARITY_OPTIONS.find(o => o.value === inoutGranularity.value) || GRANULARITY_OPTIONS[0]).count;
+
+/** 将出入库趋势数据填充到折线图（初始渲染与日/周/月切换复用） */
+const applyInoutData = (inout = {}) => {
+  if (!inoutChartInstance) return;
+  const inoutDates = inout?.dates || [];
+  const inQtyArr = (inout?.inQty || []).map(Number);
+  const outQtyArr = (inout?.outQty || []).map(Number);
+  const maxVal = Math.max(100, ...inQtyArr, ...outQtyArr);
+  const yMax = Math.ceil(maxVal / 100) * 100 + 100;
+  inoutChartInstance.setOption({
+    xAxis: { data: inoutDates },
+    yAxis: { max: yMax },
+    series: [{ data: inQtyArr }, { data: outQtyArr }]
+  });
+};
+
+/** 切换日/周/月粒度并重新请求对应数据 */
+const switchInoutGranularity = async (g) => {
+  if (inoutGranularity.value === g || switchingInout.value) return;
+  const opt = GRANULARITY_OPTIONS.find(o => o.value === g);
+  if (!opt) return;
+  inoutGranularity.value = g;
+  switchingInout.value = true;
+  try {
+    const res = await getInoutTrend(opt.count, g);
+    applyInoutData(res?.data || {});
+  } catch (e) {
+    console.warn('切换出入库趋势粒度失败:', e);
+  } finally {
+    switchingInout.value = false;
+  }
+};
 
 // Chart refs
 const categoryChartRef = ref(null);
@@ -252,12 +323,13 @@ const CHART_COLORS = ['#3b82f6','#f97316','#22c55e','#a855f7','#35e7be','#b8bf2c
  * 并发加载5个看板接口，返回所有数据
  */
 const loadDashboardData = async () => {
-  const [safeDaysRes, sourceRes, categoryRes, inoutRes, qualityRes] = await Promise.allSettled([
+  const [safeDaysRes, sourceRes, categoryRes, inoutRes, qualityRes, storageRes] = await Promise.allSettled([
     getSafeDays(),
     getSourceStats(),
     getCategoryStats(),
-    getInoutTrend(7),
+    getInoutTrend(currentGranularityCount(), inoutGranularity.value),
     getQualityStats(),
+    getStorageStats(),
   ]);
   const ok = (r) => r.status === 'fulfilled' ? r.value?.data : null;
   return {
@@ -266,6 +338,7 @@ const loadDashboardData = async () => {
     category: ok(categoryRes),
     inout: ok(inoutRes),
     quality: ok(qualityRes),
+    storage: ok(storageRes),
   };
 };
 
@@ -294,12 +367,7 @@ const initCharts = ({ source = [], category = {}, inout = {}, quality = [] } = {
   });
   charts.push(categoryChart);
 
-  // 出入库折线图
-  const inoutDates = inout?.dates || [];
-  const inQtyArr = inout?.inQty || [];
-  const outQtyArr = inout?.outQty || [];
-  const maxVal = Math.max(100, ...inQtyArr, ...outQtyArr);
-  const yMax = Math.ceil(maxVal / 100) * 100 + 100;
+  // 出入库折线图（数据通过 applyInoutData 填充，支持日/周/月切换）
   const inoutChart = echarts.init(inoutChartRef.value);
   inoutChart.setOption({
     backgroundColor: 'transparent',
@@ -307,12 +375,12 @@ const initCharts = ({ source = [], category = {}, inout = {}, quality = [] } = {
     legend: { data: ['入库', '出库'], textStyle: { color: '#a0c4e8' }, top: 0 },
     grid: { top: '18%', left: '8%', right: '4%', bottom: '10%', containLabel: true },
     xAxis: {
-      type: 'category', data: inoutDates,
+      type: 'category', data: [],
       axisLine: { lineStyle: { color: 'rgba(0,231,255,0.3)' } },
       axisLabel: { color: '#a0c4e8' }
     },
     yAxis: {
-      type: 'value', max: yMax,
+      type: 'value', max: 200,
       axisLine: { lineStyle: { color: 'rgba(0,231,255,0.3)' } },
       axisLabel: { color: '#a0c4e8' },
       splitLine: { lineStyle: { color: 'rgba(0,231,255,0.1)' } }
@@ -320,21 +388,23 @@ const initCharts = ({ source = [], category = {}, inout = {}, quality = [] } = {
     series: [
       {
         name: '入库', type: 'line', smooth: true,
-        data: inQtyArr,
+        data: [],
         lineStyle: { color: '#e8d56b', width: 2 },
         itemStyle: { color: '#e8d56b' },
         areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: 'rgba(232,213,107,0.3)' }, { offset: 1, color: 'rgba(232,213,107,0)' }] } }
       },
       {
         name: '出库', type: 'line', smooth: true,
-        data: outQtyArr,
+        data: [],
         lineStyle: { color: '#6be8a0', width: 2, type: 'dashed' },
         itemStyle: { color: '#6be8a0' },
         areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: 'rgba(107,232,160,0.2)' }, { offset: 1, color: 'rgba(107,232,160,0)' }] } }
       }
     ]
   });
+  inoutChartInstance = inoutChart;
   charts.push(inoutChart);
+  applyInoutData(inout);
 
   // 器材来源环形图
   const sourceChart = echarts.init(sourceChartRef.value);
@@ -437,6 +507,12 @@ onMounted(() => {
         quantity: Number(c.quantity) || 0,
         value: Number(c.value) || 0,
       }));
+    }
+    if (data.storage) {
+      storageMetrics.value = {
+        warehouseCount: Number(data.storage.warehouseCount) || 0,
+        locationCount: Number(data.storage.locationCount) || 0,
+      };
     }
     initCharts(data);
     // DOM布局稳定后重新计算图表尺寸，解决首次渲染显示不全问题
@@ -793,6 +869,44 @@ onUnmounted(() => {
   text-shadow: 0 0 8px rgba(0,231,255,0.4);
 }
 
+/* 出入库趋势标题行：标题 + 日/周/月切换 */
+.title-with-switch {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-right: 10px;
+}
+
+.granularity-switch {
+  display: flex;
+  gap: 4px;
+}
+
+.granularity-btn {
+  font-size: 12px;
+  letter-spacing: 1px;
+  color: #a0c4e8;
+  padding: 1px 10px;
+  border: 1px solid rgba(0, 231, 255, 0.3);
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.2s;
+  user-select: none;
+}
+
+.granularity-btn:hover {
+  color: #00e7ff;
+  border-color: rgba(0, 231, 255, 0.6);
+}
+
+.granularity-btn.active {
+  color: #001226;
+  background: #00e7ff;
+  border-color: #00e7ff;
+  box-shadow: 0 0 8px rgba(0, 231, 255, 0.5);
+  font-weight: 700;
+}
+
 .chart-wrapper {
   flex: 1;
   min-height: 0;
@@ -940,6 +1054,7 @@ onUnmounted(() => {
 
 .metric-card {
   flex: 1;
+  min-width: 0;
   background: rgba(0,20,40,0.65);
   border: 1px solid rgba(0,231,255,0.35);
   border-radius: 6px;

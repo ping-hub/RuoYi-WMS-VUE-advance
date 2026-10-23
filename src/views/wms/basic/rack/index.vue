@@ -33,6 +33,13 @@
             </el-form-item>
           </el-col>
           <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
+            <el-form-item label="类型" prop="rackType">
+              <el-select v-model="queryParams.rackType" placeholder="请选择类型" clearable style="width: 100%" @change="handleQuery">
+                <el-option v-for="dict in wms_rack_type" :key="dict.value" :label="dict.label" :value="dict.value" />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :xl="6" :lg="6" :md="12" :sm="24" :xs="24">
             <div class="query-actions">
               <el-button type="primary" icon="Search" @click="handleQuery">搜索</el-button>
               <el-button icon="Refresh" @click="resetQuery">重置</el-button>
@@ -58,6 +65,11 @@
         <el-table-column label="状态" prop="rackStatus" width="100">
           <template #default="{ row }">
             <dict-tag :options="wms_rack_status" :value="row.rackStatus" />
+          </template>
+        </el-table-column>
+        <el-table-column label="类型" prop="rackType" width="100">
+          <template #default="{ row }">
+            <dict-tag :options="wms_rack_type" :value="row.rackType" />
           </template>
         </el-table-column>
         <el-table-column label="行数" prop="rowCount" width="80" align="center" />
@@ -113,6 +125,11 @@
             />
           </el-select>
         </el-form-item>
+        <el-form-item label="类型" prop="rackType">
+          <el-select v-model="form.rackType" placeholder="请选择类型" style="width: 100%">
+            <el-option v-for="dict in wms_rack_type" :key="dict.value" :label="dict.label" :value="dict.value" />
+          </el-select>
+        </el-form-item>
         <el-form-item label="货架状态" prop="rackStatus">
           <el-select v-model="form.rackStatus" placeholder="请选择货架状态" style="width: 100%">
             <el-option v-for="dict in wms_rack_status" :key="dict.value" :label="dict.label" :value="dict.value" />
@@ -157,7 +174,7 @@ import { addRack, delRack, getRack, listRack, updateRack } from '@/api/wms/rack'
 import { useWmsStore } from '@/store/modules/wms';
 
 const { proxy } = getCurrentInstance();
-const { wms_rack_status } = proxy.useDict('wms_rack_status');
+const { wms_rack_status, wms_rack_type } = proxy.useDict('wms_rack_status', 'wms_rack_type');
 const wmsStore = useWmsStore();
 
 const rackList = ref([]);
@@ -209,7 +226,8 @@ const data = reactive({
     rackName: undefined,
     warehouseId: undefined,
     areaId: undefined,
-    rackStatus: undefined
+    rackStatus: undefined,
+    rackType: undefined
   },
   rules: {
     rackName: [
@@ -266,6 +284,7 @@ function reset() {
     warehouseId: undefined,
     areaId: undefined,
     rackStatus: 'enabled',
+    rackType: 'rack',
     rowCount: 1,
     columnCount: 1,
     length: undefined,

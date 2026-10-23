@@ -83,6 +83,11 @@
             <div>{{ row.rackName }}</div>
           </template>
         </el-table-column>
+        <el-table-column label="类型" prop="locationType" width="110" align="center">
+          <template #default="{ row }">
+            <dict-tag :options="wms_location_type" :value="row.locationType" />
+          </template>
+        </el-table-column>
         <el-table-column label="状态" prop="locationStatus" width="100">
           <template #default="{ row }">
             <dict-tag :options="wms_location_status" :value="row.locationStatus" />
@@ -125,6 +130,7 @@
         <el-descriptions-item label="所属仓库">{{ getWarehouseName(form.warehouseId) }}</el-descriptions-item>
         <el-descriptions-item label="所属库区">{{ getAreaName(form.areaId) }}</el-descriptions-item>
         <el-descriptions-item label="所属货架">{{ getRackDisplayText() }}</el-descriptions-item>
+        <el-descriptions-item label="类型"><dict-tag :options="wms_location_type" :value="form.locationType" /></el-descriptions-item>
         <el-descriptions-item label="格子坐标">{{ `第 ${form.rowNo || '-'} 行 / 第 ${form.columnNo || '-'} 列` }}</el-descriptions-item>
       </el-descriptions>
       <el-form ref="locationRef" :model="form" :rules="rules" label-width="110px">
@@ -232,7 +238,7 @@ import { buildQrTscCommand, WssPrintClient, getPrintUrl } from '@/utils/wssPrint
 
 const { proxy } = getCurrentInstance();
 const route = useRoute();
-const { wms_location_status } = proxy.useDict('wms_location_status');
+const { wms_location_status, wms_location_type } = proxy.useDict('wms_location_status', 'wms_location_type');
 const wmsStore = useWmsStore();
 
 const locationList = ref([]);
