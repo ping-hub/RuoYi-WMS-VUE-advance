@@ -36,11 +36,16 @@
 
         <!-- 温湿度实时数据（V2：定时轮询入库，按设备配置表维度展示） -->
         <div class="card card-env">
-          <div class="card-title">温湿度实时数据</div>
+          <div class="card-title title-with-time">
+            <span>温湿度实时数据</span>
+            <span class="env-refresh-time" v-if="envCollectTime">采集时间 {{ envCollectTime }}</span>
+          </div>
           <div class="env-grid env-device-list">
             <div v-for="d in envDevices" :key="d.deviceId" class="env-group-card">
               <span class="env-online-dot" :class="d.online === 1 ? 'online' : 'offline'"></span>
-              <span class="env-group-label" :title="deviceTitle(d)">{{ d.deviceName || d.deviceId }}</span>
+              <el-tooltip :content="deviceTitle(d)" placement="top" :show-after="200" :disabled="!d.deviceName">
+                <span class="env-group-label">{{ d.deviceName || d.deviceId }}</span>
+              </el-tooltip>
               <span class="env-divider"></span>
               <svg viewBox="0 0 1024 1024" width="14" height="14" class="env-icon-sm"><path d="M544 64h-64v544h-96l128 192 128-192h-96V64z" fill="#ff4d4f"/></svg>
               <span class="env-metric-value temp-color">{{ formatValue(d.temperature, '℃') }}</span>
@@ -49,7 +54,6 @@
             </div>
             <div v-if="!envDevices.length" class="env-empty">暂无设备数据</div>
           </div>
-          <div class="env-refresh-time" v-if="envDataTime">采集时间 {{ envDataTime }}</div>
         </div>
 
         <!-- 环境告警（V2：智能主机主动推送入库） -->
@@ -59,8 +63,12 @@
             <div v-for="a in envAlarms" :key="a.id" class="alarm-item">
               <span class="alarm-level-dot" :style="{ background: alarmLevelColor(a.level) }"></span>
               <div class="alarm-info">
-                <div class="alarm-desc" :title="a.alarmDesc">{{ a.alarmDesc || a.engDesc || '告警' }}</div>
-                <div class="alarm-sub">{{ a.deviceName || a.deviceId }}<template v-if="a.location"> · {{ a.location }}</template> · {{ a.sTime || a.pushTime }}</div>
+                <el-tooltip :content="a.alarmDesc || a.engDesc || '告警'" placement="top" :show-after="200">
+                  <div class="alarm-desc">{{ a.alarmDesc || a.engDesc || '告警' }}</div>
+                </el-tooltip>
+                <el-tooltip :content="alarmSubText(a)" placement="top" :show-after="200">
+                  <div class="alarm-sub">{{ a.deviceName || a.deviceId }}<template v-if="a.location"> · {{ a.location }}</template> · {{ a.sTime || a.pushTime }}</div>
+                </el-tooltip>
               </div>
               <span class="alarm-state" :class="alarmStateClass(a.state)">{{ alarmStateText(a.state) }}</span>
             </div>
@@ -194,7 +202,7 @@
 </template>
 
 <script setup name="EnvMonitorDashboard">
-import { ref, nextTick, onMounted, onUnmounted } from 'vue';
+import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue';
 import * as echarts from 'echarts';
 import html2canvas from 'html2canvas';
 import { getSafeDays, getSourceStats, getCategoryStats, getStorageStats, getInoutTrend, getQualityStats, getWarrantyStats } from '@/api/wms/dashboard';
@@ -222,6 +230,12 @@ const borrowWarningPercent = ref(0);
 const envDevices = ref([]);
 const envAlarms = ref([]);
 const envDataTime = ref('');
+// 采集时间仅展示时分秒（后端返回 yyyy-MM-dd HH:mm:ss）
+const envCollectTime = computed(() => {
+  const t = envDataTime.value || '';
+  const parts = t.split(' ');
+  return parts.length > 1 ? parts[1] : t;
+});
 
 // ========== 真实数据 ref ==========
 const safeDays = ref(0);
@@ -434,7 +448,7 @@ const initCharts = ({ source = [], category = {}, inout = {}, quality = [] } = {
     tooltip: { trigger: 'item' },
     legend: { bottom: '2%', textStyle: { color: '#a0c4e8', fontSize: 11 }, itemWidth: 10, itemHeight: 10 },
     series: [{
-      type: 'pie', radius: ['35%', '65%'], center: ['50%', '42%'],
+      type: 'pie', radius: ['45%', '72%'], center: ['50%', '46%'],
       label: { show: true, color: '#a0c4e8', fontSize: 10, formatter: '{d}%' },
       data: (source || []).map((s, i) => ({
         value: Number(s.value) || 0,
@@ -579,6 +593,15 @@ const deviceTitle = (d) => {
   if (d.warehouse) parts.push(d.warehouse);
   if (d.location) parts.push(d.location);
   return parts.join(' / ');
+};
+
+// 告警副行完整文本（悬浮提示用）：设备名 · 位置 · 时间
+const alarmSubText = (a) => {
+  const parts = [a.deviceName || a.deviceId];
+  if (a.location) parts.push(a.location);
+  const time = a.sTime || a.pushTime;
+  if (time) parts.push(time);
+  return parts.join(' · ');
 };
 
 // 告警等级颜色（1提示/2一般/3重要/4紧急）
@@ -911,6 +934,13 @@ onUnmounted(() => {
   flex-shrink: 0;
   text-shadow: 0 0 8px rgba(0,231,255,0.4);
 }
+/* 温湿度卡片标题行：左标题 + 右采集时间 */
+.title-with-time {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-right: 10px;
+}
 /* 出入库趋势标题行：标题 + 日/周/月切换 */
 .title-with-switch {
   display: flex;
@@ -1019,7 +1049,7 @@ onUnmounted(() => {
 }
 
 /* 环境监测 */
-.card-env { flex: 0 0 auto; }
+.card-env { flex: 4; min-height: 122px; }
 
 .env-grid {
   display: flex;
@@ -1032,6 +1062,9 @@ onUnmounted(() => {
   align-items: center;
   gap: 8px;
   padding: 6px 10px;
+  height: 32px;
+  box-sizing: border-box;
+  flex-shrink: 0;
   background: rgba(0,20,40,0.5);
   border: 1px solid rgba(0,231,255,0.15);
   border-radius: 4px;
@@ -1061,7 +1094,10 @@ onUnmounted(() => {
   color: #a0c4e8;
   font-weight: 500;
   white-space: nowrap;
-  min-width: 28px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
 }
 
 .env-divider {
@@ -1079,26 +1115,32 @@ onUnmounted(() => {
   font-size: 14px;
   font-weight: bold;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .temp-color { color: #ff6b6b; }
 .hum-color  { color: #00e7ff; }
 
 /* 温湿度实时数据 / 环境告警（V2） */
-.env-device-list { max-height: 240px; overflow-y: auto; }
-.env-alarm-list { max-height: 220px; overflow-y: auto; }
+.env-device-list { flex: 1; min-height: 0; overflow-y: auto; }
+.env-alarm-list { flex: 1; min-height: 0; overflow-y: auto; }
 .env-device-list::-webkit-scrollbar, .env-alarm-list::-webkit-scrollbar { width: 4px; }
-.env-device-list::-webkit-scrollbar-thumb, .env-alarm-list::-webkit-scrollbar-thumb { background: rgba(0,231,255,0.2); border-radius: 2px; }
+.env-device-list::-webkit-scrollbar-track, .env-alarm-list::-webkit-scrollbar-track { background: rgba(0,231,255,0.04); }
+.env-device-list::-webkit-scrollbar-thumb, .env-alarm-list::-webkit-scrollbar-thumb { background: rgba(0,150,200,0.5); border-radius: 2px; }
+.env-device-list::-webkit-scrollbar-thumb:hover, .env-alarm-list::-webkit-scrollbar-thumb:hover { background: rgba(0,180,230,0.7); }
 .env-empty { color: #666; font-size: 12px; text-align: center; padding: 10px 0; }
-.env-refresh-time { font-size: 11px; color: #666; text-align: right; margin-top: 4px; flex-shrink: 0; }
+.env-refresh-time { font-size: 11px; font-weight: normal; letter-spacing: normal; color: rgba(160,196,232,0.8); text-align: right; flex-shrink: 0; }
 
-.card-env-alarm { flex: 0 0 auto; }
+.card-env-alarm { flex: 5; min-height: 146px; }
 
 .alarm-item {
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 6px 10px;
+  height: 44px;
+  box-sizing: border-box;
+  flex-shrink: 0;
   background: rgba(0,20,40,0.5);
   border: 1px solid rgba(0,231,255,0.15);
   border-radius: 4px;
@@ -1147,7 +1189,7 @@ onUnmounted(() => {
 .alarm-state.state-unknown { color: #a0c4e8; border-color: rgba(160,196,232,0.4); }
 
 /* 器材来源 */
-.card-source { flex: 1; min-height: 0; }
+.card-source { flex: 9; min-height: 0; }
 
 /* 核心指标 */
 .core-metrics {
